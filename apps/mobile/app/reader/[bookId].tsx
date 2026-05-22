@@ -1,0 +1,368 @@
+import type { BookDocument } from "@readup/db";
+import {
+  resolveBookAudioSource,
+  type ResolvedBookAudioSource,
+} from "@/features/books/api/book-audio";
+import { fetchBookByBookId } from "@/features/books/api/books";
+import { setLibraryStatus } from "@/features/library/api/library";
+import { ReaderBookAudioProvider } from "@/features/reader/audio/reader-book-audio-context";
+import { BookListenPlayer } from "@/features/reader/components/book-listen-player";
+import { PageElements } from "@/features/reader/components/page-elements";
+import { ReaderBottomNowPlaying } from "@/features/reader/components/reader-bottom-now-playing";
+import { ReaderBottomReadingProgress } from "@/features/reader/components/reader-bottom-reading-progress";
+import { useAuth } from "@/shared/context/auth-context";
+import { StatusBar } from "expo-status-bar";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Headphones,
+  Menu,
+  X,
+} from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+type ReadMode = "read" | "listen";
+
+type ReaderAudioState =
+  | { status: "checking"; source: null }
+  | { status: "available"; source: ResolvedBookAudioSource }
+  | { status: "unavailable"; source: null };
+
+function ReaderChrome({
+  document,
+  hasAudio,
+  readMode,
+  pageIndex,
+  pages,
+  totalPages,
+  goNext,
+  goPrev,
+  pageLabel,
+}: {
+  document: BookDocument;
+  hasAudio: boolean;
+  readMode: ReadMode;
+  pageIndex: number;
+  pages: NonNullable<BookDocument["pages"]>;
+  totalPages: number;
+  goNext: () => void;
+  goPrev: () => void;
+  pageLabel: number;
+}) {
+  const currentPage = pages[pageIndex] ?? null;
+  const pageProgress =
+    totalPages > 0 ? Math.min((pageIndex + 1) / totalPages, 1) : 0;
+
+  return (
+    <>
+      <View className="flex-1 bg-[#FBFAF2]">
+        {readMode === "read" && currentPage && (
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="px-[22px] pb-6 pt-2"
+            showsVerticalScrollIndicator={false}
+          >
+            <PageElements elements={currentPage.elements} />
+          </ScrollView>
+        )}
+        {readMode === "listen" && hasAudio && (
+          <BookListenPlayer document={document} />
+        )}
+      </View>
+
+      <View className="flex-row items-center justify-center gap-5 border-t border-[#E8E6D8] bg-[#F2F0E6] py-3">
+        <Pressable
+          onPress={goPrev}
+          disabled={pageIndex <= 0}
+          className={`h-10 w-10 items-center justify-center rounded-[10px] ${
+            pageIndex <= 0
+              ? "border border-[#E8E6D8] bg-[#FBFAF2]"
+              : "border border-[#C8C6B2] bg-[#FBFAF2] active:opacity-80"
+          }`}
+        >
+          <ChevronLeft
+            size={22}
+            color={pageIndex <= 0 ? "#A8A58F" : "#1A2420"}
+            strokeWidth={2}
+          />
+        </Pressable>
+        <Text className="min-w-[72px] text-center text-sm font-medium text-[#4A5550]">
+          {pageLabel} of {totalPages || pages.length}
+        </Text>
+        <Pressable
+          onPress={goNext}
+          disabled={pageIndex >= pages.length - 1}
+          className={`h-10 w-10 items-center justify-center rounded-[10px] ${
+            pageIndex >= pages.length - 1
+              ? "border border-[#E8E6D8] bg-[#FBFAF2]"
+              : "border border-[#C8C6B2] bg-[#FBFAF2] active:opacity-80"
+          }`}
+        >
+          <ChevronRight
+            size={22}
+            color={pageIndex >= pages.length - 1 ? "#A8A58F" : "#1A2420"}
+            strokeWidth={2}
+          />
+        </Pressable>
+      </View>
+
+      {hasAudio ? (
+        <ReaderBottomNowPlaying document={document} />
+      ) : (
+        <ReaderBottomReadingProgress
+          document={document}
+          pageProgress={pageProgress}
+        />
+      )}
+    </>
+  );
+}
+
+export default function ReaderScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { bookId: bookIdParam } = useLocalSearchParams<{ bookId: string }>();
+  const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [document, setDocument] = useState<BookDocument | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [readMode, setReadMode] = useState<ReadMode>("read");
+  const [audioState, setAudioState] = useState<ReaderAudioState>({
+    status: "checking",
+    source: null,
+  });
+
+  const load = useCallback(async () => {
+    if (!bookId) {
+      setError("Missing book");
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      setDocument(null);
+      setAudioState({ status: "checking", source: null });
+      const row = await fetchBookByBookId(bookId);
+      if (!row) {
+        setError("Book not found");
+        setDocument(null);
+        return;
+      }
+      setDocument(row.document);
+      setPageIndex(0);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load book");
+      setDocument(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [bookId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!document?.book_id) {
+      setAudioState({ status: "checking", source: null });
+      return;
+    }
+    let cancelled = false;
+    setAudioState({ status: "checking", source: null });
+    void resolveBookAudioSource(document.book_id)
+      .then((source) => {
+        if (cancelled) return;
+        setAudioState(
+          source
+            ? { status: "available", source }
+            : { status: "unavailable", source: null },
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setAudioState({ status: "unavailable", source: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [document?.book_id]);
+
+  useEffect(() => {
+    if (audioState.status !== "available") setReadMode("read");
+  }, [audioState.status]);
+
+  const pages = useMemo(() => {
+    if (!document?.pages?.length) return [];
+    return [...document.pages].sort(
+      (a, b) => a.page_number - b.page_number,
+    );
+  }, [document]);
+
+  const currentPage = pages[pageIndex] ?? null;
+  const totalPages = document?.total_pages ?? pages.length ?? 0;
+  const pageLabel = currentPage?.page_number ?? pageIndex + 1;
+  const hasAudio = audioState.status === "available";
+
+  useEffect(() => {
+    if (!user || !document?.book_id || pages.length === 0) return;
+    const status = pageIndex >= pages.length - 1 ? "completed" : "in_progress";
+    void setLibraryStatus(user.id, document.book_id, status, {
+      page: pageLabel,
+      total_pages: totalPages,
+    }).catch(() => undefined);
+  }, [document?.book_id, pageIndex, pageLabel, pages.length, totalPages, user]);
+
+  const goNext = () => {
+    if (pageIndex < pages.length - 1) setPageIndex((i) => i + 1);
+  };
+
+  const goPrev = () => {
+    if (pageIndex > 0) setPageIndex((i) => i - 1);
+  };
+
+  return (
+    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top", "left", "right"]}>
+      <StatusBar style="dark" />
+
+      <View className="flex-row items-center justify-between border-b border-[#E8E6D8] bg-[#FBFAF2] px-3 pb-2.5">
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Close reader"
+          className="active:opacity-70"
+        >
+          <X size={28} color="#1A2420" strokeWidth={2} />
+        </Pressable>
+
+        {audioState.status === "checking" && document ? (
+          <View className="h-10 min-w-[120px] items-center justify-center rounded-[10px] border border-[#E8E6D8] bg-[#F2F0E6] px-4">
+            <ActivityIndicator size="small" color="#4A5550" />
+          </View>
+        ) : hasAudio ? (
+          <View className="flex-row gap-1 rounded-[12px] border border-[#E8E6D8] bg-[#F2F0E6] p-0.5">
+            <Pressable
+              onPress={() => setReadMode("read")}
+              className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
+                readMode === "read" ? "bg-[#FBFAF2]" : ""
+              }`}
+            >
+              <FileText
+                size={18}
+                color={readMode === "read" ? "#1A2420" : "#7A7868"}
+                strokeWidth={2}
+              />
+              <Text
+                className={`text-[13px] font-semibold ${
+                  readMode === "read" ? "text-[#1A2420]" : "text-[#7A7868]"
+                }`}
+              >
+                Read
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setReadMode("listen")}
+              className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
+                readMode === "listen" ? "bg-[#FBFAF2]" : ""
+              }`}
+            >
+              <Headphones
+                size={18}
+                color={readMode === "listen" ? "#1A2420" : "#7A7868"}
+                strokeWidth={2}
+              />
+              <Text
+                className={`text-[13px] font-semibold ${
+                  readMode === "listen" ? "text-[#1A2420]" : "text-[#7A7868]"
+                }`}
+              >
+                Listen
+              </Text>
+            </Pressable>
+          </View>
+        ) : document ? (
+          <View className="flex-row items-center gap-1.5 rounded-[10px] border border-[#E8E6D8] bg-[#F2F0E6] px-4 py-2">
+            <FileText size={18} color="#7A7868" strokeWidth={2} />
+            <Text className="text-[13px] font-semibold text-[#7A7868]">Read</Text>
+          </View>
+        ) : (
+          <View className="h-10 w-[120px]" />
+        )}
+
+        <View className="flex-row items-center gap-3.5">
+          <Pressable hitSlop={12} accessibilityRole="button">
+            <Menu size={26} color="#1A2420" strokeWidth={2} />
+          </Pressable>
+          <Pressable hitSlop={12} accessibilityRole="button">
+            <Text className="text-lg font-semibold text-[#1A2420]">AA</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View className="flex-1 bg-[#FBFAF2]">
+        {loading && (
+          <View className="flex-1 items-center justify-center p-6">
+            <ActivityIndicator size="large" color="#059669" />
+          </View>
+        )}
+        {!loading && error && (
+          <View className="flex-1 items-center justify-center p-6">
+            <Text className="mb-4 text-center text-base text-[#4A5550]">
+              {error}
+            </Text>
+            <Pressable
+              onPress={load}
+              className="min-h-[54px] items-center justify-center rounded-full border-2 border-[#047857] bg-[#059669] px-6 active:opacity-90"
+            >
+              <Text className="text-lg font-medium text-[#FBFAF2]">Retry</Text>
+            </Pressable>
+          </View>
+        )}
+        {!loading && !error && document && (
+          hasAudio ? (
+            <ReaderBookAudioProvider
+              bookId={document.book_id}
+              initialSource={audioState.source}
+            >
+              <ReaderChrome
+                document={document}
+                hasAudio
+                readMode={readMode}
+                pageIndex={pageIndex}
+                pages={pages}
+                totalPages={totalPages}
+                goNext={goNext}
+                goPrev={goPrev}
+                pageLabel={pageLabel}
+              />
+            </ReaderBookAudioProvider>
+          ) : (
+            <ReaderChrome
+              document={document}
+              hasAudio={false}
+              readMode={readMode}
+              pageIndex={pageIndex}
+              pages={pages}
+              totalPages={totalPages}
+              goNext={goNext}
+              goPrev={goPrev}
+              pageLabel={pageLabel}
+            />
+          )
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}

@@ -1,0 +1,60 @@
+{
+  "title": "Sample Short Book",
+  "author": "Unknown",
+  "language": "en",
+  "genres": ["literary_fiction"],
+  "cover_image_path": "book_abc123/cover.jpeg",
+  "total_pages": 2,
+  "pages": [
+    {
+      "page_number": 1,
+      "elements": [
+        {
+          "type": "chapter_name",
+          "content": "Chapter 1: The Beginning"
+        },
+        {
+          "type": "text",
+          "content": "Lina woke before sunrise and stepped outside to find the village unusually quiet."
+        },
+        {
+          "type": "quote",
+          "content": "The village unusually quiet."
+        },
+        {
+          "type": "text",
+          "content": "The wind carried a strange warmth, and the road to the hills seemed brighter than usual."
+        },
+        {
+          "type": "keywords",
+          "content": ["sunrise", "village", "wind", "hills"]
+        }
+      ]
+    },
+    {
+      "page_number": 2,
+      "elements": [
+        {
+          "type": "chapter_name",
+          "content": "Chapter 1: The Beginning"
+        },
+        {
+          "type": "text",
+          "content": "She followed the narrow path behind her house and discovered footprints leading toward the forest."
+        },
+        {
+          "type": "quote",
+          "content": "Each step made her more certain."
+        },
+        {
+          "type": "text",
+          "content": "Each step made her more certain that someone had passed there only moments before."
+        },
+        {
+          "type": "keywords",
+          "content": ["path", "forest", "footprints", "mystery"]
+        }
+      ]
+    }
+  ]
+}

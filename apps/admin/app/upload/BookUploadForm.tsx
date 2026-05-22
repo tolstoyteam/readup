@@ -1,0 +1,476 @@
+"use client";
+
+/* eslint-disable react-hooks/refs -- dnd-kit sortable exposes ref/listener props for render. */
+
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useFieldArray, useForm } from "react-hook-form";
+import { parseBookContentInput } from "@/lib/book-content";
+import {
+  COVER_HEIGHT_WIDTH_RATIO,
+  COVER_RATIO_TOLERANCE,
+  isCoverAspectRatio,
+} from "@/lib/cover-ratio";
+import { genreDisplayName } from "@/lib/book-genres";
+import { LANGUAGE_OPTIONS } from "@/lib/book-language";
+import type { BookWithContent } from "@/lib/book-relational";
+import { BookPreview } from "@/app/upload/components/BookPreview";
+import { ChapterEditor } from "@/app/upload/components/ChapterEditor";
+import { QuizEditor, createDefaultQuiz } from "@/app/upload/components/QuizEditor";
+import { BOOK_GENRES, type BookEditorValues, type BookGenre } from "./types";
+
+export type BookEditContext = {
+  recordId: number;
+  initial: BookWithContent;
+};
+
+function newId() {
+  return crypto.randomUUID();
+}
+
+function createChapter() {
+  return {
+    id: newId(),
+    title: "",
+    blocks: [
+      {
+        id: newId(),
+        type: "paragraph" as const,
+        content: { text: "" },
+      },
+    ],
+  };
+}
+
+function toEditorValues(book?: BookWithContent): BookEditorValues {
+  if (!book) {
+    return {
+      title: "",
+      author: "",
+      language: "en",
+      genres: [],
+      keywords: [],
+      cover_image_url: undefined,
+      chapters: [createChapter()],
+      quiz: undefined,
+    };
+  }
+
+  return {
+    title: book.title,
+    author: book.author,
+    language: book.language,
+    genres: book.genres.filter((genre): genre is BookGenre =>
+      (BOOK_GENRES as readonly string[]).includes(genre),
+    ),
+    keywords: book.keywords,
+    cover_image_url: book.coverImageUrl,
+    chapters: book.chapters.map((chapter) => ({
+      id: String(chapter.id),
+      title: chapter.title,
+      blocks: chapter.blocks.map((block) => ({
+        id: String(block.id),
+        type: block.type,
+        content:
+          block.type === "quote"
+            ? {
+                text: block.content.text,
+                source: "source" in block.content ? block.content.source ?? "" : "",
+              }
+            : { text: block.content.text },
+      })),
+    })),
+    quiz: book.quiz
+      ? {
+          questions: book.quiz.questions.map((question) => ({
+            id: String(question.id),
+            question: question.question,
+            answers: question.answers.map((answer) => ({
+              id: String(answer.id),
+              text: answer.text,
+              is_correct: answer.isCorrect,
+            })),
+          })),
+        }
+      : undefined,
+  };
+}
+
+async function validateCoverFile(file: File): Promise<string | null> {
+  const lower = file.name.toLowerCase();
+  if (!/\.(png|jpe?g|svg)$/.test(lower)) {
+    return "Cover couldn't be added. Use PNG, JPEG, or SVG only.";
+  }
+  const mime = file.type.toLowerCase();
+  if (mime && mime !== "image/png" && mime !== "image/jpeg" && mime !== "image/jpg" && mime !== "image/svg+xml") {
+    return "Cover couldn't be added. Use PNG, JPEG, or SVG only.";
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const { w, h } = await new Promise<{ w: number; h: number }>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => reject(new Error("load"));
+      img.src = url;
+    });
+    if (!isCoverAspectRatio(h, w)) {
+      return `Cover height ÷ width must be ${COVER_HEIGHT_WIDTH_RATIO} (±${COVER_RATIO_TOLERANCE}). This image is ${h}×${w}px.`;
+    }
+  } catch {
+    return "Cover couldn't be read. The file may be corrupted or unsupported.";
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+  return null;
+}
+
+function SortableChapterShell({
+  id,
+  children,
+}: {
+  id: string;
+  children: ReactNode;
+}) {
+  const sortable = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(sortable.transform),
+    transition: sortable.transition,
+  };
+
+  return (
+    <div ref={sortable.setNodeRef} style={style}>
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          aria-label="Drag chapter"
+          {...sortable.attributes}
+          {...sortable.listeners}
+          className="cursor-grab rounded-md border border-stone-200 bg-white px-2 py-1 text-xs text-stone-500 active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
+        >
+          Drag chapter
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export function BookUploadForm({ editContext }: { editContext?: BookEditContext }) {
+  const router = useRouter();
+  const [genrePick, setGenrePick] = useState<BookGenre | "">("");
+  const [keywordDraft, setKeywordDraft] = useState("");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
+  const [coverHint, setCoverHint] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [quizEnabled, setQuizEnabled] = useState(() => Boolean(editContext?.initial.quiz));
+
+  const form = useForm<BookEditorValues>({
+    defaultValues: toEditorValues(editContext?.initial),
+    mode: "onChange",
+  });
+
+  const chapters = useFieldArray({
+    control: form.control,
+    name: "chapters",
+    keyName: "fieldId",
+  });
+
+  const values = form.watch();
+  const selectedGenres = form.watch("genres");
+  const keywords = form.watch("keywords");
+  const jsonPretty = useMemo(() => JSON.stringify(values, null, 2), [values]);
+
+  const addGenre = () => {
+    if (!genrePick || selectedGenres.includes(genrePick) || selectedGenres.length >= 5) return;
+    form.setValue("genres", [...selectedGenres, genrePick], { shouldDirty: true, shouldValidate: true });
+    setGenrePick("");
+  };
+
+  const addKeyword = () => {
+    const keyword = keywordDraft.trim();
+    if (!keyword) return;
+    if (keywords.some((item) => item.toLowerCase() === keyword.toLowerCase())) {
+      setKeywordDraft("");
+      return;
+    }
+    form.setValue("keywords", [...keywords, keyword], { shouldDirty: true, shouldValidate: true });
+    setKeywordDraft("");
+  };
+
+  const handleChapterDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = chapters.fields.findIndex((field) => field.id === active.id);
+    const newIndex = chapters.fields.findIndex((field) => field.id === over.id);
+    if (oldIndex >= 0 && newIndex >= 0) {
+      chapters.move(oldIndex, newIndex);
+    }
+  };
+
+  const setQuiz = (enabled: boolean) => {
+    setQuizEnabled(enabled);
+    form.setValue("quiz", enabled ? form.getValues("quiz") ?? createDefaultQuiz() : undefined, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const submit = async (rawValues: BookEditorValues) => {
+    setStatus(null);
+    setError(null);
+
+    const payload = {
+      ...rawValues,
+      cover_image_url: coverRemoved ? null : rawValues.cover_image_url,
+      quiz: quizEnabled ? rawValues.quiz : undefined,
+    };
+    const parsed = parseBookContentInput(payload);
+    if (!parsed.ok) {
+      setError(parsed.message);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const url = editContext ? `/api/books/${editContext.recordId}` : "/api/books";
+      const method = editContext ? "PATCH" : "POST";
+      let response: Response;
+      if (coverFile) {
+        const formData = new FormData();
+        formData.append("book", JSON.stringify(parsed.data));
+        formData.append("cover", coverFile);
+        response = await fetch(url, { method, body: formData });
+      } else {
+        response = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parsed.data),
+        });
+      }
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Save failed");
+      }
+
+      setStatus(editContext ? "Book updated." : "Book created.");
+      setCoverFile(null);
+      setCoverRemoved(false);
+      router.refresh();
+      if (!editContext && typeof data.id === "number") {
+        router.push(`/books/${data.id}/edit`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <main className="min-h-full bg-linear-to-b from-[#faf8f5] via-[#f7f4ef] to-[#f0ebe3] px-4 py-8 text-stone-900 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 dark:text-zinc-100 sm:px-6 lg:px-8">
+      <form onSubmit={form.handleSubmit(submit)} className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-6">
+          <header>
+            <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-amber-800/80 dark:text-amber-200/70">
+              {editContext ? "Edit book" : "New book"}
+            </p>
+            <h1 className="font-serif text-3xl font-semibold tracking-tight text-stone-800 dark:text-zinc-50">
+              Block-based book composer
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-stone-600 dark:text-zinc-400">
+              Chapters and paragraph/quote blocks save as normalized relational rows. The JSON panel is only a request preview.
+            </p>
+          </header>
+
+          <section className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                  Title
+                </span>
+                <input {...form.register("title")} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+              </label>
+              <label>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                  Author
+                </span>
+                <input {...form.register("author")} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+              </label>
+              <label>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                  Language
+                </span>
+                <select {...form.register("language")} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                  Cover image
+                </span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setCoverHint(null);
+                    if (!file) {
+                      setCoverFile(null);
+                      return;
+                    }
+                    const message = await validateCoverFile(file);
+                    if (message) {
+                      setCoverHint(message);
+                      setCoverFile(null);
+                      event.target.value = "";
+                      return;
+                    }
+                    setCoverFile(file);
+                    setCoverRemoved(false);
+                  }}
+                  className="w-full text-sm"
+                />
+              </label>
+            </div>
+            {coverHint ? <p className="mt-2 text-sm text-red-600 dark:text-red-300">{coverHint}</p> : null}
+            {editContext?.initial.coverImageUrl && !coverRemoved ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCoverRemoved(true);
+                  form.setValue("cover_image_url", null, { shouldDirty: true });
+                }}
+                className="mt-3 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-900/60 dark:text-red-300"
+              >
+                Remove existing cover
+              </button>
+            ) : null}
+          </section>
+
+          <section className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+            <h2 className="font-serif text-lg font-semibold text-stone-800 dark:text-zinc-50">Genres and keywords</h2>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <select value={genrePick} onChange={(event) => setGenrePick(event.target.value as BookGenre | "")} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+                <option value="">Choose genre</option>
+                {BOOK_GENRES.map((genre) => (
+                  <option key={genre} value={genre}>
+                    {genreDisplayName(genre)}
+                  </option>
+                ))}
+              </select>
+              <button type="button" onClick={addGenre} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                Add genre
+              </button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {selectedGenres.map((genre) => (
+                <button
+                  type="button"
+                  key={genre}
+                  onClick={() => form.setValue("genres", selectedGenres.filter((item) => item !== genre), { shouldDirty: true, shouldValidate: true })}
+                  className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/25 dark:text-amber-100"
+                >
+                  {genreDisplayName(genre)} ×
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <input
+                value={keywordDraft}
+                onChange={(event) => setKeywordDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addKeyword();
+                  }
+                }}
+                className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                placeholder="Keyword"
+              />
+              <button type="button" onClick={addKeyword} className="rounded-lg border border-stone-200 px-3 py-2 text-xs font-medium text-stone-700 dark:border-zinc-700 dark:text-zinc-200">
+                Add keyword
+              </button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {keywords.map((keyword, index) => (
+                <button
+                  type="button"
+                  key={`${keyword}-${index}`}
+                  onClick={() => form.setValue("keywords", keywords.filter((_, i) => i !== index), { shouldDirty: true, shouldValidate: true })}
+                  className="rounded border border-stone-200 bg-stone-50 px-2 py-1 text-xs text-stone-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                >
+                  {keyword} ×
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <DndContext onDragEnd={handleChapterDragEnd}>
+            <SortableContext items={chapters.fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-5">
+                {chapters.fields.map((chapter, chapterIndex) => (
+                  <SortableChapterShell key={chapter.fieldId} id={chapter.id}>
+                    <ChapterEditor
+                      chapterIndex={chapterIndex}
+                      control={form.control}
+                      register={form.register}
+                      canRemove={chapters.fields.length > 1}
+                      onRemove={() => chapters.remove(chapterIndex)}
+                    />
+                  </SortableChapterShell>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          <button
+            type="button"
+            onClick={() => chapters.append(createChapter())}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+          >
+            Add chapter
+          </button>
+
+          <QuizEditor control={form.control} register={form.register} enabled={quizEnabled} onToggle={setQuiz} />
+
+          {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">{error}</p> : null}
+          {status ? <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">{status}</p> : null}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-lg bg-amber-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-800 disabled:pointer-events-none disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
+            >
+              {isSaving ? "Saving..." : editContext ? "Save changes" : "Create book"}
+            </button>
+            <details className="min-w-full">
+              <summary className="cursor-pointer text-sm font-medium text-stone-600 dark:text-zinc-400">
+                Request preview JSON
+              </summary>
+              <pre className="mt-3 max-h-96 overflow-auto rounded-xl bg-stone-950 p-4 text-xs text-stone-100">
+                {jsonPretty}
+              </pre>
+            </details>
+          </div>
+        </div>
+
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <BookPreview value={values} />
+        </div>
+      </form>
+    </main>
+  );
+}

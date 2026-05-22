@@ -1,0 +1,43 @@
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import "react-native-reanimated";
+
+import { AuthProvider } from "@/shared/context/auth-context";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import "../global.css";
+
+export const unstable_settings = {
+  /** Default stack base when dismissing modals / nested stacks (For you tab). */
+  anchor: "(tabs)",
+};
+
+export default function RootLayout() {
+  const colorScheme = useColorScheme();
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <Stack>
+            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(setup)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="settings"
+              options={{ headerShown: false, animation: "slide_from_right" }}
+            />
+            <Stack.Screen name="reader/[bookId]" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
+  );
+}
