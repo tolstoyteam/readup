@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -72,6 +73,32 @@ export type BookDocument = LegacyBookDocument & { book_id: string };
 export type BookDataColumn = BookDocument | BookDocument[];
 
 export type LibraryStatus = "saved" | "in_progress" | "completed";
+
+/** Documented shape for `user_library.progress`. Stored as JSONB so app/server can extend without migration. */
+export type LibraryProgress = {
+  page: number;
+  total_pages: number;
+  audio_position_ms?: number;
+  /** ISO timestamp of the last reader session that touched this row. */
+  last_read_at?: string;
+};
+
+export const NOTIFICATION_TYPES = [
+  "streak_reminder",
+  "new_content",
+  "quiz_reminder",
+  "achievement",
+  "daily_reading",
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export type NotificationPreferences = {
+  daily_reminder?: boolean;
+  streak_alerts?: boolean;
+  new_content?: boolean;
+  quiz_reminders?: boolean;
+  achievements?: boolean;
+};
 
 export const usersTable = pgTable("users", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -209,6 +236,18 @@ export const profilesTable = pgTable("profiles", {
   readingGoal: text("reading_goal"),
   interestsStepDone: boolean("interests_step_done").notNull().default(false),
   goalStepDone: boolean("goal_step_done").notNull().default(false),
+  /** Service-role only flag. App reads but cannot update (enforced by trigger). */
+  isPremium: boolean("is_premium").notNull().default(false),
+  currentStreakDays: integer("current_streak_days").notNull().default(0),
+  longestStreakDays: integer("longest_streak_days").notNull().default(0),
+  lastReadDate: date("last_read_date"),
+  totalBooksCompleted: integer("total_books_completed").notNull().default(0),
+  totalReadingMinutes: integer("total_reading_minutes").notNull().default(0),
+  dailyReadingGoalMinutes: integer("daily_reading_goal_minutes").notNull().default(5),
+  notificationPreferences: jsonb("notification_preferences")
+    .$type<NotificationPreferences>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -234,6 +273,113 @@ export const userLibraryTable = pgTable(
   ],
 );
 
+export const userSearchHistoryTable = pgTable(
+  "user_search_history",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    query: text("query").notNull(),
+    searchedAt: timestamp("searched_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.query] }),
+    index("user_search_history_searched_at_idx").on(table.userId, table.searchedAt),
+  ],
+);
+
+export type QuizAttemptAnswer = {
+  question_id: number;
+  answer_id: number | null;
+  is_correct: boolean;
+};
+
+export const userQuizAttemptsTable = pgTable(
+  "user_quiz_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    /** Matches `user_library.book_id` (text form of `books.id`). */
+    bookId: text("book_id").notNull(),
+    quizId: integer("quiz_id")
+      .notNull()
+      .references(() => quizzesTable.id, { onDelete: "cascade" }),
+    score: integer("score").notNull(),
+    totalQuestions: integer("total_questions").notNull(),
+    answers: jsonb("answers").$type<QuizAttemptAnswer[]>().notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("user_quiz_attempts_user_book_idx").on(
+      table.userId,
+      table.bookId,
+      table.completedAt,
+    ),
+  ],
+);
+
+export const achievementsTable = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  /** lucide-react-native icon name or asset key. */
+  icon: text("icon").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const userAchievementsTable = pgTable(
+  "user_achievements",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    achievementId: integer("achievement_id")
+      .notNull()
+      .references(() => achievementsTable.id, { onDelete: "cascade" }),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.achievementId] })],
+);
+
+export const userNotificationsTable = pgTable(
+  "user_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    type: text("type").$type<NotificationType>().notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown> | null>(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("user_notifications_user_created_idx").on(table.userId, table.createdAt),
+    check(
+      "user_notifications_type_check",
+      sql`${table.type} in ('streak_reminder', 'new_content', 'quiz_reminder', 'achievement', 'daily_reading')`,
+    ),
+  ],
+);
+
+export const readingDailyLogTable = pgTable(
+  "reading_daily_log",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    activityDate: date("activity_date").notNull(),
+    minutesRead: integer("minutes_read").notNull().default(0),
+    booksTouched: integer("books_touched").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.activityDate] })],
+);
+
 export type BookRecord = typeof booksTable.$inferSelect;
 export type NewBookRecord = typeof booksTable.$inferInsert;
 export type GenreRecord = typeof genresTable.$inferSelect;
@@ -242,3 +388,10 @@ export type ChapterBlockRecord = typeof chapterBlocksTable.$inferSelect;
 export type QuizRecord = typeof quizzesTable.$inferSelect;
 export type QuizQuestionRecord = typeof quizQuestionsTable.$inferSelect;
 export type QuizAnswerRecord = typeof quizAnswersTable.$inferSelect;
+export type ProfileRecord = typeof profilesTable.$inferSelect;
+export type UserSearchHistoryRecord = typeof userSearchHistoryTable.$inferSelect;
+export type UserQuizAttemptRecord = typeof userQuizAttemptsTable.$inferSelect;
+export type AchievementRecord = typeof achievementsTable.$inferSelect;
+export type UserAchievementRecord = typeof userAchievementsTable.$inferSelect;
+export type UserNotificationRecord = typeof userNotificationsTable.$inferSelect;
+export type ReadingDailyLogRecord = typeof readingDailyLogTable.$inferSelect;

@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import { Search as SearchIcon } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Search as SearchIcon, X } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -22,6 +22,12 @@ import {
   removeLibraryItem,
   setLibraryStatus,
 } from "@/features/library/api/library";
+import {
+  fetchSearchHistory,
+  recordSearch,
+  removeSearchHistoryEntry,
+  type SearchHistoryEntry,
+} from "@/features/search/api/search-history";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
@@ -54,6 +60,8 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
+  const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
+  const recordDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -86,19 +94,49 @@ export default function SearchScreen() {
   useEffect(() => {
     if (!user) {
       setSavedIds(new Set());
+      setHistory([]);
       return;
     }
     let cancelled = false;
-    fetchUserLibrary(user.id, "saved")
-      .then((items) => {
-        if (cancelled) return;
-        setSavedIds(new Set(items.map((item) => item.book_id)));
-      })
-      .catch(() => undefined);
+    Promise.all([
+      fetchUserLibrary(user.id, "saved").catch(() => []),
+      fetchSearchHistory(user.id).catch(() => []),
+    ]).then(([items, entries]) => {
+      if (cancelled) return;
+      setSavedIds(new Set(items.map((item) => item.book_id)));
+      setHistory(entries);
+    });
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return;
+    if (recordDebounceRef.current) clearTimeout(recordDebounceRef.current);
+    recordDebounceRef.current = setTimeout(() => {
+      void recordSearch(user.id, trimmed).then(() => {
+        fetchSearchHistory(user.id)
+          .then((entries) => setHistory(entries))
+          .catch(() => undefined);
+      });
+    }, 1200);
+    return () => {
+      if (recordDebounceRef.current) clearTimeout(recordDebounceRef.current);
+    };
+  }, [query, user]);
+
+  async function clearHistoryEntry(entry: SearchHistoryEntry) {
+    if (!user) return;
+    setHistory((prev) => prev.filter((row) => row.query !== entry.query));
+    try {
+      await removeSearchHistoryEntry(user.id, entry.query);
+    } catch {
+      /* ignore */
+    }
+  }
 
   const categories = useMemo(() => {
     const values = new Set<string>();
@@ -133,11 +171,8 @@ export default function SearchScreen() {
     });
   }, [books, category, difficulty, query, time]);
 
-  async function openBook(item: BookCardItem) {
-    if (user) {
-      void setLibraryStatus(user.id, item.bookId, "in_progress").catch(() => undefined);
-    }
-    router.push(`/reader/${encodeURIComponent(item.bookId)}`);
+  function openBook(item: BookCardItem) {
+    router.push(`/book/${encodeURIComponent(item.bookId)}`);
   }
 
   async function toggleSavedBook(item: BookCardItem) {
@@ -223,6 +258,40 @@ export default function SearchScreen() {
                 onChange={setTime}
               />
             </View>
+
+            {query.trim().length === 0 && history.length > 0 ? (
+              <View className="gap-2">
+                <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#4A5550]">
+                  Недавние запросы
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {history.map((entry) => (
+                    <View
+                      key={entry.query}
+                      className="flex-row items-center gap-1 rounded-full border border-[#E8E6D8] bg-[#F2F0E6] px-3 py-1.5"
+                    >
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Search ${entry.query}`}
+                        onPress={() => setQuery(entry.query)}
+                      >
+                        <Text className="text-[13px] tracking-[-0.52px] text-[#1A2420]">
+                          {entry.query}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${entry.query}`}
+                        hitSlop={8}
+                        onPress={() => clearHistoryEntry(entry)}
+                      >
+                        <X size={14} color={ReadupColors.textTertiary} strokeWidth={2} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
           </View>
         }
         ListEmptyComponent={

@@ -12,6 +12,57 @@ export type FetchBooksResult = {
   tableRowCount: number;
 };
 
+type RelationalBookRow = {
+  id: number;
+  title: string;
+  author: string | null;
+  language: string | null;
+  cover_image_url: string | null;
+  keywords: string[] | null;
+  data: BookDataColumn | null;
+  book_genres:
+    | Array<{ genre: { name: string } | { name: string }[] | null }>
+    | null;
+};
+
+const BOOK_LIST_SELECT =
+  "id, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name))";
+
+export function extractGenresFromJoin(
+  bookGenres: RelationalBookRow["book_genres"],
+): string[] {
+  return (bookGenres ?? [])
+    .flatMap((row) => {
+      if (!row.genre) return [];
+      if (Array.isArray(row.genre)) {
+        return row.genre.map((g) => g.name).filter(Boolean);
+      }
+      return [row.genre.name].filter(Boolean);
+    })
+    .filter((name): name is string => !!name);
+}
+
+/** Build a list/detail stub when only relational columns exist (no legacy JSONB). */
+export function documentFromRelationalRow(row: RelationalBookRow): BookDocument {
+  const legacy = asRecord(row.data);
+  return {
+    book_id: String(row.id),
+    title: row.title,
+    author: row.author ?? "",
+    language: row.language ?? "",
+    genres: extractGenresFromJoin(row.book_genres),
+    cover_image_path: row.cover_image_url ?? undefined,
+    difficulty:
+      typeof legacy?.difficulty === "string" ? legacy.difficulty : undefined,
+    reading_time_minutes:
+      typeof legacy?.reading_time_minutes === "number"
+        ? legacy.reading_time_minutes
+        : undefined,
+    total_pages: 1,
+    pages: [],
+  };
+}
+
 function asRecord(v: unknown): Record<string, unknown> | null {
   if (v != null && typeof v === "object" && !Array.isArray(v)) {
     return v as Record<string, unknown>;
@@ -136,23 +187,32 @@ export function coverUrl(path: string | undefined): string | null {
 export async function fetchBooks(): Promise<FetchBooksResult> {
   const { data, error } = await supabase
     .from("books")
-    .select("id, data")
+    .select(BOOK_LIST_SELECT)
     .order("id", { ascending: true });
 
   if (error) throw error;
 
-  const rows = data ?? [];
+  const rows = (data ?? []) as RelationalBookRow[];
   const books: { id: number; document: BookDocument }[] = [];
 
   for (const row of rows) {
-    for (const document of normalizeBooksFromCell(row.data)) {
-      books.push({ id: row.id, document });
+    const fromLegacy = normalizeBooksFromCell(row.data);
+    if (fromLegacy.length > 0) {
+      for (const document of fromLegacy) {
+        books.push({ id: row.id, document });
+      }
+      continue;
     }
+    books.push({ id: row.id, document: documentFromRelationalRow(row) });
   }
 
   if (__DEV__ && rows.length === 0) {
     console.warn(
-      "[fetchBooks] 0 rows from public.books. If Postgres has data, add a SELECT policy for the anon role (see packages/db/sql/supabase-books-anon-select.sql).",
+      "[fetchBooks] 0 rows from public.books. Check RLS SELECT policy for anon/authenticated (see packages/db/sql/supabase-books-anon-select.sql).",
+    );
+  } else if (__DEV__ && rows.length > 0 && books.length === 0) {
+    console.warn(
+      "[fetchBooks] Books table has rows but none could be parsed. Relational columns or legacy data JSON may be missing.",
     );
   }
 
@@ -162,6 +222,25 @@ export async function fetchBooks(): Promise<FetchBooksResult> {
 export async function fetchBookByBookId(
   bookId: string,
 ): Promise<{ id: number; document: BookDocument } | null> {
+  const numericId = Number(bookId);
+  if (Number.isFinite(numericId) && numericId > 0) {
+    const { data, error } = await supabase
+      .from("books")
+      .select(BOOK_LIST_SELECT)
+      .eq("id", numericId)
+      .maybeSingle();
+
+    if (!error && data) {
+      const row = data as RelationalBookRow;
+      const fromLegacy = normalizeBooksFromCell(row.data);
+      if (fromLegacy.length > 0) {
+        const match = fromLegacy.find((doc) => doc.book_id === bookId) ?? fromLegacy[0];
+        if (match) return { id: row.id, document: match };
+      }
+      return { id: row.id, document: documentFromRelationalRow(row) };
+    }
+  }
+
   const { data, error } = await supabase.from("books").select("id, data");
 
   if (error) throw error;

@@ -1,15 +1,40 @@
 import { supabase } from "@/shared/lib/supabase";
 
+export type NotificationPreferences = {
+  daily_reminder?: boolean;
+  streak_alerts?: boolean;
+  new_content?: boolean;
+  quiz_reminders?: boolean;
+  achievements?: boolean;
+};
+
 export type Profile = {
   id: string;
   selected_interests: string[];
   reading_goal: string | null;
   interests_step_done: boolean;
   goal_step_done: boolean;
+  is_premium: boolean;
+  current_streak_days: number;
+  longest_streak_days: number;
+  last_read_date: string | null;
+  total_books_completed: number;
+  total_reading_minutes: number;
+  daily_reading_goal_minutes: number;
+  notification_preferences: NotificationPreferences;
 };
 
 const PROFILE_COLUMNS =
-  "id, selected_interests, reading_goal, interests_step_done, goal_step_done";
+  "id, selected_interests, reading_goal, interests_step_done, goal_step_done, is_premium, current_streak_days, longest_streak_days, last_read_date, total_books_completed, total_reading_minutes, daily_reading_goal_minutes, notification_preferences";
+
+function intish(value: unknown, fallback = 0): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
 
 function normalizeProfile(row: unknown): Profile | null {
   if (!row || typeof row !== "object") return null;
@@ -27,6 +52,19 @@ function normalizeProfile(row: unknown): Profile | null {
       typeof record.reading_goal === "string" ? record.reading_goal : null,
     interests_step_done: record.interests_step_done === true,
     goal_step_done: record.goal_step_done === true,
+    is_premium: record.is_premium === true,
+    current_streak_days: intish(record.current_streak_days),
+    longest_streak_days: intish(record.longest_streak_days),
+    last_read_date:
+      typeof record.last_read_date === "string" ? record.last_read_date : null,
+    total_books_completed: intish(record.total_books_completed),
+    total_reading_minutes: intish(record.total_reading_minutes),
+    daily_reading_goal_minutes: intish(record.daily_reading_goal_minutes, 5),
+    notification_preferences:
+      record.notification_preferences &&
+      typeof record.notification_preferences === "object"
+        ? (record.notification_preferences as NotificationPreferences)
+        : {},
   };
 }
 
@@ -100,4 +138,138 @@ export async function saveGoal(
   const profile = normalizeProfile(data);
   if (!profile) throw new Error("Could not save goal");
   return profile;
+}
+
+export async function saveDailyReadingGoal(
+  userId: string,
+  minutes: number,
+): Promise<Profile> {
+  const clamped = Math.max(1, Math.min(120, Math.round(minutes)));
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        daily_reading_goal_minutes: clamped,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    )
+    .select(PROFILE_COLUMNS)
+    .single();
+  if (error) throw error;
+  const profile = normalizeProfile(data);
+  if (!profile) throw new Error("Could not save daily goal");
+  return profile;
+}
+
+export async function saveNotificationPreferences(
+  userId: string,
+  preferences: NotificationPreferences,
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        notification_preferences: preferences,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    )
+    .select(PROFILE_COLUMNS)
+    .single();
+  if (error) throw error;
+  const profile = normalizeProfile(data);
+  if (!profile) throw new Error("Could not save notification preferences");
+  return profile;
+}
+
+export type AchievementUnlock = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlockedAt: string | null;
+};
+
+export async function fetchUnlockedAchievements(
+  userId: string,
+): Promise<AchievementUnlock[]> {
+  const { data, error } = await supabase
+    .from("user_achievements")
+    .select(
+      "unlocked_at, achievement:achievements(id, slug, title, description, icon, sort_order)",
+    )
+    .eq("user_id", userId);
+  if (error) {
+    if (__DEV__) console.warn("[fetchUnlockedAchievements]", error.message);
+    return [];
+  }
+  type AchievementRow = {
+    id: number;
+    slug: string;
+    title: string;
+    description: string;
+    icon: string;
+    sort_order: number;
+  };
+  return (data ?? [])
+    .map((row) => {
+      const record = row as unknown as {
+        unlocked_at: string | null;
+        achievement?: AchievementRow | AchievementRow[] | null;
+      };
+      const achievement = Array.isArray(record.achievement)
+        ? record.achievement[0]
+        : record.achievement;
+      if (!achievement) return null;
+      return {
+        id: achievement.id,
+        slug: achievement.slug,
+        title: achievement.title,
+        description: achievement.description,
+        icon: achievement.icon,
+        unlockedAt: record.unlocked_at,
+      };
+    })
+    .filter((row): row is AchievementUnlock => !!row);
+}
+
+export type ReadingDailyLogEntry = {
+  date: string;
+  minutes: number;
+  booksTouched: number;
+};
+
+export async function fetchReadingDailyLog(
+  userId: string,
+  days = 14,
+): Promise<ReadingDailyLogEntry[]> {
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - days);
+  const { data, error } = await supabase
+    .from("reading_daily_log")
+    .select("activity_date, minutes_read, books_touched")
+    .eq("user_id", userId)
+    .gte("activity_date", since.toISOString().slice(0, 10))
+    .order("activity_date", { ascending: true });
+  if (error) {
+    if (__DEV__) console.warn("[fetchReadingDailyLog]", error.message);
+    return [];
+  }
+  return (data ?? [])
+    .map((row) => {
+      const record = row as {
+        activity_date: string;
+        minutes_read: number;
+        books_touched: number;
+      };
+      return {
+        date: record.activity_date,
+        minutes: intish(record.minutes_read),
+        booksTouched: intish(record.books_touched),
+      };
+    });
 }

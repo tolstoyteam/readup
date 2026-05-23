@@ -10,7 +10,9 @@
     "admin": "pnpm --filter @readup/admin dev",
     "db:generate": "pnpm --filter @readup/db generate",
     "db:migrate": "pnpm --filter @readup/db migrate",
-    "db:studio": "pnpm --filter @readup/db studio"
+    "db:studio": "pnpm --filter @readup/db studio",
+    "db:push": "pnpm --filter @readup/db push",
+    "db:sql": "pnpm --filter @readup/db sql"
   },
   "devDependencies": {
     "turbo": "^2.5.4"

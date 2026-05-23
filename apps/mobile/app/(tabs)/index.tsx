@@ -1,5 +1,10 @@
 import { coverUrl, fetchBooks } from "@/features/books/api/books";
 import {
+  fetchRecommendedBooks,
+  fetchTrendingBookIds,
+  type RecommendedBook,
+} from "@/features/books/api/recommendations";
+import {
   BookCard,
   type BookCardItem,
 } from "@/features/books/components/book-card";
@@ -49,6 +54,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const [items, setItems] = useState<HomeBook[]>([]);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+  const [recommended, setRecommended] = useState<RecommendedBook[]>([]);
+  const [trendingIds, setTrendingIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,9 +63,11 @@ export default function HomeScreen() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [{ books }, library] = await Promise.all([
+      const [{ books }, library, recs, trending] = await Promise.all([
         fetchBooks(),
         user ? fetchUserLibrary(user.id) : Promise.resolve([]),
+        user ? fetchRecommendedBooks(12).catch(() => []) : Promise.resolve([]),
+        fetchTrendingBookIds(12).catch(() => []),
       ]);
       setItems(
         books.map((r) => ({
@@ -71,10 +80,14 @@ export default function HomeScreen() {
         })),
       );
       setLibraryItems(library);
+      setRecommended(recs);
+      setTrendingIds(trending.map((row) => row.book_id));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load books");
       setItems([]);
       setLibraryItems([]);
+      setRecommended([]);
+      setTrendingIds([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -91,11 +104,30 @@ export default function HomeScreen() {
   };
 
   const continueBook = useMemo(() => {
-    const inProgress = libraryItems.find((item) => item.status === "in_progress");
-    return items.find((item) => item.bookId === inProgress?.book_id) ?? items[0] ?? null;
+    const inProgress = [...libraryItems]
+      .filter((item) => item.status === "in_progress")
+      .sort((a, b) => {
+        const lastA = a.progress?.last_read_at ?? a.updated_at ?? "";
+        const lastB = b.progress?.last_read_at ?? b.updated_at ?? "";
+        return lastB.localeCompare(lastA);
+      })[0];
+    return items.find((item) => item.bookId === inProgress?.book_id) ?? null;
   }, [items, libraryItems]);
 
   const sections = useMemo<Section[]>(() => {
+    const byBookId = new Map(items.map((item) => [item.bookId, item]));
+
+    const recommendedSection: HomeBook[] = recommended
+      .map((rec) => byBookId.get(rec.bookId))
+      .filter((item): item is HomeBook => !!item);
+
+    const trendingSection: HomeBook[] = trendingIds
+      .map((id) => byBookId.get(id))
+      .filter((item): item is HomeBook => !!item);
+
+    const trendingFallback =
+      trendingSection.length > 0 ? trendingSection : items.slice(0, 10);
+
     const genreSections = new Map<string, HomeBook[]>();
     for (const item of items) {
       for (const genre of item.genres) {
@@ -106,15 +138,20 @@ export default function HomeScreen() {
     }
 
     return [
-      { title: "В тренде", data: items.slice(0, 10) },
+      { title: "Рекомендации", data: recommendedSection },
+      { title: "В тренде", data: trendingFallback },
       ...Array.from(genreSections.entries())
         .filter(([, data]) => data.length > 0)
         .slice(0, 4)
         .map(([title, data]) => ({ title, data })),
     ].filter((section) => section.data.length > 0);
-  }, [items]);
+  }, [items, recommended, trendingIds]);
 
-  async function openBook(item: BookCardItem) {
+  function openBook(item: BookCardItem) {
+    router.push(`/book/${encodeURIComponent(item.bookId)}`);
+  }
+
+  function openContinue(item: BookCardItem) {
     if (user) {
       void setLibraryStatus(user.id, item.bookId, "in_progress").catch(() => undefined);
     }
@@ -141,9 +178,11 @@ export default function HomeScreen() {
           <ReadupLogo />
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Premium"
+            onPress={() => router.push("/subscription")}
             className="h-8 w-8 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
           >
-            <Zap size={20} color={ReadupColors.text} strokeWidth={2} />
+            <Zap size={20} color={ReadupColors.brand} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -168,8 +207,7 @@ export default function HomeScreen() {
         ) : items.length === 0 ? (
           <View className="min-h-[420px] items-center justify-center px-6">
             <Text className="text-center text-[15px] leading-[22px] text-[#4A5550]">
-              No books yet. Add rows to public.books and make sure anon SELECT
-              policy is enabled.
+              No books in the catalog yet. Add a book in the admin panel.
             </Text>
           </View>
         ) : (
@@ -177,7 +215,7 @@ export default function HomeScreen() {
             {continueBook ? (
               <Pressable
                 accessibilityRole="button"
-                onPress={() => openBook(continueBook)}
+                onPress={() => openContinue(continueBook)}
                 className="mx-8 mb-7 h-32 overflow-hidden rounded-[20px] bg-[#F2F0E6] active:opacity-90"
               >
                 <View className="h-full flex-row items-center justify-between pl-3">

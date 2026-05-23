@@ -5,7 +5,16 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { router } from "expo-router";
-import { ChevronDown, ChevronUp, Settings } from "lucide-react-native";
+import {
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Crown,
+  Flame,
+  Settings,
+  Trophy,
+} from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,8 +33,10 @@ import { BookCard, type BookCardItem } from "@/features/books/components/book-ca
 import {
   ensureProfile,
   fetchProfile,
+  fetchUnlockedAchievements,
   saveGoal,
   saveInterests,
+  type AchievementUnlock,
   type Profile,
 } from "@/features/profile/api/profile";
 import { GOALS, INTEREST_GROUPS } from "@/features/setup/constants";
@@ -74,6 +85,7 @@ export default function ProfileScreen() {
   const [savingSection, setSavingSection] = useState<null | "name" | "interests" | "goal">(null);
   const [libraryItems, setLibraryItems] = useState<BookCardItem[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(true);
+  const [achievements, setAchievements] = useState<AchievementUnlock[]>([]);
 
   const loadProfile = useCallback(async () => {
     if (!user) return;
@@ -133,7 +145,8 @@ export default function ProfileScreen() {
     setInitialFullName(name);
     void loadProfile();
     void loadLibrary();
-  }, [user, loadProfile]);
+    void fetchUnlockedAchievements(user.id).then(setAchievements).catch(() => undefined);
+  }, [user, loadProfile, loadLibrary]);
 
   const selectedSet = useMemo(() => new Set(selectedInterests), [selectedInterests]);
 
@@ -266,15 +279,113 @@ export default function ProfileScreen() {
             style={{ fontFamily: "Inter_600SemiBold" }}>
             Профиль
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Настройки"
-            onPress={() => router.push("/settings")}
-            hitSlop={10}
-            className="active:opacity-70">
-            <Settings size={22} color={ReadupColors.textSecondary} strokeWidth={2} />
-          </Pressable>
+          <View className="flex-row items-center gap-3">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Уведомления"
+              onPress={() => router.push("/notifications")}
+              hitSlop={10}
+              className="active:opacity-70">
+              <Bell size={22} color={ReadupColors.textSecondary} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Настройки"
+              onPress={() => router.push("/settings")}
+              hitSlop={10}
+              className="active:opacity-70">
+              <Settings size={22} color={ReadupColors.textSecondary} strokeWidth={2} />
+            </Pressable>
+          </View>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/subscription")}
+          className={`${cardClass} flex-row items-center justify-between active:opacity-90`}>
+          <View className="flex-1 flex-row items-center gap-3">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-[#ECFDF5]">
+              <Crown size={20} color={ReadupColors.brand} strokeWidth={2.2} />
+            </View>
+            <View className="flex-1">
+              <Text
+                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
+                style={{ fontFamily: "Inter_600SemiBold" }}>
+                {profile.is_premium ? "Readup Premium" : "Откройте Premium"}
+              </Text>
+              <Text
+                className="text-[13px] tracking-[-0.52px] text-[#4A5550]"
+                style={{ fontFamily: "Inter_400Regular" }}>
+                {profile.is_premium
+                  ? "Все функции активны"
+                  : "Все книги, аудио, тесты без рекламы"}
+              </Text>
+            </View>
+          </View>
+          <ChevronRight size={20} color={ReadupColors.textTertiary} strokeWidth={2} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/streak")}
+          className={`${cardClass} active:opacity-90`}>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-3">
+              <Flame size={20} color={ReadupColors.brand} strokeWidth={2.2} />
+              <Text
+                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
+                style={{ fontFamily: "Inter_600SemiBold" }}>
+                Серия и прогресс
+              </Text>
+            </View>
+            <ChevronRight size={20} color={ReadupColors.textTertiary} strokeWidth={2} />
+          </View>
+          <View className="mt-4 flex-row gap-3">
+            <StatPill
+              label="Серия"
+              value={`${profile.current_streak_days}`}
+              unit="дн"
+            />
+            <StatPill
+              label="Книг"
+              value={`${profile.total_books_completed}`}
+              unit=""
+            />
+            <StatPill
+              label="Минут"
+              value={`${profile.total_reading_minutes}`}
+              unit=""
+            />
+          </View>
+        </Pressable>
+
+        {achievements.length > 0 ? (
+          <View className={cardClass}>
+            <View className="flex-row items-center gap-2">
+              <Trophy size={18} color={ReadupColors.brand} strokeWidth={2.2} />
+              <Text
+                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
+                style={{ fontFamily: "Inter_600SemiBold" }}>
+                Достижения
+              </Text>
+            </View>
+            <View className="mt-3 flex-row flex-wrap gap-2">
+              {achievements.slice(0, 6).map((achievement) => (
+                <View
+                  key={achievement.id}
+                  className="rounded-full border border-[#059669] bg-[#ECFDF5] px-3 py-1.5"
+                >
+                  <Text
+                    className="text-[12px] font-medium tracking-[-0.48px] text-[#059669]"
+                    style={{ fontFamily: "Inter_500Medium" }}
+                  >
+                    {achievement.title}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <View className={cardClass}>
           <Text
@@ -596,7 +707,7 @@ export default function ProfileScreen() {
                     <BookCard
                       item={item}
                       onPress={(book) => {
-                        router.push(`/reader/${encodeURIComponent(book.bookId)}`);
+                        router.push(`/book/${encodeURIComponent(book.bookId)}`);
                       }}
                     />
                   </View>
@@ -608,5 +719,35 @@ export default function ProfileScreen() {
 
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function StatPill({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+}) {
+  return (
+    <View className="flex-1 items-center rounded-[14px] bg-[#FBFAF2] px-3 py-3">
+      <Text
+        className="text-[11px] uppercase tracking-[-0.44px] text-[#7A7868]"
+        style={{ fontFamily: "Inter_400Regular" }}
+      >
+        {label}
+      </Text>
+      <Text
+        className="mt-1 text-[20px] font-semibold tracking-[-0.8px] text-[#1A2420]"
+        style={{ fontFamily: "Inter_600SemiBold" }}
+      >
+        {value}
+        {unit ? (
+          <Text className="text-[13px] tracking-[-0.52px] text-[#7A7868]"> {unit}</Text>
+        ) : null}
+      </Text>
+    </View>
   );
 }

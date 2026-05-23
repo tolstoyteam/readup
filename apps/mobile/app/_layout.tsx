@@ -34,6 +34,26 @@ export default function RootLayout() {
               options={{ headerShown: false, animation: "slide_from_right" }}
             />
             <Stack.Screen name="reader/[bookId]" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="book/[bookId]"
+              options={{ headerShown: false, animation: "slide_from_right" }}
+            />
+            <Stack.Screen
+              name="quiz/[bookId]"
+              options={{ headerShown: false, animation: "slide_from_bottom" }}
+            />
+            <Stack.Screen
+              name="streak"
+              options={{ headerShown: false, animation: "slide_from_right" }}
+            />
+            <Stack.Screen
+              name="subscription"
+              options={{ headerShown: false, animation: "slide_from_bottom" }}
+            />
+            <Stack.Screen
+              name="notifications"
+              options={{ headerShown: false, animation: "slide_from_right" }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </AuthProvider>

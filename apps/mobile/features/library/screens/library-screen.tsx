@@ -17,7 +17,6 @@ import {
 } from "@/features/books/components/book-card";
 import {
   fetchUserLibrary,
-  setLibraryStatus,
   type LibraryItem,
   type LibraryStatus,
 } from "@/features/library/api/library";
@@ -122,11 +121,8 @@ export default function LibraryScreen() {
     STATUS_OPTIONS.find((option) => option.value === activeStatus)?.empty ??
     "No books in this shelf yet.";
 
-  async function openBook(item: BookCardItem) {
-    if (user) {
-      void setLibraryStatus(user.id, item.bookId, "in_progress").catch(() => undefined);
-    }
-    router.push(`/reader/${encodeURIComponent(item.bookId)}`);
+  function openBook(item: BookCardItem) {
+    router.push(`/book/${encodeURIComponent(item.bookId)}`);
   }
 
   return (

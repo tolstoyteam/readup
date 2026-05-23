@@ -3,8 +3,11 @@ import {
   resolveBookAudioSource,
   type ResolvedBookAudioSource,
 } from "@/features/books/api/book-audio";
-import { fetchBookByBookId } from "@/features/books/api/books";
-import { setLibraryStatus } from "@/features/library/api/library";
+import { fetchBookContent } from "@/features/books/api/book-content";
+import {
+  fetchLibraryItem,
+  recordReadingSession,
+} from "@/features/library/api/library";
 import { ReaderBookAudioProvider } from "@/features/reader/audio/reader-book-audio-context";
 import { BookListenPlayer } from "@/features/reader/components/book-listen-player";
 import { PageElements } from "@/features/reader/components/page-elements";
@@ -21,7 +24,7 @@ import {
   Menu,
   X,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -155,21 +158,27 @@ export default function ReaderScreen() {
       setError(null);
       setDocument(null);
       setAudioState({ status: "checking", source: null });
-      const row = await fetchBookByBookId(bookId);
+      const [row, libraryItem] = await Promise.all([
+        fetchBookContent(bookId),
+        user ? fetchLibraryItem(user.id, bookId) : Promise.resolve(null),
+      ]);
       if (!row) {
         setError("Book not found");
         setDocument(null);
         return;
       }
       setDocument(row.document);
-      setPageIndex(0);
+      const pages = row.document.pages ?? [];
+      const savedPage = libraryItem?.progress?.page ?? 0;
+      const targetPage = Math.min(Math.max(savedPage - 1, 0), Math.max(pages.length - 1, 0));
+      setPageIndex(targetPage);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load book");
       setDocument(null);
     } finally {
       setLoading(false);
     }
-  }, [bookId]);
+  }, [bookId, user]);
 
   useEffect(() => {
     load();
@@ -215,12 +224,26 @@ export default function ReaderScreen() {
   const pageLabel = currentPage?.page_number ?? pageIndex + 1;
   const hasAudio = audioState.status === "available";
 
+  const lastSavedPageRef = useRef<number | null>(null);
+  const lastSaveAtRef = useRef<number>(Date.now());
+
   useEffect(() => {
     if (!user || !document?.book_id || pages.length === 0) return;
-    const status = pageIndex >= pages.length - 1 ? "completed" : "in_progress";
-    void setLibraryStatus(user.id, document.book_id, status, {
+    if (lastSavedPageRef.current === pageIndex) return;
+
+    const now = Date.now();
+    const minutesDelta = Math.min(
+      Math.max(Math.round((now - lastSaveAtRef.current) / 60000), 0),
+      30,
+    );
+    lastSavedPageRef.current = pageIndex;
+    lastSaveAtRef.current = now;
+
+    void recordReadingSession({
+      bookId: document.book_id,
       page: pageLabel,
-      total_pages: totalPages,
+      totalPages,
+      minutesDelta,
     }).catch(() => undefined);
   }, [document?.book_id, pageIndex, pageLabel, pages.length, totalPages, user]);
 
