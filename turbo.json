@@ -3,18 +3,24 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "DATABASE_URL",
+        "DATABASE_DIRECT_URL",
+        "DIRECT_URL",
+        "SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "EXPO_PUBLIC_SUPABASE_URL",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_BOOK_COVERS_BUCKET",
+        "SUPABASE_BOOK_AUDIO_BUCKET",
+        "OPENAI_API_KEY"
+      ]
     },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "start": {
-      "cache": false,
-      "persistent": true
-    }
+    "dev": { "cache": false, "persistent": true },
+    "lint": { "dependsOn": ["^lint"] },
+    "start": { "cache": false, "persistent": true }
   }
 }
