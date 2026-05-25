@@ -9,6 +9,7 @@ import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useFieldArray, useForm } from "react-hook-form";
+import type { BookContentInput } from "@/lib/book-content";
 import { parseBookContentInput } from "@/lib/book-content";
 import {
   COVER_HEIGHT_WIDTH_RATIO,
@@ -46,19 +47,21 @@ function createChapter() {
   };
 }
 
+export function emptyEditorValues(): BookEditorValues {
+  return {
+    title: "",
+    author: "",
+    language: "en",
+    genres: [],
+    keywords: [],
+    cover_image_url: undefined,
+    chapters: [createChapter()],
+    quiz: undefined,
+  };
+}
+
 function toEditorValues(book?: BookWithContent): BookEditorValues {
-  if (!book) {
-    return {
-      title: "",
-      author: "",
-      language: "en",
-      genres: [],
-      keywords: [],
-      cover_image_url: undefined,
-      chapters: [createChapter()],
-      quiz: undefined,
-    };
-  }
+  if (!book) return emptyEditorValues();
 
   return {
     title: book.title,
@@ -100,7 +103,44 @@ function toEditorValues(book?: BookWithContent): BookEditorValues {
   };
 }
 
-async function validateCoverFile(file: File): Promise<string | null> {
+/** Convert a server-validated BookContentInput (no editor ids) into editor values. */
+export function bookContentInputToEditorValues(input: BookContentInput): BookEditorValues {
+  return {
+    title: input.title,
+    author: input.author,
+    language: input.language,
+    genres: input.genres,
+    keywords: input.keywords ?? [],
+    cover_image_url: input.cover_image_url ?? undefined,
+    chapters: input.chapters.map((chapter) => ({
+      id: chapter.id ?? newId(),
+      title: chapter.title,
+      blocks: chapter.blocks.map((block) => ({
+        id: block.id ?? newId(),
+        type: block.type,
+        content:
+          block.type === "quote"
+            ? { text: block.content.text, source: block.content.source ?? "" }
+            : { text: block.content.text },
+      })),
+    })),
+    quiz: input.quiz
+      ? {
+          questions: input.quiz.questions.map((question) => ({
+            id: question.id ?? newId(),
+            question: question.question,
+            answers: question.answers.map((answer) => ({
+              id: answer.id ?? newId(),
+              text: answer.text,
+              is_correct: answer.is_correct,
+            })),
+          })),
+        }
+      : undefined,
+  };
+}
+
+export async function validateCoverFile(file: File): Promise<string | null> {
   const lower = file.name.toLowerCase();
   if (!/\.(png|jpe?g|svg)$/.test(lower)) {
     return "Cover couldn't be added. Use PNG, JPEG, or SVG only.";
@@ -149,7 +189,7 @@ function SortableChapterShell({
           aria-label="Drag chapter"
           {...sortable.attributes}
           {...sortable.listeners}
-          className="cursor-grab rounded-md border border-stone-200 bg-white px-2 py-1 text-xs text-stone-500 active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
+          className="cursor-grab rounded-md border border-elevated bg-background px-2 py-1 text-xs font-medium text-text-tertiary active:cursor-grabbing"
         >
           Drag chapter
         </button>
@@ -159,20 +199,37 @@ function SortableChapterShell({
   );
 }
 
-export function BookUploadForm({ editContext }: { editContext?: BookEditContext }) {
+type BookUploadFormProps = {
+  editContext?: BookEditContext;
+  /** When provided, the form initializes with these values instead of empty/edit defaults. */
+  initialDraft?: BookEditorValues;
+  /** Cover file pre-selected (e.g. from AI generate modal) before the form mounted. */
+  initialCoverFile?: File | null;
+  /** Show a "Generate with AI" button in the form header and invoke this when clicked. */
+  onRequestGenerate?: () => void;
+};
+
+export function BookUploadForm({
+  editContext,
+  initialDraft,
+  initialCoverFile,
+  onRequestGenerate,
+}: BookUploadFormProps) {
   const router = useRouter();
   const [genrePick, setGenrePick] = useState<BookGenre | "">("");
   const [keywordDraft, setKeywordDraft] = useState("");
-  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(initialCoverFile ?? null);
   const [coverRemoved, setCoverRemoved] = useState(false);
   const [coverHint, setCoverHint] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [quizEnabled, setQuizEnabled] = useState(() => Boolean(editContext?.initial.quiz));
+  const [quizEnabled, setQuizEnabled] = useState(() =>
+    Boolean(initialDraft?.quiz ?? editContext?.initial.quiz),
+  );
 
   const form = useForm<BookEditorValues>({
-    defaultValues: toEditorValues(editContext?.initial),
+    defaultValues: initialDraft ?? toEditorValues(editContext?.initial),
     mode: "onChange",
   });
 
@@ -275,40 +332,64 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
   };
 
   return (
-    <main className="min-h-full bg-linear-to-b from-[#faf8f5] via-[#f7f4ef] to-[#f0ebe3] px-4 py-8 text-stone-900 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 dark:text-zinc-100 sm:px-6 lg:px-8">
-      <form onSubmit={form.handleSubmit(submit)} className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+    <main className="min-h-full bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
+      <form
+        onSubmit={form.handleSubmit(submit)}
+        className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_380px]"
+      >
         <div className="space-y-6">
-          <header>
-            <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-amber-800/80 dark:text-amber-200/70">
-              {editContext ? "Edit book" : "New book"}
-            </p>
-            <h1 className="font-serif text-3xl font-semibold tracking-tight text-stone-800 dark:text-zinc-50">
-              Block-based book composer
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-stone-600 dark:text-zinc-400">
-              Chapters and paragraph/quote blocks save as normalized relational rows. The JSON panel is only a request preview.
-            </p>
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-brand">
+                {editContext ? "Edit book" : "New book"}
+              </p>
+              <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-foreground">
+                Block-based book composer
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-text-secondary">
+                Chapters and paragraph/quote blocks save as normalized relational rows. The JSON
+                panel is only a request preview.
+              </p>
+            </div>
+            {onRequestGenerate ? (
+              <button
+                type="button"
+                onClick={onRequestGenerate}
+                className="inline-flex shrink-0 items-center justify-center rounded-button border-2 border-brand-dark bg-brand px-5 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
+              >
+                Generate with AI
+              </button>
+            ) : null}
           </header>
 
-          <section className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+          <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
             <div className="grid gap-4 sm:grid-cols-2">
               <label>
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
                   Title
                 </span>
-                <input {...form.register("title")} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+                <input
+                  {...form.register("title")}
+                  className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+                />
               </label>
               <label>
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
                   Author
                 </span>
-                <input {...form.register("author")} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950" />
+                <input
+                  {...form.register("author")}
+                  className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+                />
               </label>
               <label>
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
                   Language
                 </span>
-                <select {...form.register("language")} className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+                <select
+                  {...form.register("language")}
+                  className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
+                >
                   {LANGUAGE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -317,7 +398,7 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
                 </select>
               </label>
               <label>
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
                   Cover image
                 </span>
                 <input
@@ -340,11 +421,18 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
                     setCoverFile(file);
                     setCoverRemoved(false);
                   }}
-                  className="w-full text-sm"
+                  className="w-full text-sm text-foreground file:mr-3 file:rounded-button file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-text-inverse hover:file:bg-brand-dark"
                 />
+                {coverFile ? (
+                  <p className="mt-2 text-xs text-text-tertiary">
+                    Selected: {coverFile.name}
+                  </p>
+                ) : null}
               </label>
             </div>
-            {coverHint ? <p className="mt-2 text-sm text-red-600 dark:text-red-300">{coverHint}</p> : null}
+            {coverHint ? (
+              <p className="mt-2 text-sm text-danger">{coverHint}</p>
+            ) : null}
             {editContext?.initial.coverImageUrl && !coverRemoved ? (
               <button
                 type="button"
@@ -352,17 +440,23 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
                   setCoverRemoved(true);
                   form.setValue("cover_image_url", null, { shouldDirty: true });
                 }}
-                className="mt-3 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-900/60 dark:text-red-300"
+                className="mt-3 rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10"
               >
                 Remove existing cover
               </button>
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
-            <h2 className="font-serif text-lg font-semibold text-stone-800 dark:text-zinc-50">Genres and keywords</h2>
+          <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
+            <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
+              Genres and keywords
+            </h2>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-              <select value={genrePick} onChange={(event) => setGenrePick(event.target.value as BookGenre | "")} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+              <select
+                value={genrePick}
+                onChange={(event) => setGenrePick(event.target.value as BookGenre | "")}
+                className="rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
+              >
                 <option value="">Choose genre</option>
                 {BOOK_GENRES.map((genre) => (
                   <option key={genre} value={genre}>
@@ -370,7 +464,11 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
                   </option>
                 ))}
               </select>
-              <button type="button" onClick={addGenre} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+              <button
+                type="button"
+                onClick={addGenre}
+                className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15"
+              >
                 Add genre
               </button>
             </div>
@@ -379,8 +477,14 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
                 <button
                   type="button"
                   key={genre}
-                  onClick={() => form.setValue("genres", selectedGenres.filter((item) => item !== genre), { shouldDirty: true, shouldValidate: true })}
-                  className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/25 dark:text-amber-100"
+                  onClick={() =>
+                    form.setValue(
+                      "genres",
+                      selectedGenres.filter((item) => item !== genre),
+                      { shouldDirty: true, shouldValidate: true },
+                    )
+                  }
+                  className="rounded-chip border border-brand/40 bg-brand/10 px-3 py-1 text-xs font-medium text-brand"
                 >
                   {genreDisplayName(genre)} ×
                 </button>
@@ -396,10 +500,14 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
                     addKeyword();
                   }
                 }}
-                className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                className="min-w-0 flex-1 rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
                 placeholder="Keyword"
               />
-              <button type="button" onClick={addKeyword} className="rounded-lg border border-stone-200 px-3 py-2 text-xs font-medium text-stone-700 dark:border-zinc-700 dark:text-zinc-200">
+              <button
+                type="button"
+                onClick={addKeyword}
+                className="rounded-button border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand"
+              >
                 Add keyword
               </button>
             </div>
@@ -408,8 +516,14 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
                 <button
                   type="button"
                   key={`${keyword}-${index}`}
-                  onClick={() => form.setValue("keywords", keywords.filter((_, i) => i !== index), { shouldDirty: true, shouldValidate: true })}
-                  className="rounded border border-stone-200 bg-stone-50 px-2 py-1 text-xs text-stone-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                  onClick={() =>
+                    form.setValue(
+                      "keywords",
+                      keywords.filter((_, i) => i !== index),
+                      { shouldDirty: true, shouldValidate: true },
+                    )
+                  }
+                  className="rounded-chip border border-elevated bg-background px-3 py-1 text-xs text-text-secondary"
                 >
                   {keyword} ×
                 </button>
@@ -418,7 +532,10 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
           </section>
 
           <DndContext onDragEnd={handleChapterDragEnd}>
-            <SortableContext items={chapters.fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={chapters.fields.map((field) => field.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <div className="space-y-5">
                 {chapters.fields.map((chapter, chapterIndex) => (
                   <SortableChapterShell key={chapter.fieldId} id={chapter.id}>
@@ -438,29 +555,42 @@ export function BookUploadForm({ editContext }: { editContext?: BookEditContext 
           <button
             type="button"
             onClick={() => chapters.append(createChapter())}
-            className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+            className="rounded-button border border-brand/40 bg-brand/10 px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/15"
           >
             Add chapter
           </button>
 
-          <QuizEditor control={form.control} register={form.register} enabled={quizEnabled} onToggle={setQuiz} />
+          <QuizEditor
+            control={form.control}
+            register={form.register}
+            enabled={quizEnabled}
+            onToggle={setQuiz}
+          />
 
-          {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">{error}</p> : null}
-          {status ? <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">{status}</p> : null}
+          {error ? (
+            <p className="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm font-medium text-danger">
+              {error}
+            </p>
+          ) : null}
+          {status ? (
+            <p className="rounded-card border border-brand/40 bg-brand/10 p-3 text-sm font-medium text-brand">
+              {status}
+            </p>
+          ) : null}
 
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-lg bg-amber-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-800 disabled:pointer-events-none disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
+              className="rounded-button border-2 border-brand-dark bg-brand px-6 py-2.5 text-sm font-semibold text-text-inverse shadow-sm hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-50"
             >
               {isSaving ? "Saving..." : editContext ? "Save changes" : "Create book"}
             </button>
             <details className="min-w-full">
-              <summary className="cursor-pointer text-sm font-medium text-stone-600 dark:text-zinc-400">
+              <summary className="cursor-pointer text-sm font-medium text-text-secondary hover:text-brand">
                 Request preview JSON
               </summary>
-              <pre className="mt-3 max-h-96 overflow-auto rounded-xl bg-stone-950 p-4 text-xs text-stone-100">
+              <pre className="mt-3 max-h-96 overflow-auto rounded-card bg-foreground p-4 text-xs text-text-inverse">
                 {jsonPretty}
               </pre>
             </details>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AdminNav } from "@/components/AdminNav";
 import { genreDisplayName, type BookGenre } from "@/lib/book-genres";
 import { languageLabel } from "@/lib/book-language";
 import { listBooks, type BookListItem } from "@/lib/book-relational";
@@ -25,62 +26,55 @@ export default async function BooksPage() {
 
   return (
     <>
-      <nav className="border-b border-stone-200/80 bg-white/80 px-4 py-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/"
-              className="text-sm font-medium text-stone-600 transition-colors hover:text-amber-800 dark:text-zinc-400 dark:hover:text-amber-200"
-            >
-              ← Home
-            </Link>
-            <Link
-              href="/upload"
-              className="text-sm font-medium text-stone-600 transition-colors hover:text-amber-800 dark:text-zinc-400 dark:hover:text-amber-200"
-            >
-              Upload
-            </Link>
-          </div>
-          <span className="truncate text-xs font-medium uppercase tracking-widest text-stone-400 dark:text-zinc-600">
-            Books upload
-          </span>
-        </div>
-      </nav>
+      <AdminNav
+        links={[
+          { href: "/", label: "← Home" },
+          { href: "/upload", label: "Upload" },
+        ]}
+      />
 
-      <div className="min-h-full flex-1 bg-linear-to-b from-[#faf8f5] via-[#f7f4ef] to-[#f0ebe3] text-stone-900 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 dark:text-zinc-100">
+      <div className="min-h-full flex-1 bg-background text-foreground">
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <header className="mb-8 border-b border-stone-200/80 pb-6 dark:border-zinc-800">
-            <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-amber-800/80 dark:text-amber-200/70">
+          <header className="mb-8 border-b border-elevated pb-6">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-brand">
               Library
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="font-serif text-2xl font-semibold tracking-tight text-stone-800 dark:text-zinc-50 sm:text-3xl">
+                <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground sm:text-3xl">
                   Saved books
                 </h1>
-                <p className="mt-1 max-w-md text-sm text-stone-600 dark:text-zinc-400">
+                <p className="mt-1 max-w-md text-sm text-text-secondary">
                   {rows.length === 0
                     ? "Nothing here yet — add a book from the composer."
                     : `${rows.length} book${rows.length === 1 ? "" : "s"} · same-size cards, click to edit.`}
                 </p>
               </div>
-              <Link
-                href="/upload"
-                className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500"
-              >
-                New book
-              </Link>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Link
+                  href="/upload?generate=1"
+                  className="inline-flex items-center justify-center rounded-button border-2 border-brand-dark bg-brand px-4 py-2 text-xs font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
+                >
+                  Generate with AI
+                </Link>
+                <Link
+                  href="/upload"
+                  className="inline-flex items-center justify-center rounded-button border border-elevated bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:border-brand hover:text-brand"
+                >
+                  New book
+                </Link>
+              </div>
             </div>
           </header>
 
           {rows.length === 0 ? (
-            <div className="mx-auto max-w-sm rounded-xl border border-dashed border-stone-300/90 bg-white/60 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900/50">
-              <p className="text-sm text-stone-600 dark:text-zinc-400">
+            <div className="mx-auto max-w-sm rounded-card border border-dashed border-elevated bg-surface p-8 text-center">
+              <p className="text-sm text-text-secondary">
                 No books saved yet. Compose one and save it from the upload page.
               </p>
               <Link
                 href="/upload"
-                className="mt-5 inline-flex items-center justify-center rounded-lg bg-amber-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500"
+                className="mt-5 inline-flex items-center justify-center rounded-button border-2 border-brand-dark bg-brand px-5 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
               >
                 Open composer
               </Link>
@@ -96,10 +90,10 @@ export default async function BooksPage() {
                     <Link
                       href={"/books/" + row.id + "/edit"}
                       title={row.title}
-                      className="group block h-22 shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f7f4ef] dark:focus-visible:ring-offset-zinc-900"
+                      className="group block h-22 shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
-                      <article className="flex h-full overflow-hidden rounded-xl border border-stone-200/90 bg-white/95 shadow-sm transition-[box-shadow,transform] duration-200 group-hover:border-amber-200/80 group-hover:shadow-md dark:border-zinc-700/80 dark:bg-zinc-900/95 dark:group-hover:border-amber-900/50">
-                        <div className="relative h-full w-17 shrink-0 bg-stone-100 dark:bg-zinc-800">
+                      <article className="flex h-full overflow-hidden rounded-card border border-elevated bg-surface shadow-sm transition-[box-shadow,transform] duration-200 group-hover:border-brand group-hover:shadow-md">
+                        <div className="relative h-full w-17 shrink-0 bg-elevated">
                           {coverUrl ? (
                             <img
                               src={coverUrl}
@@ -107,17 +101,19 @@ export default async function BooksPage() {
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] leading-tight text-stone-400 dark:text-zinc-500">
+                            <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] leading-tight text-text-tertiary">
                               {row.coverImageUrl ? "—" : "∅"}
                             </div>
                           )}
                         </div>
                         <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-2 pr-3 pl-3">
-                          <h2 className="line-clamp-2 font-serif text-sm font-semibold leading-snug text-stone-800 dark:text-zinc-50">
+                          <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
                             {row.title}
                           </h2>
-                          <p className="truncate text-xs text-stone-600 dark:text-zinc-400">{row.author}</p>
-                          <p className="truncate text-[11px] text-stone-500 dark:text-zinc-500">
+                          <p className="truncate text-xs text-text-secondary">
+                            {row.author}
+                          </p>
+                          <p className="truncate text-[11px] text-text-tertiary">
                             {languageLabel(row.language)} · {row.chapterCount}{" "}
                             {row.chapterCount === 1 ? "chapter" : "chapters"}
                           </p>
@@ -126,13 +122,13 @@ export default async function BooksPage() {
                               {genrePreview.map((g) => (
                                 <span
                                   key={g}
-                                  className="max-w-22 truncate rounded border border-amber-200/70 bg-amber-50/90 px-1 py-px text-[10px] text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/25 dark:text-amber-100"
+                                  className="max-w-22 truncate rounded-chip border border-brand/30 bg-brand/10 px-2 py-px text-[10px] font-medium text-brand"
                                 >
                                   {genreDisplayName(g as BookGenre)}
                                 </span>
                               ))}
                               {genreExtra > 0 ? (
-                                <span className="text-[10px] font-medium text-stone-400 dark:text-zinc-500">
+                                <span className="text-[10px] font-medium text-text-tertiary">
                                   +{genreExtra}
                                 </span>
                               ) : null}

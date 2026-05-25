@@ -36,15 +36,15 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
   };
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white/90 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+    <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="min-w-0 flex-1">
-          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
             Chapter title
           </span>
           <input
             {...register(`chapters.${chapterIndex}.title`)}
-            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             placeholder="Chapter title"
           />
         </label>
@@ -52,7 +52,7 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
           type="button"
           disabled={!canRemove}
           onClick={onRemove}
-          className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-40 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+          className="rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40"
         >
           Remove chapter
         </button>
@@ -85,7 +85,7 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
               content: { text: "" },
             })
           }
-          className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-950 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+          className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15"
         >
           Add paragraph
         </button>
@@ -98,7 +98,7 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
               content: { text: "", source: "" },
             })
           }
-          className="rounded-lg border border-stone-200 px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          className="rounded-button border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand"
         >
           Add quote
         </button>

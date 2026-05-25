@@ -28,7 +28,7 @@ export function BlockEditor({ chapterIndex, blockIndex, block, register, onRemov
     <article
       ref={sortable.setNodeRef}
       style={style}
-      className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
+      className="rounded-card border border-elevated bg-background p-4 shadow-sm"
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button
@@ -36,13 +36,13 @@ export function BlockEditor({ chapterIndex, blockIndex, block, register, onRemov
           aria-label="Drag block"
           {...sortable.attributes}
           {...sortable.listeners}
-          className="cursor-grab rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-500 active:cursor-grabbing dark:border-zinc-700 dark:text-zinc-400"
+          className="cursor-grab rounded-md border border-elevated bg-surface px-2 py-1 text-xs font-medium text-text-tertiary active:cursor-grabbing"
         >
           Drag
         </button>
         <select
           {...register(`${base}.type`)}
-          className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+          className="rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
         >
           <option value="paragraph">Paragraph</option>
           <option value="quote">Quote</option>
@@ -50,32 +50,32 @@ export function BlockEditor({ chapterIndex, blockIndex, block, register, onRemov
         <button
           type="button"
           onClick={onRemove}
-          className="ml-auto rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+          className="ml-auto rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10"
         >
           Remove block
         </button>
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
           Text
         </span>
         <textarea
           {...register(`${base}.content.text`)}
           rows={block.type === "quote" ? 3 : 5}
-          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
           placeholder={block.type === "quote" ? "Quote text" : "Paragraph text"}
         />
       </label>
 
       {block.type === "quote" ? (
         <label className="mt-3 block">
-          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500 dark:text-zinc-400">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
             Source optional
           </span>
           <input
             {...register(`${base}.content.source`)}
-            className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             placeholder="Speaker or source"
           />
         </label>

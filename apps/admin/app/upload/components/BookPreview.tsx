@@ -4,14 +4,14 @@ import type { BookEditorValues } from "@/app/upload/types";
 
 export function BookPreview({ value }: { value: BookEditorValues }) {
   return (
-    <aside className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
-      <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-amber-800/80 dark:text-amber-200/70">
+    <aside className="rounded-card border border-elevated bg-surface p-5 shadow-sm">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-brand">
         Live preview
       </p>
-      <h2 className="font-serif text-2xl font-semibold text-stone-800 dark:text-zinc-50">
+      <h2 className="font-reader text-2xl font-semibold text-foreground">
         {value.title || "Untitled book"}
       </h2>
-      <p className="mt-1 text-sm text-stone-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-text-secondary">
         {value.author || "Unknown author"} · {value.language || "No language"}
       </p>
 
@@ -20,7 +20,7 @@ export function BookPreview({ value }: { value: BookEditorValues }) {
           {value.keywords.map((keyword, index) => (
             <span
               key={`${keyword}-${index}`}
-              className="rounded border border-stone-200 bg-stone-50 px-2 py-1 text-xs text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+              className="rounded-chip border border-elevated bg-background px-2.5 py-1 text-xs text-text-secondary"
             >
               {keyword}
             </span>
@@ -31,19 +31,19 @@ export function BookPreview({ value }: { value: BookEditorValues }) {
       <div className="mt-5 space-y-5">
         {value.chapters.map((chapter, chapterIndex) => (
           <section key={chapter.id || chapterIndex}>
-            <h3 className="font-serif text-lg font-semibold text-stone-800 dark:text-zinc-50">
+            <h3 className="font-reader text-lg font-semibold text-foreground">
               {chapter.title || `Chapter ${chapterIndex + 1}`}
             </h3>
-            <div className="mt-2 space-y-3 text-sm leading-6 text-stone-700 dark:text-zinc-300">
+            <div className="mt-2 space-y-3 font-reader text-sm leading-6 text-text-secondary">
               {chapter.blocks.map((block, blockIndex) =>
                 block.type === "quote" ? (
                   <blockquote
                     key={block.id || blockIndex}
-                    className="border-l-4 border-amber-300 pl-4 italic text-stone-600 dark:border-amber-700 dark:text-zinc-300"
+                    className="border-l-4 border-brand pl-4 italic text-foreground"
                   >
                     <p>{block.content.text || "Quote..."}</p>
                     {block.content.source ? (
-                      <footer className="mt-1 text-xs not-italic text-stone-500 dark:text-zinc-500">
+                      <footer className="mt-1 text-xs not-italic text-text-tertiary">
                         {block.content.source}
                       </footer>
                     ) : null}

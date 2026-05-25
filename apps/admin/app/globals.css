@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --readup-brand: #059669;
+  --readup-brand-dark: #047857;
+  --readup-background: #fbfaf2;
+  --readup-surface: #f2f0e6;
+  --readup-elevated: #e8e6d8;
+  --readup-text: #1a2420;
+  --readup-text-secondary: #4a5550;
+  --readup-text-tertiary: #7a7868;
+  --readup-text-inverse: #fbfaf2;
+  --readup-border: #c8c6b2;
+  --readup-white: #ffffff;
+  --readup-info: #2563eb;
+  --readup-danger: #b85c5c;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand: var(--readup-brand);
+  --color-brand-dark: var(--readup-brand-dark);
+  --color-background: var(--readup-background);
+  --color-surface: var(--readup-surface);
+  --color-elevated: var(--readup-elevated);
+  --color-foreground: var(--readup-text);
+  --color-text-secondary: var(--readup-text-secondary);
+  --color-text-tertiary: var(--readup-text-tertiary);
+  --color-text-inverse: var(--readup-text-inverse);
+  --color-border-default: var(--readup-border);
+  --color-info: var(--readup-info);
+  --color-danger: var(--readup-danger);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-reader: Georgia, ui-serif, "Times New Roman", serif;
+
+  --radius-chip: 999px;
+  --radius-button: 100px;
+  --radius-card: 20px;
+  --radius-book: 10px;
+  --radius-input: 30px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--readup-background);
+  color: var(--readup-text);
+  font-family: var(--font-sans);
 }
