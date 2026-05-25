@@ -13,6 +13,7 @@ import { BookListenPlayer } from "@/features/reader/components/book-listen-playe
 import { PageElements } from "@/features/reader/components/page-elements";
 import { ReaderBottomNowPlaying } from "@/features/reader/components/reader-bottom-now-playing";
 import { ReaderBottomReadingProgress } from "@/features/reader/components/reader-bottom-reading-progress";
+import { ReaderListenLoading } from "@/features/reader/components/reader-listen-states";
 import { useAuth } from "@/shared/context/auth-context";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -37,9 +38,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type ReadMode = "read" | "listen";
 
 type ReaderAudioState =
-  | { status: "checking"; source: null }
-  | { status: "available"; source: ResolvedBookAudioSource }
-  | { status: "unavailable"; source: null };
+  | { status: "checking"; source: null; message: null }
+  | { status: "available"; source: ResolvedBookAudioSource; message: null }
+  | { status: "unavailable"; source: null; message: null }
+  | { status: "error"; source: null; message: string };
 
 function ReaderChrome({
   document,
@@ -51,6 +53,7 @@ function ReaderChrome({
   goNext,
   goPrev,
   pageLabel,
+  onRetryAudio,
 }: {
   document: BookDocument;
   hasAudio: boolean;
@@ -61,6 +64,7 @@ function ReaderChrome({
   goNext: () => void;
   goPrev: () => void;
   pageLabel: number;
+  onRetryAudio?: () => void;
 }) {
   const currentPage = pages[pageIndex] ?? null;
   const pageProgress =
@@ -79,7 +83,7 @@ function ReaderChrome({
           </ScrollView>
         )}
         {readMode === "listen" && hasAudio && (
-          <BookListenPlayer document={document} />
+          <BookListenPlayer document={document} onRetryAudio={onRetryAudio} />
         )}
       </View>
 
@@ -134,8 +138,12 @@ function ReaderChrome({
 export default function ReaderScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { bookId: bookIdParam } = useLocalSearchParams<{ bookId: string }>();
+  const { bookId: bookIdParam, mode: modeParam } = useLocalSearchParams<{
+    bookId: string;
+    mode?: string;
+  }>();
   const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
+  const wantsListenMode = modeParam === "listen";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +153,34 @@ export default function ReaderScreen() {
   const [audioState, setAudioState] = useState<ReaderAudioState>({
     status: "checking",
     source: null,
+    message: null,
   });
+
+  const loadAudio = useCallback(async (targetBookId: string) => {
+    setAudioState({ status: "checking", source: null, message: null });
+    try {
+      const source = await resolveBookAudioSource(targetBookId);
+      setAudioState(
+        source
+          ? { status: "available", source, message: null }
+          : { status: "unavailable", source: null, message: null },
+      );
+    } catch (e) {
+      setAudioState({
+        status: "error",
+        source: null,
+        message:
+          e instanceof Error
+            ? e.message
+            : "Не удалось проверить наличие аудио. Проверьте подключение к сети.",
+      });
+    }
+  }, []);
+
+  const reloadAudio = useCallback(() => {
+    if (!document?.book_id) return;
+    void loadAudio(document.book_id);
+  }, [document?.book_id, loadAudio]);
 
   const load = useCallback(async () => {
     if (!bookId) {
@@ -157,7 +192,7 @@ export default function ReaderScreen() {
       setLoading(true);
       setError(null);
       setDocument(null);
-      setAudioState({ status: "checking", source: null });
+      setAudioState({ status: "checking", source: null, message: null });
       const [row, libraryItem] = await Promise.all([
         fetchBookContent(bookId),
         user ? fetchLibraryItem(user.id, bookId) : Promise.resolve(null),
@@ -170,7 +205,10 @@ export default function ReaderScreen() {
       setDocument(row.document);
       const pages = row.document.pages ?? [];
       const savedPage = libraryItem?.progress?.page ?? 0;
-      const targetPage = Math.min(Math.max(savedPage - 1, 0), Math.max(pages.length - 1, 0));
+      const targetPage = Math.min(
+        Math.max(savedPage - 1, 0),
+        Math.max(pages.length - 1, 0),
+      );
       setPageIndex(targetPage);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load book");
@@ -186,31 +224,21 @@ export default function ReaderScreen() {
 
   useEffect(() => {
     if (!document?.book_id) {
-      setAudioState({ status: "checking", source: null });
+      setAudioState({ status: "checking", source: null, message: null });
       return;
     }
-    let cancelled = false;
-    setAudioState({ status: "checking", source: null });
-    void resolveBookAudioSource(document.book_id)
-      .then((source) => {
-        if (cancelled) return;
-        setAudioState(
-          source
-            ? { status: "available", source }
-            : { status: "unavailable", source: null },
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setAudioState({ status: "unavailable", source: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [document?.book_id]);
+    void loadAudio(document.book_id);
+  }, [document?.book_id, loadAudio]);
 
   useEffect(() => {
-    if (audioState.status !== "available") setReadMode("read");
-  }, [audioState.status]);
+    if (audioState.status !== "available") {
+      setReadMode("read");
+      return;
+    }
+    if (wantsListenMode) {
+      setReadMode("listen");
+    }
+  }, [audioState.status, wantsListenMode]);
 
   const pages = useMemo(() => {
     if (!document?.pages?.length) return [];
@@ -223,6 +251,7 @@ export default function ReaderScreen() {
   const totalPages = document?.total_pages ?? pages.length ?? 0;
   const pageLabel = currentPage?.page_number ?? pageIndex + 1;
   const hasAudio = audioState.status === "available";
+  const audioChecking = audioState.status === "checking" && !!document;
 
   const lastSavedPageRef = useRef<number | null>(null);
   const lastSaveAtRef = useRef<number>(Date.now());
@@ -353,8 +382,11 @@ export default function ReaderScreen() {
             </Pressable>
           </View>
         )}
-        {!loading && !error && document && (
-          hasAudio ? (
+        {!loading && !error && document && audioChecking && (
+          <ReaderListenLoading message="Проверяем наличие аудио…" />
+        )}
+        {!loading && !error && document && !audioChecking && (
+          hasAudio && audioState.status === "available" ? (
             <ReaderBookAudioProvider
               bookId={document.book_id}
               initialSource={audioState.source}
@@ -369,6 +401,7 @@ export default function ReaderScreen() {
                 goNext={goNext}
                 goPrev={goPrev}
                 pageLabel={pageLabel}
+                onRetryAudio={reloadAudio}
               />
             </ReaderBookAudioProvider>
           ) : (

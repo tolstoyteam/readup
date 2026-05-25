@@ -2,6 +2,10 @@ import type { BookDocument } from "@readup/db";
 import { coverUrl } from "@/features/books/api/books";
 import { audioProgressFraction } from "@/features/reader/audio/audio-progress";
 import { useReaderBookAudio } from "@/features/reader/audio/reader-book-audio-context";
+import {
+  ReaderListenError,
+  ReaderListenLoading,
+} from "@/features/reader/components/reader-listen-states";
 import { Image } from "expo-image";
 import {
   BookOpen,
@@ -30,16 +34,24 @@ function formatClock(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function BookListenPlayer({ document }: { document: BookDocument }) {
+export function BookListenPlayer({
+  document,
+  onRetryAudio,
+}: {
+  document: BookDocument;
+  onRetryAudio?: () => void;
+}) {
   const {
     voice,
     setVoice,
     voices,
     audioUrl,
     isAudioLoading,
+    loadError,
     status,
     togglePlayback,
     seekToFraction,
+    retryVoiceLoad,
   } = useReaderBookAudio();
   const [voiceMenuOpen, setVoiceMenuOpen] = useState(false);
   const [barWidth, setBarWidth] = useState(1);
@@ -64,7 +76,30 @@ export function BookListenPlayer({ document }: { document: BookDocument }) {
     [barWidth, seekToFraction],
   );
 
+  const handleRetry = useCallback(() => {
+    if (loadError) {
+      retryVoiceLoad();
+      return;
+    }
+    onRetryAudio?.();
+  }, [loadError, onRetryAudio, retryVoiceLoad]);
+
   const showSpinner = isAudioLoading || Boolean(audioUrl && !status.isLoaded);
+
+  if (isAudioLoading && !audioUrl && !loadError) {
+    return <ReaderListenLoading message="Загрузка аудио…" />;
+  }
+
+  if (loadError || (!isAudioLoading && !audioUrl)) {
+    return (
+      <ReaderListenError
+        message={
+          loadError ?? "Аудио недоступно для этой книги. Попробуйте ещё раз."
+        }
+        onRetry={handleRetry}
+      />
+    );
+  }
 
   return (
     <View className="flex-1 justify-between bg-[#FBFAF2] px-6 pb-4 pt-2">

@@ -26,11 +26,13 @@ type ReaderBookAudioContextValue = {
   voices: typeof BOOK_AUDIO_VOICES;
   audioUrl: string | null;
   isAudioLoading: boolean;
+  loadError: string | null;
   status: ReturnType<typeof useAudioPlayerStatus>;
   play: () => void;
   pause: () => void;
   togglePlayback: () => void;
   seekToFraction: (fraction: number) => void;
+  retryVoiceLoad: () => void;
 };
 
 const ReaderBookAudioContext =
@@ -48,29 +50,42 @@ export function ReaderBookAudioProvider({
   const [voice, setVoice] = useState<BookAudioVoice>(initialSource.voice);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(initialSource.url);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [voiceReloadKey, setVoiceReloadKey] = useState(0);
 
   useEffect(() => {
     setVoice(initialSource.voice);
     setPlaybackUrl(initialSource.url);
     setIsAudioLoading(false);
+    setLoadError(null);
   }, [bookId, initialSource.voice, initialSource.url]);
 
   useEffect(() => {
     if (voice === initialSource.voice) {
       setPlaybackUrl(initialSource.url);
       setIsAudioLoading(false);
+      setLoadError(null);
       return;
     }
 
     let cancelled = false;
     setPlaybackUrl(null);
     setIsAudioLoading(true);
+    setLoadError(null);
     void (async () => {
       try {
         const url = await resolveBookAudioPlaybackUrl(bookId, voice);
-        if (!cancelled) setPlaybackUrl(url);
+        if (cancelled) return;
+        if (url) {
+          setPlaybackUrl(url);
+        } else {
+          setLoadError("Не удалось загрузить аудио для выбранного голоса.");
+        }
       } catch {
-        if (!cancelled) setPlaybackUrl(null);
+        if (!cancelled) {
+          setPlaybackUrl(null);
+          setLoadError("Не удалось загрузить аудио. Проверьте подключение к сети.");
+        }
       } finally {
         if (!cancelled) setIsAudioLoading(false);
       }
@@ -78,7 +93,12 @@ export function ReaderBookAudioProvider({
     return () => {
       cancelled = true;
     };
-  }, [bookId, initialSource.voice, initialSource.url, voice]);
+  }, [bookId, initialSource.voice, initialSource.url, voice, voiceReloadKey]);
+
+  const retryVoiceLoad = useCallback(() => {
+    setLoadError(null);
+    setVoiceReloadKey((k) => k + 1);
+  }, []);
 
   const player = useAudioPlayer(playbackUrl, {
     updateInterval: 250,
@@ -138,21 +158,25 @@ export function ReaderBookAudioProvider({
       /** Resolved signed or public URL used by the native player. */
       audioUrl: playbackUrl,
       isAudioLoading,
+      loadError,
       status,
       play,
       pause,
       togglePlayback,
       seekToFraction,
+      retryVoiceLoad,
     }),
     [
       voice,
       playbackUrl,
       isAudioLoading,
+      loadError,
       status,
       play,
       pause,
       togglePlayback,
       seekToFraction,
+      retryVoiceLoad,
     ],
   );
 

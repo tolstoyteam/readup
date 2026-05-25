@@ -1,11 +1,13 @@
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { bookHasAudioInStorage } from "@/features/books/api/book-audio";
 import {
   ArrowLeft,
   Bookmark,
   BookOpen,
   Clock,
+  Headphones,
   Layers,
   ListChecks,
 } from "lucide-react-native";
@@ -50,6 +52,8 @@ export default function BookDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [savingAction, setSavingAction] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasAudio, setHasAudio] = useState(false);
+  const [audioCheckDone, setAudioCheckDone] = useState(false);
 
   const load = useCallback(async () => {
     if (!bookId) {
@@ -72,8 +76,20 @@ export default function BookDetailScreen() {
       }
       setBook(detail);
       setLibrary(libItem);
+      setAudioCheckDone(false);
+      if (detail) {
+        void bookHasAudioInStorage(detail.bookId)
+          .then(setHasAudio)
+          .catch(() => setHasAudio(false))
+          .finally(() => setAudioCheckDone(true));
+      } else {
+        setHasAudio(false);
+        setAudioCheckDone(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить книгу");
+      setHasAudio(false);
+      setAudioCheckDone(true);
     } finally {
       setLoading(false);
     }
@@ -112,6 +128,13 @@ export default function BookDetailScreen() {
   function openReader() {
     if (!book) return;
     router.push(`/reader/${encodeURIComponent(book.bookId)}`);
+  }
+
+  function openListen() {
+    if (!book) return;
+    router.push(
+      `/reader/${encodeURIComponent(book.bookId)}?mode=listen`,
+    );
   }
 
   function openQuiz() {
@@ -280,6 +303,19 @@ export default function BookDetailScreen() {
                   {isInProgress ? "Продолжить чтение" : "Начать чтение"}
                 </Text>
               </Pressable>
+
+              {audioCheckDone && hasAudio ? (
+                <Pressable
+                  onPress={openListen}
+                  accessibilityRole="button"
+                  className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] bg-transparent px-6 active:opacity-80"
+                >
+                  <Headphones size={20} color={ReadupColors.brand} strokeWidth={2.2} />
+                  <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669]">
+                    Слушать
+                  </Text>
+                </Pressable>
+              ) : null}
 
               {book.hasQuiz ? (
                 <Pressable
