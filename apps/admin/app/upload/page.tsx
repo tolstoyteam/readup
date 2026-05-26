@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AdminNav } from "@/components/AdminNav";
 import { UploadPageClient } from "./UploadPageClient";
 
@@ -17,7 +18,15 @@ export default function UploadPage() {
           { href: "/books", label: "Saved books" },
         ]}
       />
-      <UploadPageClient />
+      <Suspense
+        fallback={
+          <main className="min-h-full bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
+            <p className="text-sm text-text-secondary">Loading composer…</p>
+          </main>
+        }
+      >
+        <UploadPageClient />
+      </Suspense>
     </>
   );
 }
