@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import type { BookContentInput } from "@/lib/book-content";
 import { parseBookContentInput } from "@/lib/book-content";
 import {
@@ -228,8 +228,10 @@ export function BookUploadForm({
     Boolean(initialDraft?.quiz ?? editContext?.initial.quiz),
   );
 
+  const defaultValues = initialDraft ?? toEditorValues(editContext?.initial);
+
   const form = useForm<BookEditorValues>({
-    defaultValues: initialDraft ?? toEditorValues(editContext?.initial),
+    defaultValues,
     mode: "onChange",
   });
 
@@ -239,9 +241,11 @@ export function BookUploadForm({
     keyName: "fieldId",
   });
 
-  const values = form.watch();
-  const selectedGenres = form.watch("genres");
-  const keywords = form.watch("keywords");
+  const values = useWatch({
+    control: form.control,
+    defaultValue: defaultValues,
+  }) as BookEditorValues;
+  const { genres: selectedGenres, keywords } = values;
   const jsonPretty = useMemo(() => JSON.stringify(values, null, 2), [values]);
 
   const addGenre = () => {
