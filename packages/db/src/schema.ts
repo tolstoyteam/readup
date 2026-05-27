@@ -127,6 +127,7 @@ export const booksTable = pgTable(
 export const genresTable = pgTable("genres", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
+  nameRu: text("name_ru").notNull(),
 });
 
 export const bookGenresTable = pgTable(

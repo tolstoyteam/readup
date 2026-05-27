@@ -231,7 +231,7 @@ as $$
       b.language,
       b.cover_image_url,
       coalesce(
-        array_agg(distinct g.name order by g.name) filter (where g.name is not null),
+        array_agg(distinct g.name_ru order by g.name_ru) filter (where g.name_ru is not null),
         array[]::text[]
       ) as genres,
       (
@@ -242,7 +242,10 @@ as $$
             select 1
             from public.book_genres bg2
             join public.genres g2 on g2.id = bg2.genre_id
-            where bg2.book_id = b.id and lower(g2.name) = lower(i)
+            where bg2.book_id = b.id and (
+              lower(g2.name_ru) = lower(i)
+              or lower(g2.name) = lower(i)
+            )
           )
         ), 0)
         +

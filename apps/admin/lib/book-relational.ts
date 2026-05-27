@@ -14,6 +14,7 @@ import {
   type ChapterBlockType,
   type BookTtsAudio,
 } from "@readup/db";
+import { genreRuLabel, isBookGenre } from "@readup/db";
 import type { BookContentInput } from "@/lib/book-content";
 
 export type BookBlock = {
@@ -67,7 +68,12 @@ async function resolveGenreIds(tx: DbExecutor, genreNames: string[]) {
 
   await tx
     .insert(genresTable)
-    .values(names.map((name) => ({ name })))
+    .values(
+      names.map((name) => ({
+        name,
+        nameRu: isBookGenre(name) ? genreRuLabel(name) : name,
+      })),
+    )
     .onConflictDoNothing();
 
   return tx

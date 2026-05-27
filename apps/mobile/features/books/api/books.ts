@@ -1,4 +1,5 @@
 import type { BookDataColumn, BookDocument, BookPage } from "@readup/db";
+import { genreRuLabel, isBookGenre } from "@readup/db";
 import { supabase, supabaseCoverPublicUrl } from "@/shared/lib/supabase";
 
 export type BookRow = {
@@ -21,12 +22,12 @@ type RelationalBookRow = {
   keywords: string[] | null;
   data: BookDataColumn | null;
   book_genres:
-    | Array<{ genre: { name: string } | { name: string }[] | null }>
+    | Array<{ genre: { name?: string | null; name_ru?: string | null } | { name?: string | null; name_ru?: string | null }[] | null }>
     | null;
 };
 
 const BOOK_LIST_SELECT =
-  "id, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name))";
+  "id, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))";
 
 export function extractGenresFromJoin(
   bookGenres: RelationalBookRow["book_genres"],
@@ -35,9 +36,11 @@ export function extractGenresFromJoin(
     .flatMap((row) => {
       if (!row.genre) return [];
       if (Array.isArray(row.genre)) {
-        return row.genre.map((g) => g.name).filter(Boolean);
+        return row.genre
+          .map((g) => (g.name_ru ?? g.name ?? "").trim())
+          .filter(Boolean);
       }
-      return [row.genre.name].filter(Boolean);
+      return [(row.genre.name_ru ?? row.genre.name ?? "").trim()].filter(Boolean);
     })
     .filter((name): name is string => !!name);
 }
@@ -105,7 +108,11 @@ function normalizeOneBook(obj: Record<string, unknown>): BookDocument | null {
   const author = typeof obj.author === "string" ? obj.author : "";
   const language = typeof obj.language === "string" ? obj.language : "";
   const genres = Array.isArray(obj.genres)
-    ? obj.genres.filter((g): g is string => typeof g === "string")
+    ? obj.genres
+        .filter((g): g is string => typeof g === "string")
+        .map((g) => g.trim())
+        .filter(Boolean)
+        .map((g) => (isBookGenre(g) ? genreRuLabel(g) : g))
     : [];
 
   const cover_image_path =

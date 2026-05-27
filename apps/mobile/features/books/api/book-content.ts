@@ -24,7 +24,7 @@ export async function fetchBookContent(
   const { data: bookRow, error: bookError } = await supabase
     .from("books")
     .select(
-      "id, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name))",
+      "id, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))",
     )
     .eq("id", numericId)
     .maybeSingle();
@@ -93,7 +93,7 @@ export async function fetchBookContent(
     keywords: string[] | null;
     data: { difficulty?: string; reading_time_minutes?: number } | null;
     book_genres:
-      | Array<{ genre: { name: string } | { name: string }[] | null }>
+      | Array<{ genre: { name?: string | null; name_ru?: string | null } | { name?: string | null; name_ru?: string | null }[] | null }>
       | null;
   };
 
@@ -101,9 +101,11 @@ export async function fetchBookContent(
     .flatMap((row) => {
       if (!row.genre) return [];
       if (Array.isArray(row.genre)) {
-        return row.genre.map((g) => g.name).filter(Boolean);
+        return row.genre
+          .map((g) => (g.name_ru ?? g.name ?? "").trim())
+          .filter(Boolean);
       }
-      return [row.genre.name].filter(Boolean);
+      return [(row.genre.name_ru ?? row.genre.name ?? "").trim()].filter(Boolean);
     })
     .filter((name): name is string => !!name);
 

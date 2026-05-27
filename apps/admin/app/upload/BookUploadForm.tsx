@@ -453,7 +453,7 @@ export function BookUploadForm({
 
           <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
             <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
-              Genres and keywords
+              Жанры и ключевые слова
             </h2>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row">
               <select
@@ -461,7 +461,7 @@ export function BookUploadForm({
                 onChange={(event) => setGenrePick(event.target.value as BookGenre | "")}
                 className="rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
               >
-                <option value="">Choose genre</option>
+                <option value="">Выберите жанр</option>
                 {BOOK_GENRES.map((genre) => (
                   <option key={genre} value={genre}>
                     {genreDisplayName(genre)}
@@ -473,7 +473,7 @@ export function BookUploadForm({
                 onClick={addGenre}
                 className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15"
               >
-                Add genre
+                Добавить жанр
               </button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">

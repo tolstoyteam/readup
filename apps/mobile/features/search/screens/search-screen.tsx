@@ -240,7 +240,7 @@ export default function SearchScreen() {
 
             <View className="gap-3">
               <FilterRow
-                label="Category"
+                label="Жанр"
                 options={categories}
                 value={category}
                 onChange={setCategory}

@@ -17,7 +17,7 @@ select
   b.cover_image_url,
   b.keywords,
   coalesce(
-    array_agg(g.name order by g.name) filter (where g.name is not null),
+    array_agg(g.name_ru order by g.name_ru) filter (where g.name_ru is not null),
     array[]::text[]
   ) as genres,
   -- Difficulty/reading_time still live in legacy JSON; surface them when present.
