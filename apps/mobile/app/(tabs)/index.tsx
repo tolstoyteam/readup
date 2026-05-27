@@ -1,22 +1,12 @@
-import { coverUrl, fetchBooks } from "@/features/books/api/books";
-import {
-  fetchRecommendedBooks,
-  fetchTrendingBookIds,
-  type RecommendedBook,
-} from "@/features/books/api/recommendations";
 import {
   BookCard,
   type BookCardItem,
 } from "@/features/books/components/book-card";
-import {
-  fetchUserLibrary,
-  setLibraryStatus,
-  type LibraryItem,
-} from "@/features/library/api/library";
+import { useHomeFeed } from "@/features/home/hooks/use-home-feed";
+import { setLibraryStatus } from "@/features/library/api/library";
 import { Image } from "expo-image";
 import { ChevronRight, Zap } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -32,120 +22,19 @@ import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
-type HomeBook = BookCardItem & {
-  genres: string[];
-};
-
-type Section = {
-  title: string;
-  data: HomeBook[];
-};
-
-function sectionTitle(genre: string) {
-  const normalized = genre.trim().toLowerCase();
-  if (normalized.includes("драма") || normalized.includes("drama")) return "Драма";
-  if (normalized.includes("фанта") || normalized.includes("sci")) return "Фантастика";
-  if (normalized.includes("детектив") || normalized.includes("detect")) return "Детектив";
-  return genre.trim();
-}
-
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<HomeBook[]>([]);
-  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
-  const [recommended, setRecommended] = useState<RecommendedBook[]>([]);
-  const [trendingIds, setTrendingIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setError(null);
-      const [{ books }, library, recs, trending] = await Promise.all([
-        fetchBooks(),
-        user ? fetchUserLibrary(user.id) : Promise.resolve([]),
-        user ? fetchRecommendedBooks(12).catch(() => []) : Promise.resolve([]),
-        fetchTrendingBookIds(12).catch(() => []),
-      ]);
-      setItems(
-        books.map((r) => ({
-          id: r.id,
-          title: r.document.title,
-          author: r.document.author,
-          bookId: r.document.book_id,
-          cover: coverUrl(r.document.cover_image_path),
-          genres: r.document.genres,
-        })),
-      );
-      setLibraryItems(library);
-      setRecommended(recs);
-      setTrendingIds(trending.map((row) => row.book_id));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load books");
-      setItems([]);
-      setLibraryItems([]);
-      setRecommended([]);
-      setTrendingIds([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
-  };
-
-  const continueBook = useMemo(() => {
-    const inProgress = [...libraryItems]
-      .filter((item) => item.status === "in_progress")
-      .sort((a, b) => {
-        const lastA = a.progress?.last_read_at ?? a.updated_at ?? "";
-        const lastB = b.progress?.last_read_at ?? b.updated_at ?? "";
-        return lastB.localeCompare(lastA);
-      })[0];
-    return items.find((item) => item.bookId === inProgress?.book_id) ?? null;
-  }, [items, libraryItems]);
-
-  const sections = useMemo<Section[]>(() => {
-    const byBookId = new Map(items.map((item) => [item.bookId, item]));
-
-    const recommendedSection: HomeBook[] = recommended
-      .map((rec) => byBookId.get(rec.bookId))
-      .filter((item): item is HomeBook => !!item);
-
-    const trendingSection: HomeBook[] = trendingIds
-      .map((id) => byBookId.get(id))
-      .filter((item): item is HomeBook => !!item);
-
-    const trendingFallback =
-      trendingSection.length > 0 ? trendingSection : items.slice(0, 10);
-
-    const genreSections = new Map<string, HomeBook[]>();
-    for (const item of items) {
-      for (const genre of item.genres) {
-        const title = sectionTitle(genre);
-        if (!title) continue;
-        genreSections.set(title, [...(genreSections.get(title) ?? []), item]);
-      }
-    }
-
-    return [
-      { title: "Рекомендации", data: recommendedSection },
-      { title: "В тренде", data: trendingFallback },
-      ...Array.from(genreSections.entries())
-        .filter(([, data]) => data.length > 0)
-        .slice(0, 4)
-        .map(([title, data]) => ({ title, data })),
-    ].filter((section) => section.data.length > 0);
-  }, [items, recommended, trendingIds]);
+  const {
+    items,
+    loading,
+    refreshing,
+    error,
+    continueBook,
+    sections,
+    load,
+    onRefresh,
+  } = useHomeFeed();
 
   function openBook(item: BookCardItem) {
     router.push(`/book/${encodeURIComponent(item.bookId)}`);

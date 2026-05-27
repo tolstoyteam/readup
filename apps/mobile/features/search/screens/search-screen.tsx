@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -13,15 +12,23 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { coverUrl, fetchBooks } from "@/features/books/api/books";
+import { fetchGenres } from "@/features/books/api/genres";
 import {
   BookCard,
   type BookCardItem,
 } from "@/features/books/components/book-card";
 import {
+  bookMatchesGenres,
+  genresBySlugs,
+  genresFromBooks,
+  type GenreOption,
+} from "@/features/books/lib/genre-filters";
+import {
   fetchUserLibrary,
   removeLibraryItem,
   setLibraryStatus,
 } from "@/features/library/api/library";
+import { GenreChipRow } from "@/features/search/components/genre-chip-row";
 import {
   fetchSearchHistory,
   recordSearch,
@@ -34,29 +41,15 @@ import { useAuth } from "@/shared/context/auth-context";
 
 type SearchBook = BookCardItem & {
   genres: string[];
-  difficulty?: string;
-  readingTimeMinutes?: number;
 };
-
-const DIFFICULTY_OPTIONS = ["Любая", "Легкая", "Средняя", "Сложная"];
-const TIME_OPTIONS = ["Любое", "До 15 мин", "15-30 мин", "30+ мин"];
-
-function passesTimeFilter(book: SearchBook, filter: string) {
-  const minutes = book.readingTimeMinutes;
-  if (filter === "Любое" || minutes == null) return true;
-  if (filter === "До 15 мин") return minutes < 15;
-  if (filter === "15-30 мин") return minutes >= 15 && minutes <= 30;
-  return minutes > 30;
-}
 
 export default function SearchScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [books, setBooks] = useState<SearchBook[]>([]);
+  const [genres, setGenres] = useState<GenreOption[]>([]);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("Все");
-  const [difficulty, setDifficulty] = useState("Любая");
-  const [time, setTime] = useState("Любое");
+  const [selectedGenreSlugs, setSelectedGenreSlugs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
@@ -67,19 +60,22 @@ export default function SearchScreen() {
     try {
       setLoading(true);
       setError(null);
-      const { books: rows } = await fetchBooks();
-      setBooks(
-        rows.map((row) => ({
-          id: row.id,
-          bookId: row.document.book_id,
-          title: row.document.title,
-          author: row.document.author,
-          cover: coverUrl(row.document.cover_image_path),
-          genres: row.document.genres,
-          difficulty: row.document.difficulty,
-          readingTimeMinutes: row.document.reading_time_minutes,
-        })),
-      );
+      const [{ books: rows }, catalogGenres] = await Promise.all([
+        fetchBooks(),
+        fetchGenres().catch(() => null),
+      ]);
+
+      const mapped: SearchBook[] = rows.map((row) => ({
+        id: row.id,
+        bookId: row.document.book_id,
+        title: row.document.title,
+        author: row.document.author,
+        cover: coverUrl(row.document.cover_image_path),
+        genres: row.document.genres,
+      }));
+
+      setBooks(mapped);
+      setGenres(catalogGenres ?? genresFromBooks(mapped));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load books");
     } finally {
@@ -138,15 +134,23 @@ export default function SearchScreen() {
     }
   }
 
-  const categories = useMemo(() => {
-    const values = new Set<string>();
-    for (const book of books) {
-      for (const genre of book.genres) {
-        if (genre.trim()) values.add(genre.trim());
-      }
-    }
-    return ["Все", ...Array.from(values).sort((a, b) => a.localeCompare(b))];
-  }, [books]);
+  const selectedSlugsSet = useMemo(
+    () => new Set(selectedGenreSlugs),
+    [selectedGenreSlugs],
+  );
+
+  const selectedGenreOptions = useMemo(
+    () => genresBySlugs(genres, selectedGenreSlugs),
+    [genres, selectedGenreSlugs],
+  );
+
+  function toggleGenre(slug: string) {
+    setSelectedGenreSlugs((current) =>
+      current.includes(slug)
+        ? current.filter((item) => item !== slug)
+        : [...current, slug],
+    );
+  }
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -155,21 +159,16 @@ export default function SearchScreen() {
         !needle ||
         book.title.toLowerCase().includes(needle) ||
         book.author?.toLowerCase().includes(needle);
-      const matchesCategory =
-        category === "Все" || book.genres.some((genre) => genre === category);
-      const matchesDifficulty =
-        difficulty === "Любая" ||
-        !book.difficulty ||
-        book.difficulty.toLowerCase() === difficulty.toLowerCase();
 
-      return (
-        matchesText &&
-        matchesCategory &&
-        matchesDifficulty &&
-        passesTimeFilter(book, time)
+      const matchesGenres = bookMatchesGenres(
+        book,
+        selectedGenreOptions,
+        "and",
       );
+
+      return matchesText && matchesGenres;
     });
-  }, [books, category, difficulty, query, time]);
+  }, [books, query, selectedGenreOptions]);
 
   function openBook(item: BookCardItem) {
     router.push(`/book/${encodeURIComponent(item.bookId)}`);
@@ -238,26 +237,14 @@ export default function SearchScreen() {
               />
             </View>
 
-            <View className="gap-3">
-              <FilterRow
+            {genres.length > 0 ? (
+              <GenreChipRow
                 label="Жанр"
-                options={categories}
-                value={category}
-                onChange={setCategory}
+                genres={genres}
+                selectedSlugs={selectedSlugsSet}
+                onToggle={toggleGenre}
               />
-              <FilterRow
-                label="Difficulty"
-                options={DIFFICULTY_OPTIONS}
-                value={difficulty}
-                onChange={setDifficulty}
-              />
-              <FilterRow
-                label="Time"
-                options={TIME_OPTIONS}
-                value={time}
-                onChange={setTime}
-              />
-            </View>
+            ) : null}
 
             {query.trim().length === 0 && history.length > 0 ? (
               <View className="gap-2">
@@ -338,58 +325,5 @@ export default function SearchScreen() {
         }}
       />
     </SafeAreaView>
-  );
-}
-
-function FilterRow({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: string[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#4A5550]">
-        {label}
-      </Text>
-      <ScrollView
-        horizontal
-        nestedScrollEnabled
-        keyboardShouldPersistTaps="handled"
-        showsHorizontalScrollIndicator={false}>
-        <View className="flex-row gap-2">
-          {options.map((option) => {
-            const active = option === value;
-            return (
-              <Pressable
-                key={option}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                onPress={() => onChange(option)}
-                className="rounded-full border px-3 py-1.5 active:opacity-80"
-                style={{
-                  borderColor: ReadupColors.brand,
-                  backgroundColor: active ? ReadupColors.brand : "transparent",
-                }}
-              >
-                <Text
-                  className="text-[13px] tracking-[-0.52px]"
-                  style={{
-                    color: active ? ReadupColors.textInverse : ReadupColors.text,
-                  }}
-                >
-                  {option}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </ScrollView>
-    </View>
   );
 }
