@@ -13,10 +13,7 @@ import {
   fetchTrendingBookIds,
   type RecommendedBook,
 } from "@/features/books/api/recommendations";
-import {
-  fetchUserLibrary,
-  type LibraryItem,
-} from "@/features/library/api/library";
+import { useLibrary } from "@/features/library";
 import { useAuth } from "@/shared/context/auth-context";
 
 export type HomeBook = BookCardItem & {
@@ -30,9 +27,9 @@ export type HomeSection = {
 
 export function useHomeFeed() {
   const { user } = useAuth();
+  const { continueBook: continueRecord } = useLibrary();
   const [items, setItems] = useState<HomeBook[]>([]);
   const [genres, setGenres] = useState<GenreOption[]>([]);
-  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [recommended, setRecommended] = useState<RecommendedBook[]>([]);
   const [trendingIds, setTrendingIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,14 +39,12 @@ export function useHomeFeed() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [{ books }, library, recs, trending, catalogGenres] =
-        await Promise.all([
-          fetchBooks(),
-          user ? fetchUserLibrary(user.id) : Promise.resolve([]),
-          user ? fetchRecommendedBooks(12).catch(() => []) : Promise.resolve([]),
-          fetchTrendingBookIds(12).catch(() => []),
-          fetchGenres().catch(() => null),
-        ]);
+      const [{ books }, recs, trending, catalogGenres] = await Promise.all([
+        fetchBooks(),
+        user ? fetchRecommendedBooks(12).catch(() => []) : Promise.resolve([]),
+        fetchTrendingBookIds(12).catch(() => []),
+        fetchGenres().catch(() => null),
+      ]);
 
       const mapped: HomeBook[] = books.map((r) => ({
         id: r.id,
@@ -61,16 +56,12 @@ export function useHomeFeed() {
       }));
 
       setItems(mapped);
-      setLibraryItems(library);
       setRecommended(recs);
       setTrendingIds(trending.map((row) => row.book_id));
-      setGenres(
-        catalogGenres ?? genresFromBooks(mapped),
-      );
+      setGenres(catalogGenres ?? genresFromBooks(mapped));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load books");
       setItems([]);
-      setLibraryItems([]);
       setRecommended([]);
       setTrendingIds([]);
       setGenres([]);
@@ -90,15 +81,9 @@ export function useHomeFeed() {
   }, [load]);
 
   const continueBook = useMemo(() => {
-    const inProgress = [...libraryItems]
-      .filter((item) => item.status === "in_progress")
-      .sort((a, b) => {
-        const lastA = a.progress?.last_read_at ?? a.updated_at ?? "";
-        const lastB = b.progress?.last_read_at ?? b.updated_at ?? "";
-        return lastB.localeCompare(lastA);
-      })[0];
-    return items.find((item) => item.bookId === inProgress?.book_id) ?? null;
-  }, [items, libraryItems]);
+    if (!continueRecord) return null;
+    return items.find((item) => item.bookId === continueRecord.bookId) ?? null;
+  }, [continueRecord, items]);
 
   const sections = useMemo<HomeSection[]>(() => {
     const byBookId = new Map(items.map((item) => [item.bookId, item]));

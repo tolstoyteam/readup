@@ -10,21 +10,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { coverUrl, fetchBooks } from "@/features/books/api/books";
+import { fetchBooks } from "@/features/books/api/books";
 import {
   BookCard,
   type BookCardItem,
 } from "@/features/books/components/book-card";
 import {
-  fetchUserLibrary,
-  type LibraryItem,
-  type LibraryStatus,
-} from "@/features/library/api/library";
+  buildBookCatalogMap,
+  joinLibraryBooks,
+  type LibraryBookCard,
+  type LibrarySection,
+  useLibrary,
+} from "@/features/library";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors } from "@/shared/constants/readup-theme";
-import { useAuth } from "@/shared/context/auth-context";
 
-const STATUS_OPTIONS: { value: LibraryStatus; label: string; empty: string }[] = [
+const SECTION_OPTIONS: { value: LibrarySection; label: string; empty: string }[] = [
   {
     value: "saved",
     label: "Saved",
@@ -42,67 +43,38 @@ const STATUS_OPTIONS: { value: LibraryStatus; label: string; empty: string }[] =
   },
 ];
 
-type LibraryBook = BookCardItem & {
-  status: LibraryStatus;
-  updatedAt: string | null;
-};
-
 export default function LibraryScreen() {
-  const { user } = useAuth();
   const router = useRouter();
-  const listRef = useRef<FlatListType<LibraryBook>>(null);
+  const listRef = useRef<FlatListType<LibraryBookCard>>(null);
   const skipInitialScrollReset = useRef(true);
-  const [activeStatus, setActiveStatus] = useState<LibraryStatus>("saved");
-  const [libraryBooks, setLibraryBooks] = useState<LibraryBook[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<LibrarySection>("saved");
+  const [catalogBooks, setCatalogBooks] = useState<LibraryBookCard[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const { records, savedBooks, inProgressBooks, completedBooks, loading, error, refresh } =
+    useLibrary();
 
-  const load = useCallback(async () => {
-    if (!user) {
-      setLibraryBooks([]);
-      setLoading(false);
-      return;
-    }
-
+  const loadCatalog = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const [{ books }, library] = await Promise.all([
-        fetchBooks(),
-        fetchUserLibrary(user.id),
-      ]);
-      const byBookId = new Map(
-        books.map((row) => [
-          row.document.book_id,
-          {
-            id: row.id,
-            bookId: row.document.book_id,
-            title: row.document.title,
-            author: row.document.author,
-            cover: coverUrl(row.document.cover_image_path),
-          },
-        ]),
-      );
-
-      setLibraryBooks(
-        library
-          .map((item) => toLibraryBook(item, byBookId))
-          .filter((item): item is LibraryBook => !!item),
-      );
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error ? loadError.message : "Could not load library",
-      );
+      setCatalogLoading(true);
+      const { books } = await fetchBooks();
+      const catalog = buildBookCatalogMap(books);
+      setCatalogBooks(joinLibraryBooks(records, catalog));
+    } catch {
+      setCatalogBooks([]);
     } finally {
-      setLoading(false);
+      setCatalogLoading(false);
     }
-  }, [user]);
+  }, [records]);
 
   useFocusEffect(
     useCallback(() => {
-      load();
-    }, [load]),
+      void refresh();
+    }, [refresh]),
   );
+
+  useEffect(() => {
+    void loadCatalog();
+  }, [loadCatalog]);
 
   useEffect(() => {
     if (skipInitialScrollReset.current) {
@@ -110,16 +82,29 @@ export default function LibraryScreen() {
       return;
     }
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, [activeStatus]);
+  }, [activeSection]);
 
-  const visibleBooks = useMemo(
-    () => libraryBooks.filter((book) => book.status === activeStatus),
-    [activeStatus, libraryBooks],
-  );
+  const sectionRecords = useMemo(() => {
+    switch (activeSection) {
+      case "saved":
+        return savedBooks;
+      case "in_progress":
+        return inProgressBooks;
+      case "completed":
+        return completedBooks;
+    }
+  }, [activeSection, savedBooks, inProgressBooks, completedBooks]);
+
+  const visibleBooks = useMemo(() => {
+    const bookIds = new Set(sectionRecords.map((record) => record.bookId));
+    return catalogBooks.filter((book) => bookIds.has(book.bookId));
+  }, [catalogBooks, sectionRecords]);
 
   const activeEmpty =
-    STATUS_OPTIONS.find((option) => option.value === activeStatus)?.empty ??
+    SECTION_OPTIONS.find((option) => option.value === activeSection)?.empty ??
     "No books in this shelf yet.";
+
+  const isLoading = loading || catalogLoading;
 
   function openBook(item: BookCardItem) {
     router.push(`/book/${encodeURIComponent(item.bookId)}`);
@@ -130,8 +115,8 @@ export default function LibraryScreen() {
       <FlatList
         ref={listRef}
         data={visibleBooks}
-        extraData={activeStatus}
-        keyExtractor={(item) => `${item.status}-${item.id}-${item.bookId}`}
+        extraData={activeSection}
+        keyExtractor={(item) => `${activeSection}-${item.id}-${item.bookId}`}
         numColumns={2}
         columnWrapperClassName="gap-5 px-8"
         contentContainerClassName="gap-6 pb-8"
@@ -146,14 +131,14 @@ export default function LibraryScreen() {
             </View>
 
             <View className="flex-row rounded-full bg-[#F2F0E6] p-1">
-              {STATUS_OPTIONS.map((option) => {
-                const active = option.value === activeStatus;
+              {SECTION_OPTIONS.map((option) => {
+                const active = option.value === activeSection;
                 return (
                   <Pressable
                     key={option.value}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
-                    onPress={() => setActiveStatus(option.value)}
+                    onPress={() => setActiveSection(option.value)}
                     className="flex-1 items-center rounded-full px-2 py-2 active:opacity-80"
                     style={{
                       backgroundColor: active ? ReadupColors.brand : "transparent",
@@ -177,7 +162,7 @@ export default function LibraryScreen() {
         }
         ListEmptyComponent={
           <View className="min-h-[320px] items-center justify-center px-8">
-            {loading ? (
+            {isLoading ? (
               <ActivityIndicator size="large" color={ReadupColors.brand} />
             ) : error ? (
               <Text className="text-center text-[15px] leading-6 text-[#4A5550]">
@@ -198,18 +183,4 @@ export default function LibraryScreen() {
       />
     </SafeAreaView>
   );
-}
-
-function toLibraryBook(
-  item: LibraryItem,
-  booksById: Map<string, BookCardItem>,
-): LibraryBook | null {
-  const book = booksById.get(item.book_id);
-  if (!book) return null;
-
-  return {
-    ...book,
-    status: item.status,
-    updatedAt: item.updated_at,
-  };
 }

@@ -24,10 +24,9 @@ import {
   type GenreOption,
 } from "@/features/books/lib/genre-filters";
 import {
-  fetchUserLibrary,
-  removeLibraryItem,
-  setLibraryStatus,
-} from "@/features/library/api/library";
+  useLibrary,
+  useLibraryActions,
+} from "@/features/library";
 import { GenreChipRow } from "@/features/search/components/genre-chip-row";
 import {
   fetchSearchHistory,
@@ -46,13 +45,18 @@ type SearchBook = BookCardItem & {
 export default function SearchScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { savedBooks } = useLibrary();
+  const { toggleSave } = useLibraryActions();
+  const savedIds = useMemo(
+    () => new Set(savedBooks.map((record) => record.bookId)),
+    [savedBooks],
+  );
   const [books, setBooks] = useState<SearchBook[]>([]);
   const [genres, setGenres] = useState<GenreOption[]>([]);
   const [query, setQuery] = useState("");
   const [selectedGenreSlugs, setSelectedGenreSlugs] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
   const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
   const recordDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -89,19 +93,15 @@ export default function SearchScreen() {
 
   useEffect(() => {
     if (!user) {
-      setSavedIds(new Set());
       setHistory([]);
       return;
     }
     let cancelled = false;
-    Promise.all([
-      fetchUserLibrary(user.id, "saved").catch(() => []),
-      fetchSearchHistory(user.id).catch(() => []),
-    ]).then(([items, entries]) => {
-      if (cancelled) return;
-      setSavedIds(new Set(items.map((item) => item.book_id)));
-      setHistory(entries);
-    });
+    fetchSearchHistory(user.id)
+      .catch(() => [])
+      .then((entries) => {
+        if (!cancelled) setHistory(entries);
+      });
     return () => {
       cancelled = true;
     };
@@ -176,34 +176,10 @@ export default function SearchScreen() {
 
   async function toggleSavedBook(item: BookCardItem) {
     if (!user) return;
-    const wasSaved = savedIds.has(item.bookId);
-
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (wasSaved) {
-        next.delete(item.bookId);
-      } else {
-        next.add(item.bookId);
-      }
-      return next;
-    });
-
     try {
-      if (wasSaved) {
-        await removeLibraryItem(user.id, item.bookId);
-      } else {
-        await setLibraryStatus(user.id, item.bookId, "saved");
-      }
+      await toggleSave(item.bookId);
     } catch {
-      setSavedIds((prev) => {
-        const next = new Set(prev);
-        if (wasSaved) {
-          next.add(item.bookId);
-        } else {
-          next.delete(item.bookId);
-        }
-        return next;
-      });
+      /* ignore */
     }
   }
 

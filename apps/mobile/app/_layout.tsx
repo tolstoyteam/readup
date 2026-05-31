@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { AuthProvider } from "@/shared/context/auth-context";
+import { LibraryProvider } from "@/features/library";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import "../global.css";
 
@@ -24,6 +25,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <AuthProvider>
+          <LibraryProvider>
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -55,6 +57,7 @@ export default function RootLayout() {
               options={{ headerShown: false, animation: "slide_from_right" }}
             />
           </Stack>
+          </LibraryProvider>
           <StatusBar style="auto" />
         </AuthProvider>
       </ThemeProvider>

@@ -3,7 +3,6 @@ import {
   type BookCardItem,
 } from "@/features/books/components/book-card";
 import { useHomeFeed } from "@/features/home/hooks/use-home-feed";
-import { setLibraryStatus } from "@/features/library/api/library";
 import { Image } from "expo-image";
 import { ChevronRight, Zap } from "lucide-react-native";
 import { useRouter } from "expo-router";
@@ -20,10 +19,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors } from "@/shared/constants/readup-theme";
-import { useAuth } from "@/shared/context/auth-context";
 
 export default function HomeScreen() {
-  const { user } = useAuth();
   const router = useRouter();
   const {
     items,
@@ -41,9 +38,6 @@ export default function HomeScreen() {
   }
 
   function openContinue(item: BookCardItem) {
-    if (user) {
-      void setLibraryStatus(user.id, item.bookId, "in_progress").catch(() => undefined);
-    }
     router.push(`/reader/${encodeURIComponent(item.bookId)}`);
   }
 

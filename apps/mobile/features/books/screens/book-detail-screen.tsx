@@ -23,11 +23,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { fetchBookDetail, type BookDetail } from "@/features/books/api/book-detail";
 import {
-  fetchLibraryItem,
-  removeLibraryItem,
-  setLibraryStatus,
-  type LibraryItem,
-} from "@/features/library/api/library";
+  isInProgress,
+  progressPercentage,
+  useLibraryActions,
+  useLibraryBook,
+} from "@/features/library";
 import { ReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
@@ -47,8 +47,9 @@ export default function BookDetailScreen() {
   const params = useLocalSearchParams<{ bookId: string }>();
   const bookId = params.bookId ? decodeURIComponent(params.bookId) : "";
 
+  const { record: libraryRecord, isSaved } = useLibraryBook(bookId);
+  const { toggleSave } = useLibraryActions();
   const [book, setBook] = useState<BookDetail | null>(null);
-  const [library, setLibrary] = useState<LibraryItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingAction, setSavingAction] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,18 +65,13 @@ export default function BookDetailScreen() {
     try {
       setLoading(true);
       setError(null);
-      const [detail, libItem] = await Promise.all([
-        fetchBookDetail(bookId),
-        user ? fetchLibraryItem(user.id, bookId) : Promise.resolve(null),
-      ]);
+      const detail = await fetchBookDetail(bookId);
       if (!detail) {
         setError("Книга не найдена");
         setBook(null);
-        setLibrary(null);
         return;
       }
       setBook(detail);
-      setLibrary(libItem);
       setAudioCheckDone(false);
       if (detail) {
         void bookHasAudioInStorage(detail.bookId)
@@ -93,31 +89,22 @@ export default function BookDetailScreen() {
     } finally {
       setLoading(false);
     }
-  }, [bookId, user]);
+  }, [bookId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const isSaved =
-    library?.status === "saved" ||
-    library?.status === "in_progress" ||
-    library?.status === "completed";
-  const isInProgress = library?.status === "in_progress";
-  const progressPage = library?.progress?.page ?? 0;
-  const totalPages = library?.progress?.total_pages ?? book?.totalPages ?? null;
+  const bookInProgress = isInProgress(libraryRecord);
+  const progressPage = libraryRecord?.progress?.page ?? 0;
+  const totalPages = libraryRecord?.progress?.total_pages ?? book?.totalPages ?? null;
+  const progressPercent = progressPercentage(libraryRecord?.progress ?? null);
 
   async function toggleSaved() {
     if (!user || !book || savingAction) return;
     setSavingAction(true);
     try {
-      if (library) {
-        await removeLibraryItem(user.id, book.bookId);
-        setLibrary(null);
-      } else {
-        const next = await setLibraryStatus(user.id, book.bookId, "saved");
-        setLibrary(next);
-      }
+      await toggleSave(book.bookId);
     } catch {
       // intentional silent; UI keeps previous state
     } finally {
@@ -273,7 +260,7 @@ export default function BookDetailScreen() {
               />
             </View>
 
-            {isInProgress && totalPages && totalPages > 0 ? (
+            {bookInProgress && totalPages && totalPages > 0 ? (
               <View className="mt-5 rounded-[16px] bg-[#F2F0E6] px-5 py-4">
                 <Text className="text-[13px] tracking-[-0.52px] text-[#4A5550]">
                   Вы остановились на странице {progressPage} из {totalPages}
@@ -281,12 +268,7 @@ export default function BookDetailScreen() {
                 <View className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#E8E6D8]">
                   <View
                     className="h-full rounded-full bg-[#059669]"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        Math.max(0, (progressPage / totalPages) * 100),
-                      )}%`,
-                    }}
+                    style={{ width: `${progressPercent}%` }}
                   />
                 </View>
               </View>
@@ -300,7 +282,7 @@ export default function BookDetailScreen() {
               >
                 <BookOpen size={20} color={ReadupColors.textInverse} strokeWidth={2.2} />
                 <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
-                  {isInProgress ? "Продолжить чтение" : "Начать чтение"}
+                  {bookInProgress ? "Продолжить чтение" : "Начать чтение"}
                 </Text>
               </Pressable>
 

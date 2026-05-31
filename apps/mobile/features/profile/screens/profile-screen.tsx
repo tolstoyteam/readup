@@ -28,7 +28,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
-import { coverUrl, fetchBooks } from "@/features/books/api/books";
+import { fetchBooks } from "@/features/books/api/books";
 import { BookCard, type BookCardItem } from "@/features/books/components/book-card";
 import {
   ensureProfile,
@@ -44,7 +44,11 @@ import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
-import { fetchUserLibrary } from "@/features/library/api/library";
+import {
+  buildBookCatalogMap,
+  joinLibraryBooks,
+  useLibrary,
+} from "@/features/library";
 
 function readFullNameFromUser(user: { user_metadata?: Record<string, unknown> }): string {
   const raw = user.user_metadata?.full_name;
@@ -66,6 +70,7 @@ function hasEmailIdentity(
 
 export default function ProfileScreen() {
   const { user, updateFullName } = useAuth();
+  const { savedBooks, loading: libraryLoading } = useLibrary();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -84,7 +89,6 @@ export default function ProfileScreen() {
   const [goalEditing, setGoalEditing] = useState(false);
   const [savingSection, setSavingSection] = useState<null | "name" | "interests" | "goal">(null);
   const [libraryItems, setLibraryItems] = useState<BookCardItem[]>([]);
-  const [libraryLoading, setLibraryLoading] = useState(true);
   const [achievements, setAchievements] = useState<AchievementUnlock[]>([]);
 
   const loadProfile = useCallback(async () => {
@@ -107,36 +111,23 @@ export default function ProfileScreen() {
     }
   }, [user]);
 
-  const loadLibrary = useCallback(async () => {
+  const loadSavedPreview = useCallback(async () => {
     if (!user) return;
-    setLibraryLoading(true);
     try {
-      const [{ books }, library] = await Promise.all([
-        fetchBooks(),
-        fetchUserLibrary(user.id),
-      ]);
-      const byBookId = new Map(
-        books.map((row) => [
-          row.document.book_id,
-          {
-            id: row.id,
-            bookId: row.document.book_id,
-            title: row.document.title,
-            cover: coverUrl(row.document.cover_image_path),
-          } satisfies BookCardItem,
-        ]),
-      );
-      const items = library
-        .map((item) => byBookId.get(item.book_id))
-        .filter((item): item is BookCardItem => item != null)
-        .slice(0, 8);
+      const { books } = await fetchBooks();
+      const catalog = buildBookCatalogMap(books);
+      const items = joinLibraryBooks(savedBooks, catalog)
+        .slice(0, 8)
+        .map(({ id, bookId, title, cover }) => ({ id, bookId, title, cover }));
       setLibraryItems(items);
     } catch {
       setLibraryItems([]);
-    } finally {
-      setLibraryLoading(false);
     }
-  }, [user]);
+  }, [savedBooks, user]);
+
+  useEffect(() => {
+    void loadSavedPreview();
+  }, [loadSavedPreview]);
 
   useEffect(() => {
     if (!user) return;
@@ -144,9 +135,8 @@ export default function ProfileScreen() {
     setFullName(name);
     setInitialFullName(name);
     void loadProfile();
-    void loadLibrary();
     void fetchUnlockedAchievements(user.id).then(setAchievements).catch(() => undefined);
-  }, [user, loadProfile, loadLibrary]);
+  }, [user, loadProfile]);
 
   const selectedSet = useMemo(() => new Set(selectedInterests), [selectedInterests]);
 

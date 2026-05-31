@@ -14,7 +14,9 @@ create table if not exists public.profiles (
 create table if not exists public.user_library (
   user_id uuid not null references auth.users(id) on delete cascade,
   book_id text not null,
-  status text not null check (status in ('saved', 'in_progress', 'completed')),
+  is_saved boolean not null default false,
+  reading_status text not null default 'not_started'
+    check (reading_status in ('not_started', 'in_progress', 'completed')),
   progress jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

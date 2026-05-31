@@ -72,6 +72,9 @@ export type BookDocument = LegacyBookDocument & { book_id: string };
 /** @deprecated Mobile-only legacy JSON types until the app uses the relational schema. */
 export type BookDataColumn = BookDocument | BookDocument[];
 
+export type ReadingStatus = "not_started" | "in_progress" | "completed";
+
+/** @deprecated Use ReadingStatus — old single-column model included "saved" as a status. */
 export type LibraryStatus = "saved" | "in_progress" | "completed";
 
 /** Documented shape for `user_library.progress`. Stored as JSONB so app/server can extend without migration. */
@@ -81,6 +84,15 @@ export type LibraryProgress = {
   audio_position_ms?: number;
   /** ISO timestamp of the last reader session that touched this row. */
   last_read_at?: string;
+};
+
+/** App-level view of a user's relationship with one book. */
+export type UserBookRecord = {
+  bookId: string;
+  isSaved: boolean;
+  readingStatus: ReadingStatus;
+  progress: LibraryProgress | null;
+  updatedAt: string | null;
 };
 
 export const NOTIFICATION_TYPES = [
@@ -260,7 +272,8 @@ export const userLibraryTable = pgTable(
       .notNull()
       .references(() => authUsersTable.id, { onDelete: "cascade" }),
     bookId: text("book_id").notNull(),
-    status: text("status").$type<LibraryStatus>().notNull(),
+    isSaved: boolean("is_saved").notNull().default(false),
+    readingStatus: text("reading_status").$type<ReadingStatus>().notNull().default("not_started"),
     progress: jsonb("progress").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -268,8 +281,8 @@ export const userLibraryTable = pgTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.bookId] }),
     check(
-      "user_library_status_check",
-      sql`${table.status} in ('saved', 'in_progress', 'completed')`,
+      "user_library_reading_status_check",
+      sql`${table.readingStatus} in ('not_started', 'in_progress', 'completed')`,
     ),
   ],
 );

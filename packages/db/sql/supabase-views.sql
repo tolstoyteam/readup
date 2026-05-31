@@ -49,7 +49,7 @@ as
 select
   ul.book_id,
   count(distinct ul.user_id)::integer as reader_count,
-  count(*) filter (where ul.status = 'completed')::integer as completion_count,
+  count(*) filter (where ul.reading_status = 'completed')::integer as completion_count,
   max(ul.updated_at) as last_activity
 from public.user_library ul
 where ul.updated_at >= now() - interval '30 days'

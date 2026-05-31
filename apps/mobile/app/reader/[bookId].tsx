@@ -5,9 +5,10 @@ import {
 } from "@/features/books/api/book-audio";
 import { fetchBookContent } from "@/features/books/api/book-content";
 import {
-  fetchLibraryItem,
-  recordReadingSession,
-} from "@/features/library/api/library";
+  useLibrary,
+  useLibraryActions,
+  useLibraryBook,
+} from "@/features/library";
 import { ReaderBookAudioProvider } from "@/features/reader/audio/reader-book-audio-context";
 import { BookListenPlayer } from "@/features/reader/components/book-listen-player";
 import { PageElements } from "@/features/reader/components/page-elements";
@@ -143,6 +144,8 @@ export default function ReaderScreen() {
     mode?: string;
   }>();
   const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
+  const { record: libraryRecord } = useLibraryBook(bookId);
+  const { recordReadingSession } = useLibraryActions();
   const wantsListenMode = modeParam === "listen";
 
   const [loading, setLoading] = useState(true);
@@ -193,10 +196,7 @@ export default function ReaderScreen() {
       setError(null);
       setDocument(null);
       setAudioState({ status: "checking", source: null, message: null });
-      const [row, libraryItem] = await Promise.all([
-        fetchBookContent(bookId),
-        user ? fetchLibraryItem(user.id, bookId) : Promise.resolve(null),
-      ]);
+      const row = await fetchBookContent(bookId);
       if (!row) {
         setError("Book not found");
         setDocument(null);
@@ -204,7 +204,7 @@ export default function ReaderScreen() {
       }
       setDocument(row.document);
       const pages = row.document.pages ?? [];
-      const savedPage = libraryItem?.progress?.page ?? 0;
+      const savedPage = libraryRecord?.progress?.page ?? 0;
       const targetPage = Math.min(
         Math.max(savedPage - 1, 0),
         Math.max(pages.length - 1, 0),
@@ -216,7 +216,7 @@ export default function ReaderScreen() {
     } finally {
       setLoading(false);
     }
-  }, [bookId, user]);
+  }, [bookId, libraryRecord?.progress?.page]);
 
   useEffect(() => {
     load();
@@ -274,7 +274,7 @@ export default function ReaderScreen() {
       totalPages,
       minutesDelta,
     }).catch(() => undefined);
-  }, [document?.book_id, pageIndex, pageLabel, pages.length, totalPages, user]);
+  }, [document?.book_id, pageIndex, pageLabel, pages.length, recordReadingSession, totalPages, user]);
 
   const goNext = () => {
     if (pageIndex < pages.length - 1) setPageIndex((i) => i + 1);

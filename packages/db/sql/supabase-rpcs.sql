@@ -22,7 +22,7 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
-  v_status text;
+  v_reading_status text;
   v_today date := (now() at time zone 'utc')::date;
   v_progress jsonb;
   v_row public.user_library;
@@ -37,7 +37,7 @@ begin
     raise exception 'book id required';
   end if;
 
-  v_status := case
+  v_reading_status := case
     when p_total_pages > 0 and p_page >= p_total_pages then 'completed'
     else 'in_progress'
   end;
@@ -52,14 +52,14 @@ begin
   end if;
 
   -- Was this book already completed before this call? Avoid double-counting.
-  select status = 'completed' into v_was_completed
+  select reading_status = 'completed' into v_was_completed
   from public.user_library
   where user_id = v_user_id and book_id = p_book_id;
 
-  insert into public.user_library (user_id, book_id, status, progress, updated_at)
-  values (v_user_id, p_book_id, v_status, v_progress, now())
+  insert into public.user_library (user_id, book_id, is_saved, reading_status, progress, updated_at)
+  values (v_user_id, p_book_id, false, v_reading_status, v_progress, now())
   on conflict (user_id, book_id) do update
-    set status = excluded.status,
+    set reading_status = excluded.reading_status,
         progress = excluded.progress,
         updated_at = now()
   returning * into v_row;
@@ -103,7 +103,7 @@ begin
   end if;
 
   -- Increment total_books_completed once per book.
-  if v_status = 'completed' and not v_was_completed then
+  if v_reading_status = 'completed' and not v_was_completed then
     update public.profiles
     set total_books_completed = total_books_completed + 1,
         updated_at = now()
