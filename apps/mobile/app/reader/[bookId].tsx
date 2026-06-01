@@ -5,7 +5,7 @@ import {
 } from "@/features/books/api/book-audio";
 import { fetchBookContent } from "@/features/books/api/book-content";
 import {
-  useLibrary,
+  isCompleted,
   useLibraryActions,
   useLibraryBook,
 } from "@/features/library";
@@ -15,6 +15,7 @@ import { PageElements } from "@/features/reader/components/page-elements";
 import { ReaderBottomNowPlaying } from "@/features/reader/components/reader-bottom-now-playing";
 import { ReaderBottomReadingProgress } from "@/features/reader/components/reader-bottom-reading-progress";
 import { ReaderListenLoading } from "@/features/reader/components/reader-listen-states";
+import { bookHasQuiz } from "@/features/quiz/api/quiz";
 import { useAuth } from "@/shared/context/auth-context";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -55,6 +56,11 @@ function ReaderChrome({
   goPrev,
   pageLabel,
   onRetryAudio,
+  showFinishButton,
+  onFinishBook,
+  finishing,
+  onOpenQuiz,
+  showLastPageActions,
 }: {
   document: BookDocument;
   hasAudio: boolean;
@@ -66,6 +72,11 @@ function ReaderChrome({
   goPrev: () => void;
   pageLabel: number;
   onRetryAudio?: () => void;
+  showFinishButton?: boolean;
+  onFinishBook?: () => void;
+  finishing?: boolean;
+  onOpenQuiz?: () => void;
+  showLastPageActions?: boolean;
 }) {
   const currentPage = pages[pageIndex] ?? null;
   const pageProgress =
@@ -87,6 +98,40 @@ function ReaderChrome({
           <BookListenPlayer document={document} onRetryAudio={onRetryAudio} />
         )}
       </View>
+
+      {showLastPageActions && ((showFinishButton && onFinishBook) || onOpenQuiz) ? (
+        <View className="flex-row items-center justify-center gap-3 bg-[#FBFAF2] px-[22px] py-3">
+          {showFinishButton && onFinishBook ? (
+            <Pressable
+              onPress={onFinishBook}
+              disabled={finishing}
+              accessibilityRole="button"
+              accessibilityLabel="Закончить книгу"
+              className={`min-h-[44px] items-center justify-center rounded-full border-2 border-[#047857] bg-[#059669] px-6 active:opacity-90 ${finishing ? "opacity-70" : ""}`}
+            >
+              {finishing ? (
+                <ActivityIndicator size="small" color="#FBFAF2" />
+              ) : (
+                <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#FBFAF2]">
+                  Закончить Книгу
+                </Text>
+              )}
+            </Pressable>
+          ) : null}
+          {onOpenQuiz ? (
+            <Pressable
+              onPress={onOpenQuiz}
+              accessibilityRole="button"
+              accessibilityLabel="Пройти тест"
+              className="min-h-[44px] items-center justify-center rounded-full border border-[#059669] bg-transparent px-6 active:opacity-80"
+            >
+              <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#059669]">
+                Пройти Тест
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       <View className="flex-row items-center justify-center gap-5 border-t border-[#E8E6D8] bg-[#F2F0E6] py-3">
         <Pressable
@@ -144,9 +189,14 @@ export default function ReaderScreen() {
     mode?: string;
   }>();
   const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
-  const { record: libraryRecord } = useLibraryBook(bookId);
+  const { record: libraryRecord, loading: libraryLoading } = useLibraryBook(bookId);
   const { recordReadingSession } = useLibraryActions();
   const wantsListenMode = modeParam === "listen";
+
+  const audioCheckedBookIdRef = useRef<string | null>(null);
+  const resumeAppliedRef = useRef<string | null>(null);
+  const lastSavedPageRef = useRef<number | null>(null);
+  const lastSaveAtRef = useRef<number>(Date.now());
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +208,23 @@ export default function ReaderScreen() {
     source: null,
     message: null,
   });
+  const [finishing, setFinishing] = useState(false);
+  const [hasQuiz, setHasQuiz] = useState(false);
+
+  useEffect(() => {
+    audioCheckedBookIdRef.current = null;
+    resumeAppliedRef.current = null;
+    lastSavedPageRef.current = null;
+    setAudioState({ status: "checking", source: null, message: null });
+    setHasQuiz(false);
+  }, [bookId]);
+
+  useEffect(() => {
+    if (!bookId) return;
+    void bookHasQuiz(bookId)
+      .then(setHasQuiz)
+      .catch(() => setHasQuiz(false));
+  }, [bookId]);
 
   const loadAudio = useCallback(async (targetBookId: string) => {
     setAudioState({ status: "checking", source: null, message: null });
@@ -195,7 +262,6 @@ export default function ReaderScreen() {
       setLoading(true);
       setError(null);
       setDocument(null);
-      setAudioState({ status: "checking", source: null, message: null });
       const row = await fetchBookContent(bookId);
       if (!row) {
         setError("Book not found");
@@ -203,30 +269,39 @@ export default function ReaderScreen() {
         return;
       }
       setDocument(row.document);
-      const pages = row.document.pages ?? [];
-      const savedPage = libraryRecord?.progress?.page ?? 0;
-      const targetPage = Math.min(
-        Math.max(savedPage - 1, 0),
-        Math.max(pages.length - 1, 0),
-      );
-      setPageIndex(targetPage);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load book");
       setDocument(null);
     } finally {
       setLoading(false);
     }
-  }, [bookId, libraryRecord?.progress?.page]);
+  }, [bookId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   useEffect(() => {
-    if (!document?.book_id) {
-      setAudioState({ status: "checking", source: null, message: null });
-      return;
-    }
+    if (!bookId || !document || libraryLoading) return;
+    if (resumeAppliedRef.current === bookId) return;
+
+    const docPages = document.pages ?? [];
+    if (docPages.length === 0) return;
+
+    resumeAppliedRef.current = bookId;
+    const savedPage = libraryRecord?.progress?.page ?? 0;
+    const targetPage = Math.min(
+      Math.max(savedPage - 1, 0),
+      Math.max(docPages.length - 1, 0),
+    );
+    setPageIndex(targetPage);
+    lastSavedPageRef.current = null;
+  }, [bookId, document, libraryLoading, libraryRecord?.progress?.page]);
+
+  useEffect(() => {
+    if (!document?.book_id) return;
+    if (audioCheckedBookIdRef.current === document.book_id) return;
+    audioCheckedBookIdRef.current = document.book_id;
     void loadAudio(document.book_id);
   }, [document?.book_id, loadAudio]);
 
@@ -252,13 +327,47 @@ export default function ReaderScreen() {
   const pageLabel = currentPage?.page_number ?? pageIndex + 1;
   const hasAudio = audioState.status === "available";
   const audioChecking = audioState.status === "checking" && !!document;
+  const isLastPage = pages.length > 0 && pageIndex === pages.length - 1;
+  const showLastPageActions = isLastPage && !!user;
+  const showFinishButton =
+    showLastPageActions && !isCompleted(libraryRecord);
 
-  const lastSavedPageRef = useRef<number | null>(null);
-  const lastSaveAtRef = useRef<number>(Date.now());
+  const handleOpenQuiz = useCallback(() => {
+    if (!document?.book_id) return;
+    router.push(`/quiz/${encodeURIComponent(document.book_id)}`);
+  }, [document?.book_id, router]);
+
+  const handleFinishBook = useCallback(async () => {
+    if (!user || !document?.book_id || finishing) return;
+    setFinishing(true);
+    try {
+      await recordReadingSession({
+        bookId: document.book_id,
+        page: totalPages,
+        totalPages,
+        minutesDelta: 0,
+      });
+      router.replace("/(tabs)");
+    } catch {
+      // ignore; user can retry
+    } finally {
+      setFinishing(false);
+    }
+  }, [
+    document?.book_id,
+    finishing,
+    recordReadingSession,
+    router,
+    totalPages,
+    user,
+  ]);
 
   useEffect(() => {
     if (!user || !document?.book_id || pages.length === 0) return;
     if (lastSavedPageRef.current === pageIndex) return;
+    // Last-page saves use pageLabel which may equal totalPages and auto-complete via RPC.
+    // Completion is only triggered by the explicit "Закончить Книгу" action.
+    if (pageIndex === pages.length - 1) return;
 
     const now = Date.now();
     const minutesDelta = Math.min(
@@ -402,6 +511,11 @@ export default function ReaderScreen() {
                 goPrev={goPrev}
                 pageLabel={pageLabel}
                 onRetryAudio={reloadAudio}
+                showLastPageActions={showLastPageActions}
+                showFinishButton={showFinishButton}
+                onFinishBook={handleFinishBook}
+                finishing={finishing}
+                onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
               />
             </ReaderBookAudioProvider>
           ) : (
@@ -415,6 +529,11 @@ export default function ReaderScreen() {
               goNext={goNext}
               goPrev={goPrev}
               pageLabel={pageLabel}
+              showLastPageActions={showLastPageActions}
+              showFinishButton={showFinishButton}
+              onFinishBook={handleFinishBook}
+              finishing={finishing}
+              onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
             />
           )
         )}

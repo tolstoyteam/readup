@@ -31,6 +31,20 @@ export type QuizAttemptResult = {
   }>;
 };
 
+/** Returns whether the book has at least one quiz row. */
+export async function bookHasQuiz(bookId: string): Promise<boolean> {
+  const numericBookId = Number(bookId);
+  if (!Number.isFinite(numericBookId) || numericBookId <= 0) return false;
+
+  const { count, error } = await supabase
+    .from("quizzes")
+    .select("id", { count: "exact", head: true })
+    .eq("book_id", numericBookId);
+
+  if (error) return false;
+  return (count ?? 0) > 0;
+}
+
 /**
  * Fetches the latest quiz for a book by its string book_id (which equals books.id::text).
  * Returns null when no quiz exists or the user lacks RLS access.
