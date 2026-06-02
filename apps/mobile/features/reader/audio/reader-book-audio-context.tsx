@@ -38,13 +38,18 @@ type ReaderBookAudioContextValue = {
 const ReaderBookAudioContext =
   createContext<ReaderBookAudioContextValue | null>(null);
 
+const LISTEN_FLUSH_INTERVAL_MS = 60_000;
+
 export function ReaderBookAudioProvider({
   bookId,
   initialSource,
+  onSessionFlush,
   children,
 }: {
   bookId: string;
   initialSource: ResolvedBookAudioSource;
+  /** Called periodically while audio plays and on pause/unmount. */
+  onSessionFlush?: (audioPositionMs: number) => void | Promise<void>;
   children: ReactNode;
 }) {
   const [voice, setVoice] = useState<BookAudioVoice>(initialSource.voice);
@@ -107,6 +112,7 @@ export function ReaderBookAudioProvider({
   const status = useAudioPlayerStatus(player);
   const statusRef = useRef(status);
   statusRef.current = status;
+  const wasPlayingRef = useRef(false);
 
   useEffect(() => {
     void setAudioModeAsync({
@@ -149,6 +155,37 @@ export function ReaderBookAudioProvider({
     },
     [player],
   );
+
+  const flushListeningSession = useCallback(() => {
+    if (!onSessionFlush) return;
+    const s = statusRef.current;
+    const audioPositionMs = Math.max(0, Math.round(s.currentTime * 1000));
+    void onSessionFlush(audioPositionMs);
+  }, [onSessionFlush]);
+
+  useEffect(() => {
+    if (!onSessionFlush || !player.playing) return;
+
+    const interval = setInterval(() => {
+      flushListeningSession();
+    }, LISTEN_FLUSH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [flushListeningSession, onSessionFlush, player.playing]);
+
+  useEffect(() => {
+    if (!onSessionFlush) return;
+    if (wasPlayingRef.current && !player.playing) {
+      flushListeningSession();
+    }
+    wasPlayingRef.current = player.playing;
+  }, [flushListeningSession, onSessionFlush, player.playing]);
+
+  useEffect(() => {
+    return () => {
+      flushListeningSession();
+    };
+  }, [flushListeningSession]);
 
   const value = useMemo(
     () => ({

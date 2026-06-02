@@ -29,6 +29,8 @@ declare
   v_profile record;
   v_minutes integer := greatest(coalesce(p_minutes_delta, 0), 0);
   v_was_completed boolean := false;
+  v_had_log_today boolean;
+  v_new_streak integer;
 begin
   if v_user_id is null then
     raise exception 'not authenticated' using errcode = '28000';
@@ -59,47 +61,69 @@ begin
   insert into public.user_library (user_id, book_id, is_saved, reading_status, progress, updated_at)
   values (v_user_id, p_book_id, false, v_reading_status, v_progress, now())
   on conflict (user_id, book_id) do update
-    set reading_status = excluded.reading_status,
+    set reading_status = case
+          when public.user_library.reading_status = 'completed' then 'completed'
+          else excluded.reading_status
+        end,
         progress = excluded.progress,
         updated_at = now()
   returning * into v_row;
 
-  -- Daily log + streak (only when actual reading happened).
-  if v_minutes > 0 then
-    insert into public.reading_daily_log (user_id, activity_date, minutes_read, books_touched)
-    values (v_user_id, v_today, v_minutes, 1)
-    on conflict (user_id, activity_date) do update
-      set minutes_read = public.reading_daily_log.minutes_read + excluded.minutes_read,
-          books_touched = public.reading_daily_log.books_touched + 1;
+  -- Daily log + streak: first session of the UTC day marks the day (even with 0 minutes).
+  select exists(
+    select 1 from public.reading_daily_log
+    where user_id = v_user_id and activity_date = v_today
+  ) into v_had_log_today;
 
-    select current_streak_days, longest_streak_days, last_read_date, total_reading_minutes
+  if not v_had_log_today then
+    insert into public.reading_daily_log (user_id, activity_date, minutes_read, books_touched)
+    values (v_user_id, v_today, v_minutes, 1);
+
+    select
+      current_streak_days,
+      longest_streak_days,
+      last_read_date,
+      total_reading_minutes,
+      coalesce(total_reading_days, 0) as total_reading_days
       into v_profile
     from public.profiles
     where id = v_user_id;
 
     if v_profile is null then
-      insert into public.profiles (id, last_read_date, current_streak_days, longest_streak_days, total_reading_minutes)
-      values (v_user_id, v_today, 1, 1, v_minutes);
+      insert into public.profiles (
+        id,
+        last_read_date,
+        current_streak_days,
+        longest_streak_days,
+        total_reading_minutes,
+        total_reading_days
+      )
+      values (v_user_id, v_today, 1, 1, v_minutes, 1);
     else
+      v_new_streak := case
+        when v_profile.last_read_date = v_today then v_profile.current_streak_days
+        when v_profile.last_read_date = v_today - 1 then v_profile.current_streak_days + 1
+        else 1
+      end;
+
       update public.profiles
       set last_read_date = v_today,
-          current_streak_days = case
-            when v_profile.last_read_date = v_today then v_profile.current_streak_days
-            when v_profile.last_read_date = v_today - 1 then v_profile.current_streak_days + 1
-            else 1
-          end,
-          longest_streak_days = greatest(
-            v_profile.longest_streak_days,
-            case
-              when v_profile.last_read_date = v_today then v_profile.current_streak_days
-              when v_profile.last_read_date = v_today - 1 then v_profile.current_streak_days + 1
-              else 1
-            end
-          ),
+          current_streak_days = v_new_streak,
+          longest_streak_days = greatest(v_profile.longest_streak_days, v_new_streak),
           total_reading_minutes = v_profile.total_reading_minutes + v_minutes,
+          total_reading_days = v_profile.total_reading_days + 1,
           updated_at = now()
       where id = v_user_id;
     end if;
+  elsif v_minutes > 0 then
+    update public.reading_daily_log
+    set minutes_read = public.reading_daily_log.minutes_read + v_minutes
+    where user_id = v_user_id and activity_date = v_today;
+
+    update public.profiles
+    set total_reading_minutes = total_reading_minutes + v_minutes,
+        updated_at = now()
+    where id = v_user_id;
   end if;
 
   -- Increment total_books_completed once per book.
@@ -298,11 +322,12 @@ begin
   from public.user_library
   where user_id = p_user_id and reading_status = 'completed';
 
-  if v_profile.total_books_completed < v_completed_books then
+  if v_profile.total_books_completed is distinct from v_completed_books then
     update public.profiles
     set total_books_completed = v_completed_books,
         updated_at = now()
     where id = p_user_id;
+    v_profile.total_books_completed := v_completed_books;
   end if;
 
   select exists(

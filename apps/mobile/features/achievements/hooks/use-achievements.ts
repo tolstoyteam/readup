@@ -8,17 +8,17 @@ import {
 import { buildAchievementViewModels } from "@/features/achievements/build-view-models";
 import type { AchievementViewModel } from "@/features/achievements/types";
 import { fetchProfile } from "@/features/profile/api/profile";
-import { useLibrary } from "@/features/library";
+import {
+  getEffectiveCurrentStreak,
+  todayActivityDateKey,
+} from "@/features/reading-stats";
 import { useAuth } from "@/shared/context/auth-context";
 
 export function useAchievements() {
   const { user } = useAuth();
-  const { completedBooks } = useLibrary();
   const [viewModels, setViewModels] = useState<AchievementViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const completedBooksCount = completedBooks.length;
 
   const reload = useCallback(async () => {
     if (!user) {
@@ -37,9 +37,10 @@ export function useAchievements() {
         fetchHasPerfectQuiz(user.id),
       ]);
 
+      const todayKey = todayActivityDateKey();
       const stats = {
-        completedBooksCount,
-        currentStreakDays: profile?.current_streak_days ?? 0,
+        completedBooksCount: profile?.total_books_completed ?? 0,
+        currentStreakDays: getEffectiveCurrentStreak(profile, todayKey),
         totalReadingMinutes: profile?.total_reading_minutes ?? 0,
         hasPerfectQuiz,
       };
@@ -51,7 +52,7 @@ export function useAchievements() {
     } finally {
       setLoading(false);
     }
-  }, [user, completedBooksCount]);
+  }, [user]);
 
   useEffect(() => {
     void reload();

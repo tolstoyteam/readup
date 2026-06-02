@@ -136,6 +136,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const result = await recordReadingSessionService(args);
       if (result) {
         applyRecord(result, args.bookId);
+      } else {
+        throw new Error("Could not save reading session");
       }
     },
     [applyRecord],

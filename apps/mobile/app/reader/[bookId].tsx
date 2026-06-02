@@ -9,6 +9,7 @@ import {
   useLibraryActions,
   useLibraryBook,
 } from "@/features/library";
+import { useReadingSessionTracker } from "@/features/reading-stats";
 import { ReaderBookAudioProvider } from "@/features/reader/audio/reader-book-audio-context";
 import { BookListenPlayer } from "@/features/reader/components/book-listen-player";
 import { PageElements } from "@/features/reader/components/page-elements";
@@ -30,6 +31,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -195,8 +197,6 @@ export default function ReaderScreen() {
 
   const audioCheckedBookIdRef = useRef<string | null>(null);
   const resumeAppliedRef = useRef<string | null>(null);
-  const lastSavedPageRef = useRef<number | null>(null);
-  const lastSaveAtRef = useRef<number>(Date.now());
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +214,6 @@ export default function ReaderScreen() {
   useEffect(() => {
     audioCheckedBookIdRef.current = null;
     resumeAppliedRef.current = null;
-    lastSavedPageRef.current = null;
     setAudioState({ status: "checking", source: null, message: null });
     setHasQuiz(false);
   }, [bookId]);
@@ -282,23 +281,6 @@ export default function ReaderScreen() {
   }, [load]);
 
   useEffect(() => {
-    if (!bookId || !document || libraryLoading) return;
-    if (resumeAppliedRef.current === bookId) return;
-
-    const docPages = document.pages ?? [];
-    if (docPages.length === 0) return;
-
-    resumeAppliedRef.current = bookId;
-    const savedPage = libraryRecord?.progress?.page ?? 0;
-    const targetPage = Math.min(
-      Math.max(savedPage - 1, 0),
-      Math.max(docPages.length - 1, 0),
-    );
-    setPageIndex(targetPage);
-    lastSavedPageRef.current = null;
-  }, [bookId, document, libraryLoading, libraryRecord?.progress?.page]);
-
-  useEffect(() => {
     if (!document?.book_id) return;
     if (audioCheckedBookIdRef.current === document.book_id) return;
     audioCheckedBookIdRef.current = document.book_id;
@@ -325,6 +307,37 @@ export default function ReaderScreen() {
   const currentPage = pages[pageIndex] ?? null;
   const totalPages = document?.total_pages ?? pages.length ?? 0;
   const pageLabel = currentPage?.page_number ?? pageIndex + 1;
+  const sessionTracker = useReadingSessionTracker({
+    enabled: !!user && !!document?.book_id && totalPages > 0,
+    bookId: document?.book_id,
+    pageLabel,
+    totalPages,
+    recordReadingSession,
+  });
+
+  useEffect(() => {
+    if (!bookId || !document || libraryLoading) return;
+    if (resumeAppliedRef.current === bookId) return;
+
+    const docPages = document.pages ?? [];
+    if (docPages.length === 0) return;
+
+    resumeAppliedRef.current = bookId;
+    const savedPage = libraryRecord?.progress?.page ?? 0;
+    const targetPage = Math.min(
+      Math.max(savedPage - 1, 0),
+      Math.max(docPages.length - 1, 0),
+    );
+    setPageIndex(targetPage);
+    sessionTracker.resetPageTracking(targetPage);
+  }, [
+    bookId,
+    document,
+    libraryLoading,
+    libraryRecord?.progress?.page,
+    sessionTracker,
+  ]);
+
   const hasAudio = audioState.status === "available";
   const audioChecking = audioState.status === "checking" && !!document;
   const isLastPage = pages.length > 0 && pageIndex === pages.length - 1;
@@ -341,49 +354,22 @@ export default function ReaderScreen() {
     if (!user || !document?.book_id || finishing) return;
     setFinishing(true);
     try {
-      await recordReadingSession({
-        bookId: document.book_id,
-        page: totalPages,
-        totalPages,
-        minutesDelta: 0,
-      });
+      await sessionTracker.flush({ completing: true });
       router.replace("/(tabs)");
     } catch {
-      // ignore; user can retry
+      Alert.alert(
+        "Не удалось завершить книгу",
+        "Проверьте подключение к сети и попробуйте снова.",
+      );
     } finally {
       setFinishing(false);
     }
-  }, [
-    document?.book_id,
-    finishing,
-    recordReadingSession,
-    router,
-    totalPages,
-    user,
-  ]);
+  }, [document?.book_id, finishing, router, sessionTracker, user]);
 
   useEffect(() => {
     if (!user || !document?.book_id || pages.length === 0) return;
-    if (lastSavedPageRef.current === pageIndex) return;
-    // Last-page saves use pageLabel which may equal totalPages and auto-complete via RPC.
-    // Completion is only triggered by the explicit "Закончить Книгу" action.
-    if (pageIndex === pages.length - 1) return;
-
-    const now = Date.now();
-    const minutesDelta = Math.min(
-      Math.max(Math.round((now - lastSaveAtRef.current) / 60000), 0),
-      30,
-    );
-    lastSavedPageRef.current = pageIndex;
-    lastSaveAtRef.current = now;
-
-    void recordReadingSession({
-      bookId: document.book_id,
-      page: pageLabel,
-      totalPages,
-      minutesDelta,
-    }).catch(() => undefined);
-  }, [document?.book_id, pageIndex, pageLabel, pages.length, recordReadingSession, totalPages, user]);
+    sessionTracker.onPageChange(pageIndex);
+  }, [document?.book_id, pageIndex, pages.length, sessionTracker, user]);
 
   const goNext = () => {
     if (pageIndex < pages.length - 1) setPageIndex((i) => i + 1);
@@ -499,6 +485,9 @@ export default function ReaderScreen() {
             <ReaderBookAudioProvider
               bookId={document.book_id}
               initialSource={audioState.source}
+              onSessionFlush={(audioPositionMs) =>
+                sessionTracker.flush({ audioPositionMs })
+              }
             >
               <ReaderChrome
                 document={document}

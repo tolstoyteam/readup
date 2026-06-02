@@ -12,6 +12,7 @@ alter table public.profiles
   add column if not exists longest_streak_days integer not null default 0,
   add column if not exists last_read_date date,
   add column if not exists total_books_completed integer not null default 0,
+  add column if not exists total_reading_days integer not null default 0,
   add column if not exists total_reading_minutes integer not null default 0,
   add column if not exists daily_reading_goal_minutes integer not null default 5,
   add column if not exists notification_preferences jsonb not null default '{}'::jsonb;

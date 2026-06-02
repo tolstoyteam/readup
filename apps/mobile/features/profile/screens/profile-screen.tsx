@@ -39,6 +39,10 @@ import {
   saveInterests,
   type Profile,
 } from "@/features/profile/api/profile";
+import {
+  buildReadingStatsSnapshot,
+  todayActivityDateKey,
+} from "@/features/reading-stats";
 import { GOALS, INTEREST_GROUPS } from "@/features/setup/constants";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
@@ -152,6 +156,11 @@ export default function ProfileScreen() {
   const unlockedAchievementPreview = useMemo(
     () => achievementViewModels.filter((row) => row.isUnlocked).slice(0, 3),
     [achievementViewModels],
+  );
+
+  const readingStats = useMemo(
+    () => buildReadingStatsSnapshot(profile, todayActivityDateKey()),
+    [profile],
   );
 
   const selectedSet = useMemo(() => new Set(selectedInterests), [selectedInterests]);
@@ -349,17 +358,17 @@ export default function ProfileScreen() {
           <View className="mt-4 flex-row gap-3">
             <StatPill
               label="Серия"
-              value={`${profile.current_streak_days}`}
+              value={`${readingStats.currentStreakDays}`}
               unit="дн"
             />
             <StatPill
-              label="Книг"
-              value={`${profile.total_books_completed}`}
+              label="Прочитано"
+              value={`${readingStats.totalBooksCompleted}`}
               unit=""
             />
             <StatPill
               label="Минут"
-              value={`${profile.total_reading_minutes}`}
+              value={`${readingStats.totalReadingMinutes}`}
               unit=""
             />
           </View>

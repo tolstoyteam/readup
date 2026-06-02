@@ -19,13 +19,14 @@ export type Profile = {
   longest_streak_days: number;
   last_read_date: string | null;
   total_books_completed: number;
+  total_reading_days: number;
   total_reading_minutes: number;
   daily_reading_goal_minutes: number;
   notification_preferences: NotificationPreferences;
 };
 
 const PROFILE_COLUMNS =
-  "id, selected_interests, reading_goal, interests_step_done, goal_step_done, is_premium, current_streak_days, longest_streak_days, last_read_date, total_books_completed, total_reading_minutes, daily_reading_goal_minutes, notification_preferences";
+  "id, selected_interests, reading_goal, interests_step_done, goal_step_done, is_premium, current_streak_days, longest_streak_days, last_read_date, total_books_completed, total_reading_days, total_reading_minutes, daily_reading_goal_minutes, notification_preferences";
 
 function intish(value: unknown, fallback = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -58,6 +59,7 @@ function normalizeProfile(row: unknown): Profile | null {
     last_read_date:
       typeof record.last_read_date === "string" ? record.last_read_date : null,
     total_books_completed: intish(record.total_books_completed),
+    total_reading_days: intish(record.total_reading_days),
     total_reading_minutes: intish(record.total_reading_minutes),
     daily_reading_goal_minutes: intish(record.daily_reading_goal_minutes, 5),
     notification_preferences:

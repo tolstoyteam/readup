@@ -3,11 +3,12 @@ import { StatusBar } from "expo-status-bar";
 import {
   ArrowLeft,
   BookOpen,
+  Calendar,
   Flame,
   Target,
   Trophy,
 } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,13 +18,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  fetchProfile,
-  fetchReadingDailyLog,
-  saveDailyReadingGoal,
-  type Profile,
-  type ReadingDailyLogEntry,
-} from "@/features/profile/api/profile";
+import { saveDailyReadingGoal } from "@/features/profile/api/profile";
+import { generateLastNDays, useReadingStats } from "@/features/reading-stats";
 import { ReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
@@ -32,50 +28,26 @@ const GOAL_OPTIONS = [5, 10, 20, 30];
 export default function StreakScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [log, setLog] = useState<ReadingDailyLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { profile, log, todayKey, stats, loading, reload } = useReadingStats(14);
   const [savingGoal, setSavingGoal] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      const [prof, dailyLog] = await Promise.all([
-        fetchProfile(user.id),
-        fetchReadingDailyLog(user.id, 14),
-      ]);
-      setProfile(prof);
-      setLog(dailyLog);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   async function selectGoal(minutes: number) {
     if (!user || savingGoal) return;
     setSavingGoal(true);
     try {
-      const next = await saveDailyReadingGoal(user.id, minutes);
-      setProfile(next);
+      await saveDailyReadingGoal(user.id, minutes);
+      await reload();
     } finally {
       setSavingGoal(false);
     }
   }
 
   const dailyGoal = profile?.daily_reading_goal_minutes ?? 5;
-  const todayKey = new Date().toISOString().slice(0, 10);
   const todayEntry = log.find((entry) => entry.date === todayKey);
   const todayMinutes = todayEntry?.minutes ?? 0;
   const dailyProgress = Math.min(todayMinutes / Math.max(dailyGoal, 1), 1);
   const maxLogMinutes = Math.max(...log.map((entry) => entry.minutes), dailyGoal, 1);
+  const chartDays = generateLastNDays(todayKey, 14);
 
   return (
     <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
@@ -115,26 +87,34 @@ export default function StreakScreen() {
               </Text>
             </View>
             <Text className="mt-2 text-[44px] font-extrabold tracking-[-1.76px] text-[#1A2420]">
-              {profile?.current_streak_days ?? 0}{" "}
+              {stats.currentStreakDays}{" "}
               <Text className="text-[18px] font-medium tracking-[-0.72px] text-[#4A5550]">
-                {dayLabel(profile?.current_streak_days ?? 0)}
+                {dayLabel(stats.currentStreakDays)}
               </Text>
             </Text>
             <Text className="mt-1 text-[13px] tracking-[-0.52px] text-[#7A7868]">
-              Лучшая серия: {profile?.longest_streak_days ?? 0}
+              Лучшая серия: {stats.longestStreakDays}
             </Text>
           </View>
 
-          <View className="mt-5 flex-row gap-3">
+          <View className="mt-5 flex-row flex-wrap gap-3">
+            <StatTile
+              icon={<Calendar size={20} color={ReadupColors.brand} strokeWidth={2.2} />}
+              label="Дней чтения"
+              value={String(stats.totalReadingDays)}
+              className="min-w-[46%] flex-1"
+            />
             <StatTile
               icon={<BookOpen size={20} color={ReadupColors.brand} strokeWidth={2.2} />}
               label="Книг прочитано"
-              value={String(profile?.total_books_completed ?? 0)}
+              value={String(stats.totalBooksCompleted)}
+              className="min-w-[46%] flex-1"
             />
             <StatTile
               icon={<Trophy size={20} color={ReadupColors.brand} strokeWidth={2.2} />}
               label="Минут чтения"
-              value={String(profile?.total_reading_minutes ?? 0)}
+              value={String(stats.totalReadingMinutes)}
+              className="min-w-[46%] flex-1"
             />
           </View>
 
@@ -191,13 +171,10 @@ export default function StreakScreen() {
               Последние 14 дней
             </Text>
             <View className="mt-4 flex-row items-end gap-1.5">
-              {generateLast14Days(todayKey).map((day) => {
+              {chartDays.map((day) => {
                 const entry = log.find((row) => row.date === day);
                 const minutes = entry?.minutes ?? 0;
-                const height = Math.max(
-                  6,
-                  (minutes / maxLogMinutes) * 110,
-                );
+                const height = Math.max(6, (minutes / maxLogMinutes) * 110);
                 return (
                   <View key={day} className="flex-1 items-center gap-1.5">
                     <View
@@ -230,28 +207,19 @@ function dayLabel(count: number): string {
   return "дней";
 }
 
-function generateLast14Days(todayKey: string): string[] {
-  const days: string[] = [];
-  const today = new Date(todayKey);
-  for (let i = 13; i >= 0; i -= 1) {
-    const d = new Date(today);
-    d.setUTCDate(today.getUTCDate() - i);
-    days.push(d.toISOString().slice(0, 10));
-  }
-  return days;
-}
-
 function StatTile({
   icon,
   label,
   value,
+  className = "flex-1",
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  className?: string;
 }) {
   return (
-    <View className="flex-1 rounded-[16px] bg-[#F2F0E6] px-4 py-4">
+    <View className={`rounded-[16px] bg-[#F2F0E6] px-4 py-4 ${className}`}>
       <View className="mb-2">{icon}</View>
       <Text className="text-[11px] uppercase tracking-[-0.44px] text-[#7A7868]">
         {label}

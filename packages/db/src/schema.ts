@@ -255,6 +255,7 @@ export const profilesTable = pgTable("profiles", {
   longestStreakDays: integer("longest_streak_days").notNull().default(0),
   lastReadDate: date("last_read_date"),
   totalBooksCompleted: integer("total_books_completed").notNull().default(0),
+  totalReadingDays: integer("total_reading_days").notNull().default(0),
   totalReadingMinutes: integer("total_reading_minutes").notNull().default(0),
   dailyReadingGoalMinutes: integer("daily_reading_goal_minutes").notNull().default(5),
   notificationPreferences: jsonb("notification_preferences")
