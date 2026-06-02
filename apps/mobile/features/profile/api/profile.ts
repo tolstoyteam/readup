@@ -185,57 +185,8 @@ export async function saveNotificationPreferences(
   return profile;
 }
 
-export type AchievementUnlock = {
-  id: number;
-  slug: string;
-  title: string;
-  description: string;
-  icon: string;
-  unlockedAt: string | null;
-};
-
-export async function fetchUnlockedAchievements(
-  userId: string,
-): Promise<AchievementUnlock[]> {
-  const { data, error } = await supabase
-    .from("user_achievements")
-    .select(
-      "unlocked_at, achievement:achievements(id, slug, title, description, icon, sort_order)",
-    )
-    .eq("user_id", userId);
-  if (error) {
-    if (__DEV__) console.warn("[fetchUnlockedAchievements]", error.message);
-    return [];
-  }
-  type AchievementRow = {
-    id: number;
-    slug: string;
-    title: string;
-    description: string;
-    icon: string;
-    sort_order: number;
-  };
-  return (data ?? [])
-    .map((row) => {
-      const record = row as unknown as {
-        unlocked_at: string | null;
-        achievement?: AchievementRow | AchievementRow[] | null;
-      };
-      const achievement = Array.isArray(record.achievement)
-        ? record.achievement[0]
-        : record.achievement;
-      if (!achievement) return null;
-      return {
-        id: achievement.id,
-        slug: achievement.slug,
-        title: achievement.title,
-        description: achievement.description,
-        icon: achievement.icon,
-        unlockedAt: record.unlocked_at,
-      };
-    })
-    .filter((row): row is AchievementUnlock => !!row);
-}
+export type { AchievementUnlock } from "@/features/achievements/api/achievements";
+export { fetchUnlockedAchievements } from "@/features/achievements/api/achievements";
 
 export type ReadingDailyLogEntry = {
   date: string;

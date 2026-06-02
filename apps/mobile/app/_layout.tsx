@@ -49,6 +49,10 @@ export default function RootLayout() {
               options={{ headerShown: false, animation: "slide_from_right" }}
             />
             <Stack.Screen
+              name="achievements"
+              options={{ headerShown: false, animation: "slide_from_right" }}
+            />
+            <Stack.Screen
               name="subscription"
               options={{ headerShown: false, animation: "slide_from_bottom" }}
             />

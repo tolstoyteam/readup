@@ -4,7 +4,7 @@ import {
   Inter_600SemiBold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { router } from "expo-router";
+import { type Href, router, useFocusEffect } from "expo-router";
 import {
   Bell,
   ChevronDown,
@@ -30,13 +30,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import { fetchBooks } from "@/features/books/api/books";
 import { BookCard, type BookCardItem } from "@/features/books/components/book-card";
+import { AchievementIcon } from "@/features/achievements/components/achievement-icon";
+import { useAchievements } from "@/features/achievements/hooks/use-achievements";
 import {
   ensureProfile,
   fetchProfile,
-  fetchUnlockedAchievements,
   saveGoal,
   saveInterests,
-  type AchievementUnlock,
   type Profile,
 } from "@/features/profile/api/profile";
 import { GOALS, INTEREST_GROUPS } from "@/features/setup/constants";
@@ -89,7 +89,12 @@ export default function ProfileScreen() {
   const [goalEditing, setGoalEditing] = useState(false);
   const [savingSection, setSavingSection] = useState<null | "name" | "interests" | "goal">(null);
   const [libraryItems, setLibraryItems] = useState<BookCardItem[]>([]);
-  const [achievements, setAchievements] = useState<AchievementUnlock[]>([]);
+  const {
+    viewModels: achievementViewModels,
+    unlockedCount: achievementsUnlockedCount,
+    totalCount: achievementsTotalCount,
+    reload: reloadAchievements,
+  } = useAchievements();
 
   const loadProfile = useCallback(async () => {
     if (!user) return;
@@ -135,8 +140,19 @@ export default function ProfileScreen() {
     setFullName(name);
     setInitialFullName(name);
     void loadProfile();
-    void fetchUnlockedAchievements(user.id).then(setAchievements).catch(() => undefined);
   }, [user, loadProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadProfile();
+      void reloadAchievements();
+    }, [loadProfile, reloadAchievements]),
+  );
+
+  const unlockedAchievementPreview = useMemo(
+    () => achievementViewModels.filter((row) => row.isUnlocked).slice(0, 3),
+    [achievementViewModels],
+  );
 
   const selectedSet = useMemo(() => new Set(selectedInterests), [selectedInterests]);
 
@@ -349,22 +365,41 @@ export default function ProfileScreen() {
           </View>
         </Pressable>
 
-        {achievements.length > 0 ? (
-          <View className={cardClass}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/achievements" as Href)}
+          className={`${cardClass} active:opacity-90`}>
+          <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <Trophy size={18} color={ReadupColors.brand} strokeWidth={2.2} />
-              <Text
-                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
-                style={{ fontFamily: "Inter_600SemiBold" }}>
-                Достижения
-              </Text>
+              <View>
+                <Text
+                  className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
+                  style={{ fontFamily: "Inter_600SemiBold" }}>
+                  Достижения
+                </Text>
+                <Text
+                  className="text-[13px] tracking-[-0.52px] text-[#7A7868]"
+                  style={{ fontFamily: "Inter_400Regular" }}>
+                  {achievementsUnlockedCount} из {achievementsTotalCount} получено
+                </Text>
+              </View>
             </View>
+            <ChevronRight size={20} color={ReadupColors.textTertiary} strokeWidth={2} />
+          </View>
+          {unlockedAchievementPreview.length > 0 ? (
             <View className="mt-3 flex-row flex-wrap gap-2">
-              {achievements.slice(0, 6).map((achievement) => (
+              {unlockedAchievementPreview.map((achievement) => (
                 <View
-                  key={achievement.id}
-                  className="rounded-full border border-[#059669] bg-[#ECFDF5] px-3 py-1.5"
+                  key={achievement.slug}
+                  className="flex-row items-center gap-1.5 rounded-full border border-[#059669] bg-[#ECFDF5] px-3 py-1.5"
                 >
+                  <AchievementIcon
+                    name={achievement.icon}
+                    size={14}
+                    color={ReadupColors.brand}
+                    strokeWidth={2}
+                  />
                   <Text
                     className="text-[12px] font-medium tracking-[-0.48px] text-[#059669]"
                     style={{ fontFamily: "Inter_500Medium" }}
@@ -374,8 +409,8 @@ export default function ProfileScreen() {
                 </View>
               ))}
             </View>
-          </View>
-        ) : null}
+          ) : null}
+        </Pressable>
 
         <View className={cardClass}>
           <Text

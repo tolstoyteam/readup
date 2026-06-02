@@ -108,9 +108,9 @@ begin
     set total_books_completed = total_books_completed + 1,
         updated_at = now()
     where id = v_user_id;
-
-    perform public._maybe_unlock_achievements(v_user_id);
   end if;
+
+  perform public._maybe_unlock_achievements(v_user_id);
 
   return v_row;
 end;
@@ -287,10 +287,22 @@ as $$
 declare
   v_profile record;
   v_perfect_quiz boolean;
+  v_completed_books integer;
 begin
   select * into v_profile from public.profiles where id = p_user_id;
   if v_profile is null then
     return;
+  end if;
+
+  select count(*)::integer into v_completed_books
+  from public.user_library
+  where user_id = p_user_id and reading_status = 'completed';
+
+  if v_profile.total_books_completed < v_completed_books then
+    update public.profiles
+    set total_books_completed = v_completed_books,
+        updated_at = now()
+    where id = p_user_id;
   end if;
 
   select exists(
@@ -299,14 +311,14 @@ begin
   ) into v_perfect_quiz;
 
   -- first_book_completed
-  if v_profile.total_books_completed >= 1 then
+  if v_completed_books >= 1 then
     insert into public.user_achievements (user_id, achievement_id)
     select p_user_id, id from public.achievements where slug = 'first_book_completed'
     on conflict do nothing;
   end if;
 
   -- five_books_completed
-  if v_profile.total_books_completed >= 5 then
+  if v_completed_books >= 5 then
     insert into public.user_achievements (user_id, achievement_id)
     select p_user_id, id from public.achievements where slug = 'five_books_completed'
     on conflict do nothing;
