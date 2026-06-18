@@ -1,4 +1,5 @@
-import { supabase, supabaseCoverPublicUrl } from "@/shared/lib/supabase";
+import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
+import { supabaseCoverPublicUrl } from "@/shared/lib/supabase";
 
 import { fetchBookContent } from "./book-content";
 
@@ -42,15 +43,11 @@ export async function fetchBookDetail(bookId: string): Promise<BookDetail | null
 
   const { document, id } = row;
 
-  let quizCount = 0;
+  let hasQuiz = false;
   try {
-    const { count } = await supabase
-      .from("quizzes")
-      .select("id", { count: "exact", head: true })
-      .eq("book_id", id);
-    quizCount = count ?? 0;
+    hasQuiz = await bookHasPlayableQuiz(document.book_id);
   } catch {
-    quizCount = 0;
+    hasQuiz = false;
   }
 
   return {
@@ -64,6 +61,6 @@ export async function fetchBookDetail(bookId: string): Promise<BookDetail | null
     difficulty: document.difficulty ?? null,
     readingTimeMinutes: toNumber(document.reading_time_minutes),
     totalPages: toNumber(document.total_pages),
-    hasQuiz: quizCount > 0,
+    hasQuiz,
   };
 }

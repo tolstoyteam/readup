@@ -7,6 +7,7 @@ import {
 } from "@/features/achievements/api/achievements";
 import { buildAchievementViewModels } from "@/features/achievements/build-view-models";
 import type { AchievementViewModel } from "@/features/achievements/types";
+import { subscribeEngagementRefresh } from "@/features/engagement/engagement-refresh";
 import { fetchProfile } from "@/features/profile/api/profile";
 import {
   getEffectiveCurrentStreak,
@@ -56,6 +57,12 @@ export function useAchievements() {
 
   useEffect(() => {
     void reload();
+  }, [reload]);
+
+  useEffect(() => {
+    return subscribeEngagementRefresh(() => {
+      void reload();
+    });
   }, [reload]);
 
   const unlockedCount = useMemo(

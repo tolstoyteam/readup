@@ -19,6 +19,7 @@ import {
   recordReadingSession as recordReadingSessionService,
   toggleSave as toggleSaveService,
 } from "@/features/library/services/library-service";
+import { notifyEngagementRefresh } from "@/features/engagement/engagement-refresh";
 import { useAuth } from "@/shared/context/auth-context";
 
 type LibraryContextValue = {
@@ -136,6 +137,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const result = await recordReadingSessionService(args);
       if (result) {
         applyRecord(result, args.bookId);
+        if (result.readingStatus === "completed") {
+          notifyEngagementRefresh();
+        }
       } else {
         throw new Error("Could not save reading session");
       }

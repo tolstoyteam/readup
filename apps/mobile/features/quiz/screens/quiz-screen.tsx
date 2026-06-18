@@ -17,6 +17,7 @@ import {
   type Quiz,
   type QuizAttemptResult,
 } from "@/features/quiz/api/quiz";
+import { notifyEngagementRefresh } from "@/features/engagement/engagement-refresh";
 import { ReadupColors } from "@/shared/constants/readup-theme";
 
 export default function QuizScreen() {
@@ -86,6 +87,7 @@ export default function QuizScreen() {
         answers: payload,
       });
       setResult(attempt);
+      notifyEngagementRefresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось отправить ответы");
     } finally {

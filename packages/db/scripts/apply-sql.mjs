@@ -28,6 +28,7 @@ function normalizeDatabaseUrl(raw) {
 }
 
 const SQL_FILES = [
+  "supabase-engagement-cleanup.sql",
   "supabase-profiles-library.sql",
   "supabase-books-anon-select.sql",
   "supabase-content-read.sql",
@@ -64,6 +65,58 @@ async function main() {
   console.log(
     `Verified RPCs: ${checks.map((row) => row.routine_name).join(", ") || "none"}`,
   );
+
+  const sessionRpcs = await sql`
+    select pg_get_function_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'record_reading_session'
+    order by p.oid
+  `;
+
+  if (sessionRpcs.length === 0) {
+    console.error("ERROR: record_reading_session not found after apply.");
+    process.exit(1);
+  }
+
+  for (const row of sessionRpcs) {
+    console.log(`record_reading_session: ${row.args}`);
+  }
+
+  const hasActivityDate = sessionRpcs.some((row) =>
+    String(row.args).includes("p_activity_date"),
+  );
+  if (hasActivityDate) {
+    console.error(
+      "ERROR: remediation record_reading_session (p_activity_date) still present. Re-run apply or check cleanup.",
+    );
+    process.exit(1);
+  }
+
+  if (sessionRpcs.length > 1) {
+    console.warn(
+      `WARN: ${sessionRpcs.length} record_reading_session overloads found; expected one 5-parameter version.`,
+    );
+  }
+
+  const remediationTriggers = await sql`
+    select tgname
+    from pg_trigger
+    where tgname in (
+      'trg_user_library_protect_progress',
+      'trg_profiles_protect_engagement_stats'
+    )
+      and not tgisinternal
+  `;
+
+  if (remediationTriggers.length > 0) {
+    console.error(
+      `ERROR: remediation triggers still present: ${remediationTriggers.map((r) => r.tgname).join(", ")}`,
+    );
+    process.exit(1);
+  }
+
+  console.log("Engagement cleanup verification: ok");
 }
 
 main()

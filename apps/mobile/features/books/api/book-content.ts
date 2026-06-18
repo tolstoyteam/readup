@@ -118,7 +118,7 @@ export async function fetchBookContent(
     cover_image_path: record.cover_image_url ?? undefined,
     difficulty: record.data?.difficulty,
     reading_time_minutes: record.data?.reading_time_minutes,
-    total_pages: pages.length,
+    total_pages: Math.max(pages.length, 1),
     pages,
   };
 

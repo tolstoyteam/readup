@@ -6,6 +6,7 @@ import {
   type Profile,
   type ReadingDailyLogEntry,
 } from "@/features/profile/api/profile";
+import { subscribeEngagementRefresh } from "@/features/engagement/engagement-refresh";
 import { useAuth } from "@/shared/context/auth-context";
 
 import { todayActivityDateKey } from "./activity-date";
@@ -53,6 +54,12 @@ export function useReadingStats(logDays = 14): UseReadingStatsResult {
 
   useEffect(() => {
     void reload();
+  }, [reload]);
+
+  useEffect(() => {
+    return subscribeEngagementRefresh(() => {
+      void reload();
+    });
   }, [reload]);
 
   const stats = useMemo(

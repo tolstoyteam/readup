@@ -132,12 +132,7 @@ function normalizeOneBook(obj: Record<string, unknown>): BookDocument | null {
         ? obj.readingTimeMinutes
         : undefined;
 
-  const total_pages =
-    typeof obj.total_pages === "number"
-      ? obj.total_pages
-      : typeof obj.totalPages === "number"
-        ? obj.totalPages
-        : Math.max(pages.length, 1);
+  const total_pages = Math.max(pages.length, 1);
 
   return {
     book_id,

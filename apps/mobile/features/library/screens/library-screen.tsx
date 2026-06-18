@@ -39,7 +39,7 @@ const SECTION_OPTIONS: { value: LibrarySection; label: string; empty: string }[]
   {
     value: "completed",
     label: "Completed",
-    empty: "Books move here when you reach the final page.",
+    empty: "Books move here after you tap Finish on the last page.",
   },
 ];
 

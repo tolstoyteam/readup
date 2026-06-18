@@ -16,7 +16,8 @@ import { PageElements } from "@/features/reader/components/page-elements";
 import { ReaderBottomNowPlaying } from "@/features/reader/components/reader-bottom-now-playing";
 import { ReaderBottomReadingProgress } from "@/features/reader/components/reader-bottom-reading-progress";
 import { ReaderListenLoading } from "@/features/reader/components/reader-listen-states";
-import { bookHasQuiz } from "@/features/quiz/api/quiz";
+import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
+import { pageIndexFromSavedPage } from "@/features/reader/lib/page-index";
 import { useAuth } from "@/shared/context/auth-context";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -115,7 +116,7 @@ function ReaderChrome({
                 <ActivityIndicator size="small" color="#FBFAF2" />
               ) : (
                 <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#FBFAF2]">
-                  Закончить Книгу
+                  Закончить книгу
                 </Text>
               )}
             </Pressable>
@@ -128,7 +129,7 @@ function ReaderChrome({
               className="min-h-[44px] items-center justify-center rounded-full border border-[#059669] bg-transparent px-6 active:opacity-80"
             >
               <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#059669]">
-                Пройти Тест
+                Пройти тест
               </Text>
             </Pressable>
           ) : null}
@@ -220,7 +221,7 @@ export default function ReaderScreen() {
 
   useEffect(() => {
     if (!bookId) return;
-    void bookHasQuiz(bookId)
+    void bookHasPlayableQuiz(bookId)
       .then(setHasQuiz)
       .catch(() => setHasQuiz(false));
   }, [bookId]);
@@ -305,7 +306,7 @@ export default function ReaderScreen() {
   }, [document]);
 
   const currentPage = pages[pageIndex] ?? null;
-  const totalPages = document?.total_pages ?? pages.length ?? 0;
+  const totalPages = pages.length;
   const pageLabel = currentPage?.page_number ?? pageIndex + 1;
   const sessionTracker = useReadingSessionTracker({
     enabled: !!user && !!document?.book_id && totalPages > 0,
@@ -319,15 +320,11 @@ export default function ReaderScreen() {
     if (!bookId || !document || libraryLoading) return;
     if (resumeAppliedRef.current === bookId) return;
 
-    const docPages = document.pages ?? [];
-    if (docPages.length === 0) return;
+    if (pages.length === 0) return;
 
     resumeAppliedRef.current = bookId;
     const savedPage = libraryRecord?.progress?.page ?? 0;
-    const targetPage = Math.min(
-      Math.max(savedPage - 1, 0),
-      Math.max(docPages.length - 1, 0),
-    );
+    const targetPage = pageIndexFromSavedPage(savedPage, pages);
     setPageIndex(targetPage);
     sessionTracker.resetPageTracking(targetPage);
   }, [
@@ -335,6 +332,7 @@ export default function ReaderScreen() {
     document,
     libraryLoading,
     libraryRecord?.progress?.page,
+    pages,
     sessionTracker,
   ]);
 
