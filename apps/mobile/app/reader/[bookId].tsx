@@ -16,6 +16,8 @@ import { PageElements } from "@/features/reader/components/page-elements";
 import { ReaderBottomNowPlaying } from "@/features/reader/components/reader-bottom-now-playing";
 import { ReaderBottomReadingProgress } from "@/features/reader/components/reader-bottom-reading-progress";
 import { ReaderListenLoading } from "@/features/reader/components/reader-listen-states";
+import { ReaderSettingsSheet } from "@/features/reader/components/reader-settings-sheet";
+import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
 import { pageIndexFromSavedPage } from "@/features/reader/lib/page-index";
 import { useAuth } from "@/shared/context/auth-context";
@@ -84,6 +86,7 @@ function ReaderChrome({
   const currentPage = pages[pageIndex] ?? null;
   const pageProgress =
     totalPages > 0 ? Math.min((pageIndex + 1) / totalPages, 1) : 0;
+  const { settings } = useReaderSettings();
 
   return (
     <>
@@ -91,7 +94,11 @@ function ReaderChrome({
         {readMode === "read" && currentPage && (
           <ScrollView
             className="flex-1"
-            contentContainerClassName="px-[22px] pb-6 pt-2"
+            contentContainerStyle={{
+              paddingHorizontal: settings.margin,
+              paddingTop: 8,
+              paddingBottom: 24,
+            }}
             showsVerticalScrollIndicator={false}
           >
             <PageElements elements={currentPage.elements} />
@@ -211,6 +218,7 @@ export default function ReaderScreen() {
   });
   const [finishing, setFinishing] = useState(false);
   const [hasQuiz, setHasQuiz] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     audioCheckedBookIdRef.current = null;
@@ -447,14 +455,29 @@ export default function ReaderScreen() {
         )}
 
         <View className="flex-row items-center gap-3.5">
-          <Pressable hitSlop={12} accessibilityRole="button">
+          <Pressable
+            onPress={() => setSettingsOpen(true)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Open reader settings"
+          >
             <Menu size={26} color="#1A2420" strokeWidth={2} />
           </Pressable>
-          <Pressable hitSlop={12} accessibilityRole="button">
+          <Pressable
+            onPress={() => setSettingsOpen(true)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Open reader text settings"
+          >
             <Text className="text-lg font-semibold text-[#1A2420]">AA</Text>
           </Pressable>
         </View>
       </View>
+
+      <ReaderSettingsSheet
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
 
       <View className="flex-1 bg-[#FBFAF2]">
         {loading && (

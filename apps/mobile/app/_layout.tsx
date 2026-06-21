@@ -10,6 +10,7 @@ import "react-native-reanimated";
 
 import { AuthProvider } from "@/shared/context/auth-context";
 import { LibraryProvider } from "@/features/library";
+import { ReaderSettingsProvider } from "@/features/reader/settings/reader-settings-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import "../global.css";
 
@@ -26,6 +27,7 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <AuthProvider>
           <LibraryProvider>
+          <ReaderSettingsProvider>
           <Stack>
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -61,6 +63,7 @@ export default function RootLayout() {
               options={{ headerShown: false, animation: "slide_from_right" }}
             />
           </Stack>
+          </ReaderSettingsProvider>
           </LibraryProvider>
           <StatusBar style="auto" />
         </AuthProvider>
