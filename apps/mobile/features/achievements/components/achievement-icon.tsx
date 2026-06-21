@@ -1,20 +1,40 @@
 import {
+  Award,
+  BookCopy,
   BookMarked,
   BookOpen,
+  CalendarCheck,
+  CalendarDays,
   Clock,
+  Crown,
   Flame,
+  Hourglass,
+  Library,
+  Medal,
   Sparkles,
+  Timer,
   Trophy,
+  Zap,
   type LucideIcon,
 } from "lucide-react-native";
 
 const ICON_BY_NAME: Record<string, LucideIcon> = {
   BookOpen,
   BookMarked,
+  BookCopy,
+  Library,
   Flame,
   Trophy,
+  Award,
+  Medal,
+  Crown,
   Sparkles,
   Clock,
+  Hourglass,
+  Timer,
+  Zap,
+  CalendarCheck,
+  CalendarDays,
 };
 
 type AchievementIconProps = {

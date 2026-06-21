@@ -1,5 +1,6 @@
 export {
   fetchAchievementCatalog,
+  fetchBestReadingDayMinutes,
   fetchHasPerfectQuiz,
   fetchUnlockedAchievements,
   type AchievementCatalogItem,
@@ -16,6 +17,8 @@ export { AchievementIcon } from "@/features/achievements/components/achievement-
 export { AchievementRow } from "@/features/achievements/components/achievement-row";
 export { useAchievements } from "@/features/achievements/hooks/use-achievements";
 export type {
+  AchievementCategory,
+  AchievementMetric,
   AchievementProgress,
   AchievementStats,
   AchievementViewModel,

@@ -312,6 +312,9 @@ declare
   v_profile record;
   v_perfect_quiz boolean;
   v_completed_books integer;
+  v_best_day_minutes integer;
+  v_rec record;
+  v_value integer;
 begin
   select * into v_profile from public.profiles where id = p_user_id;
   if v_profile is null then
@@ -335,47 +338,33 @@ begin
     where user_id = p_user_id and total_questions > 0 and score = total_questions
   ) into v_perfect_quiz;
 
-  -- first_book_completed
-  if v_completed_books >= 1 then
-    insert into public.user_achievements (user_id, achievement_id)
-    select p_user_id, id from public.achievements where slug = 'first_book_completed'
-    on conflict do nothing;
-  end if;
+  select coalesce(max(minutes_read), 0)::integer into v_best_day_minutes
+  from public.reading_daily_log
+  where user_id = p_user_id;
 
-  -- five_books_completed
-  if v_completed_books >= 5 then
-    insert into public.user_achievements (user_id, achievement_id)
-    select p_user_id, id from public.achievements where slug = 'five_books_completed'
-    on conflict do nothing;
-  end if;
+  -- Data-driven unlock: each achievement's metric + threshold lives in the catalog.
+  -- Adding a new achievement only needs a new seed row, no code change here.
+  for v_rec in
+    select id, metric, threshold
+    from public.achievements
+    where metric is not null and threshold is not null
+  loop
+    v_value := case v_rec.metric
+      when 'completed_books' then v_completed_books
+      when 'streak_days' then coalesce(v_profile.current_streak_days, 0)
+      when 'reading_minutes' then coalesce(v_profile.total_reading_minutes, 0)
+      when 'reading_days' then coalesce(v_profile.total_reading_days, 0)
+      when 'best_day_minutes' then v_best_day_minutes
+      when 'perfect_quiz' then case when v_perfect_quiz then 1 else 0 end
+      else null
+    end;
 
-  -- streak_3
-  if v_profile.current_streak_days >= 3 then
-    insert into public.user_achievements (user_id, achievement_id)
-    select p_user_id, id from public.achievements where slug = 'streak_3'
-    on conflict do nothing;
-  end if;
-
-  -- streak_7
-  if v_profile.current_streak_days >= 7 then
-    insert into public.user_achievements (user_id, achievement_id)
-    select p_user_id, id from public.achievements where slug = 'streak_7'
-    on conflict do nothing;
-  end if;
-
-  -- quiz_perfect
-  if v_perfect_quiz then
-    insert into public.user_achievements (user_id, achievement_id)
-    select p_user_id, id from public.achievements where slug = 'quiz_perfect'
-    on conflict do nothing;
-  end if;
-
-  -- reading_time_60
-  if v_profile.total_reading_minutes >= 60 then
-    insert into public.user_achievements (user_id, achievement_id)
-    select p_user_id, id from public.achievements where slug = 'reading_time_60'
-    on conflict do nothing;
-  end if;
+    if v_value is not null and v_value >= v_rec.threshold then
+      insert into public.user_achievements (user_id, achievement_id)
+      values (p_user_id, v_rec.id)
+      on conflict do nothing;
+    end if;
+  end loop;
 end;
 $$;
 

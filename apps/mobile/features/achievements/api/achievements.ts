@@ -95,6 +95,25 @@ export async function fetchUnlockedAchievements(
     .filter((row): row is AchievementUnlock => !!row);
 }
 
+export async function fetchBestReadingDayMinutes(
+  userId: string,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("reading_daily_log")
+    .select("minutes_read")
+    .eq("user_id", userId)
+    .order("minutes_read", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    if (__DEV__) console.warn("[fetchBestReadingDayMinutes]", error.message);
+    return 0;
+  }
+
+  const minutes = (data ?? [])[0]?.minutes_read;
+  return typeof minutes === "number" && Number.isFinite(minutes) ? minutes : 0;
+}
+
 export async function fetchHasPerfectQuiz(userId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("user_quiz_attempts")

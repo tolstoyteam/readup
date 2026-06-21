@@ -1,7 +1,7 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ArrowLeft } from "lucide-react-native";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -13,12 +13,47 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AchievementRow } from "@/features/achievements/components/achievement-row";
 import { useAchievements } from "@/features/achievements/hooks/use-achievements";
+import type {
+  AchievementCategory,
+  AchievementViewModel,
+} from "@/features/achievements/types";
 import { ReadupColors } from "@/shared/constants/readup-theme";
+
+const CATEGORY_ORDER: { category: AchievementCategory; label: string }[] = [
+  { category: "streak", label: "Серии" },
+  { category: "books", label: "Книги" },
+  { category: "reading_time", label: "Время чтения" },
+  { category: "daily", label: "За день" },
+  { category: "activity", label: "Активность" },
+];
+
+type AchievementSection = {
+  category: AchievementCategory;
+  label: string;
+  items: AchievementViewModel[];
+  unlockedCount: number;
+};
+
+function groupByCategory(
+  viewModels: AchievementViewModel[],
+): AchievementSection[] {
+  return CATEGORY_ORDER.map(({ category, label }) => {
+    const items = viewModels.filter((row) => row.category === category);
+    return {
+      category,
+      label,
+      items,
+      unlockedCount: items.filter((row) => row.isUnlocked).length,
+    };
+  }).filter((section) => section.items.length > 0);
+}
 
 export default function AchievementsScreen() {
   const router = useRouter();
   const { viewModels, unlockedCount, totalCount, loading, reload } =
     useAchievements();
+
+  const sections = useMemo(() => groupByCategory(viewModels), [viewModels]);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,9 +94,24 @@ export default function AchievementsScreen() {
           <Text className="mt-1 text-[13px] tracking-[-0.52px] text-[#7A7868]">
             {unlockedCount} из {totalCount} получено
           </Text>
-          <View className="mt-5 gap-3">
-            {viewModels.map((achievement) => (
-              <AchievementRow key={achievement.slug} achievement={achievement} />
+          <View className="mt-5 gap-7">
+            {sections.map((section) => (
+              <View key={section.category} className="gap-3">
+                <View className="flex-row items-baseline justify-between">
+                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]">
+                    {section.label}
+                  </Text>
+                  <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868]">
+                    {section.unlockedCount} из {section.items.length}
+                  </Text>
+                </View>
+                {section.items.map((achievement) => (
+                  <AchievementRow
+                    key={achievement.slug}
+                    achievement={achievement}
+                  />
+                ))}
+              </View>
             ))}
           </View>
         </ScrollView>

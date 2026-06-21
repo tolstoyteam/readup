@@ -17,6 +17,10 @@ export function getMetricValue(
       return stats.totalReadingMinutes;
     case "perfect_quiz":
       return stats.hasPerfectQuiz ? 1 : 0;
+    case "reading_days":
+      return stats.totalReadingDays;
+    case "best_day_minutes":
+      return stats.bestDayMinutes;
   }
 }
 

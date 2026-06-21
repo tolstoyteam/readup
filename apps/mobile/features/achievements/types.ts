@@ -2,13 +2,24 @@ export type AchievementMetric =
   | "completed_books"
   | "streak_days"
   | "reading_minutes"
-  | "perfect_quiz";
+  | "perfect_quiz"
+  | "reading_days"
+  | "best_day_minutes";
+
+export type AchievementCategory =
+  | "streak"
+  | "books"
+  | "reading_time"
+  | "daily"
+  | "activity";
 
 export type AchievementStats = {
   completedBooksCount: number;
   currentStreakDays: number;
   totalReadingMinutes: number;
   hasPerfectQuiz: boolean;
+  totalReadingDays: number;
+  bestDayMinutes: number;
 };
 
 export type AchievementProgress = {
@@ -24,6 +35,7 @@ export type AchievementViewModel = {
   description: string;
   icon: string;
   sortOrder: number;
+  category: AchievementCategory;
   isUnlocked: boolean;
   unlockedAt: string | null;
   progress: AchievementProgress;

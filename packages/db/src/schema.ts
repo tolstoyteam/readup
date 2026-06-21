@@ -343,6 +343,9 @@ export const achievementsTable = pgTable("achievements", {
   /** lucide-react-native icon name or asset key. */
   icon: text("icon").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  /** Stat key compared against `threshold` by _maybe_unlock_achievements. */
+  metric: text("metric"),
+  threshold: integer("threshold"),
 });
 
 export const userAchievementsTable = pgTable(

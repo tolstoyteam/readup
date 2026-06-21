@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   fetchAchievementCatalog,
+  fetchBestReadingDayMinutes,
   fetchHasPerfectQuiz,
   fetchUnlockedAchievements,
 } from "@/features/achievements/api/achievements";
@@ -31,12 +32,14 @@ export function useAchievements() {
     setLoading(true);
     setError(null);
     try {
-      const [catalog, unlocks, profile, hasPerfectQuiz] = await Promise.all([
-        fetchAchievementCatalog(),
-        fetchUnlockedAchievements(user.id),
-        fetchProfile(user.id),
-        fetchHasPerfectQuiz(user.id),
-      ]);
+      const [catalog, unlocks, profile, hasPerfectQuiz, bestDayMinutes] =
+        await Promise.all([
+          fetchAchievementCatalog(),
+          fetchUnlockedAchievements(user.id),
+          fetchProfile(user.id),
+          fetchHasPerfectQuiz(user.id),
+          fetchBestReadingDayMinutes(user.id),
+        ]);
 
       const todayKey = todayActivityDateKey();
       const stats = {
@@ -44,6 +47,8 @@ export function useAchievements() {
         currentStreakDays: getEffectiveCurrentStreak(profile, todayKey),
         totalReadingMinutes: profile?.total_reading_minutes ?? 0,
         hasPerfectQuiz,
+        totalReadingDays: profile?.total_reading_days ?? 0,
+        bestDayMinutes,
       };
 
       setViewModels(buildAchievementViewModels(catalog, unlocks, stats));

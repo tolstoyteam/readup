@@ -40,6 +40,7 @@ export function buildAchievementViewModels(
         description: item.description,
         icon: item.icon,
         sortOrder: item.sortOrder,
+        category: definition.category,
         isUnlocked,
         unlockedAt,
         progress,
