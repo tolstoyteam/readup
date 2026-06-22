@@ -21,17 +21,23 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { fetchBookDetail, type BookDetail } from "@/features/books/api/book-detail";
+import {
+  fetchBookDetail,
+  type BookDetail,
+} from "@/features/books/api/book-detail";
 import {
   isInProgress,
   progressPercentage,
   useLibraryActions,
   useLibraryBook,
 } from "@/features/library";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
-function formatReadingTime(minutes: number | null, totalPages: number | null): string {
+function formatReadingTime(
+  minutes: number | null,
+  totalPages: number | null,
+): string {
   if (minutes && minutes > 0) {
     return `~${minutes} мин`;
   }
@@ -42,6 +48,7 @@ function formatReadingTime(minutes: number | null, totalPages: number | null): s
 }
 
 export default function BookDetailScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const { user } = useAuth();
   const params = useLocalSearchParams<{ bookId: string }>();
@@ -97,7 +104,8 @@ export default function BookDetailScreen() {
 
   const bookInProgress = isInProgress(libraryRecord);
   const progressPage = libraryRecord?.progress?.page ?? 0;
-  const totalPages = libraryRecord?.progress?.total_pages ?? book?.totalPages ?? null;
+  const totalPages =
+    libraryRecord?.progress?.total_pages ?? book?.totalPages ?? null;
   const progressPercent = progressPercentage(libraryRecord?.progress ?? null);
 
   async function toggleSaved() {
@@ -119,9 +127,7 @@ export default function BookDetailScreen() {
 
   function openListen() {
     if (!book) return;
-    router.push(
-      `/reader/${encodeURIComponent(book.bookId)}?mode=listen`,
-    );
+    router.push(`/reader/${encodeURIComponent(book.bookId)}?mode=listen`);
   }
 
   function openQuiz() {
@@ -130,7 +136,10 @@ export default function BookDetailScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <StatusBar style="dark" />
 
       <View className="flex-row items-center justify-between px-5 py-3">
@@ -139,9 +148,9 @@ export default function BookDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Назад"
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
-          <ArrowLeft size={22} color={ReadupColors.text} strokeWidth={2} />
+          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
         {book ? (
           <Pressable
@@ -151,12 +160,12 @@ export default function BookDetailScreen() {
             accessibilityState={{ selected: isSaved }}
             accessibilityLabel={isSaved ? "Убрать из библиотеки" : "Сохранить"}
             hitSlop={12}
-            className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+            className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
           >
             <Bookmark
               size={20}
-              color={isSaved ? ReadupColors.brand : ReadupColors.text}
-              fill={isSaved ? ReadupColors.brand : "transparent"}
+              color={isSaved ? colors.brand : colors.text}
+              fill={isSaved ? colors.brand : "transparent"}
               strokeWidth={2}
             />
           </Pressable>
@@ -165,11 +174,11 @@ export default function BookDetailScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={ReadupColors.brand} />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : error || !book ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="mb-4 text-center text-[15px] leading-6 text-[#4A5550]">
+          <Text className="mb-4 text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
             {error ?? "Книга не найдена"}
           </Text>
           <Pressable
@@ -193,7 +202,7 @@ export default function BookDetailScreen() {
               style={{
                 width: 190,
                 height: 274,
-                backgroundColor: ReadupColors.surface,
+                backgroundColor: colors.surface,
               }}
             >
               {book.cover ? (
@@ -206,7 +215,7 @@ export default function BookDetailScreen() {
                 />
               ) : (
                 <View className="h-full items-center justify-center px-4">
-                  <Text className="text-center text-[14px] font-medium text-[#4A5550]">
+                  <Text className="text-center text-[14px] font-medium text-[#4A5550] dark:text-[#B8C1BB]">
                     {book.title}
                   </Text>
                 </View>
@@ -216,13 +225,13 @@ export default function BookDetailScreen() {
 
           <View className="px-6">
             <Text
-              className="text-center text-[26px] font-semibold leading-[32px] tracking-[-1.04px] text-[#1A2420]"
+              className="text-center text-[26px] font-semibold leading-[32px] tracking-[-1.04px] text-[#1A2420] dark:text-[#F3F4EE]"
               numberOfLines={3}
             >
               {book.title}
             </Text>
             {book.author ? (
-              <Text className="mt-2 text-center text-[15px] tracking-[-0.6px] text-[#4A5550]">
+              <Text className="mt-2 text-center text-[15px] tracking-[-0.6px] text-[#4A5550] dark:text-[#B8C1BB]">
                 {book.author}
               </Text>
             ) : null}
@@ -232,9 +241,9 @@ export default function BookDetailScreen() {
                 {book.genres.slice(0, 4).map((genre) => (
                   <View
                     key={genre}
-                    className="rounded-full border border-[#059669] px-3 py-1"
+                    className="rounded-full border border-[#059669] dark:border-[#34D399] px-3 py-1"
                   >
-                    <Text className="text-[12px] tracking-[-0.48px] text-[#059669]">
+                    <Text className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]">
                       {genre}
                     </Text>
                   </View>
@@ -242,30 +251,43 @@ export default function BookDetailScreen() {
               </View>
             ) : null}
 
-            <View className="mt-6 flex-row justify-between rounded-[20px] bg-[#F2F0E6] px-5 py-4">
+            <View className="mt-6 flex-row justify-between rounded-[20px] bg-[#F2F0E6] dark:bg-[#19211D] px-5 py-4">
               <Stat
-                icon={<Clock size={18} color={ReadupColors.text} strokeWidth={2} />}
+                icon={
+                  <Clock size={18} color={colors.text} strokeWidth={2} />
+                }
                 label="Время"
-                value={formatReadingTime(book.readingTimeMinutes, book.totalPages)}
+                value={formatReadingTime(
+                  book.readingTimeMinutes,
+                  book.totalPages,
+                )}
               />
               <Stat
-                icon={<Layers size={18} color={ReadupColors.text} strokeWidth={2} />}
+                icon={
+                  <Layers size={18} color={colors.text} strokeWidth={2} />
+                }
                 label="Сложность"
                 value={book.difficulty ?? "—"}
               />
               <Stat
-                icon={<BookOpen size={18} color={ReadupColors.text} strokeWidth={2} />}
+                icon={
+                  <BookOpen
+                    size={18}
+                    color={colors.text}
+                    strokeWidth={2}
+                  />
+                }
                 label="Страниц"
                 value={book.totalPages ? String(book.totalPages) : "—"}
               />
             </View>
 
             {bookInProgress && totalPages && totalPages > 0 ? (
-              <View className="mt-5 rounded-[16px] bg-[#F2F0E6] px-5 py-4">
-                <Text className="text-[13px] tracking-[-0.52px] text-[#4A5550]">
+              <View className="mt-5 rounded-[16px] bg-[#F2F0E6] dark:bg-[#19211D] px-5 py-4">
+                <Text className="text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
                   Вы остановились на странице {progressPage} из {totalPages}
                 </Text>
-                <View className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#E8E6D8]">
+                <View className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#E8E6D8] dark:bg-[#26302B]">
                   <View
                     className="h-full rounded-full bg-[#059669]"
                     style={{ width: `${progressPercent}%` }}
@@ -278,9 +300,13 @@ export default function BookDetailScreen() {
               <Pressable
                 onPress={openReader}
                 accessibilityRole="button"
-                className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border-2 border-[#047857] bg-[#059669] px-6 active:opacity-90"
+                className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90"
               >
-                <BookOpen size={20} color={ReadupColors.textInverse} strokeWidth={2.2} />
+                <BookOpen
+                  size={20}
+                  color={colors.textInverse}
+                  strokeWidth={2.2}
+                />
                 <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
                   {bookInProgress ? "Продолжить чтение" : "Начать чтение"}
                 </Text>
@@ -290,10 +316,14 @@ export default function BookDetailScreen() {
                 <Pressable
                   onPress={openListen}
                   accessibilityRole="button"
-                  className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] bg-transparent px-6 active:opacity-80"
+                  className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
                 >
-                  <Headphones size={20} color={ReadupColors.brand} strokeWidth={2.2} />
-                  <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669]">
+                  <Headphones
+                    size={20}
+                    color={colors.brand}
+                    strokeWidth={2.2}
+                  />
+                  <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
                     Слушать
                   </Text>
                 </Pressable>
@@ -303,10 +333,14 @@ export default function BookDetailScreen() {
                 <Pressable
                   onPress={openQuiz}
                   accessibilityRole="button"
-                  className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] bg-transparent px-6 active:opacity-80"
+                  className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
                 >
-                  <ListChecks size={20} color={ReadupColors.brand} strokeWidth={2.2} />
-                  <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669]">
+                  <ListChecks
+                    size={20}
+                    color={colors.brand}
+                    strokeWidth={2.2}
+                  />
+                  <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
                     Пройти тест
                   </Text>
                 </Pressable>
@@ -331,11 +365,11 @@ function Stat({
   return (
     <View className="flex-1 items-center">
       <View className="mb-1.5">{icon}</View>
-      <Text className="text-[11px] uppercase tracking-[-0.44px] text-[#7A7868]">
+      <Text className="text-[11px] uppercase tracking-[-0.44px] text-[#7A7868] dark:text-[#8F9A93]">
         {label}
       </Text>
       <Text
-        className="mt-0.5 text-[14px] font-semibold tracking-[-0.56px] text-[#1A2420]"
+        className="mt-0.5 text-[14px] font-semibold tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]"
         numberOfLines={1}
       >
         {value}

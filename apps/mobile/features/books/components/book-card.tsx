@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { Pressable, Text, View } from "react-native";
 
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 export type BookCardItem = {
   id: number;
@@ -18,6 +18,7 @@ type BookCardProps = {
 };
 
 export function BookCard({ item, onPress, width = 136 }: BookCardProps) {
+  const colors = useReadupColors();
   const coverHeight = Math.round(width * 1.44);
 
   return (
@@ -30,7 +31,7 @@ export function BookCard({ item, onPress, width = 136 }: BookCardProps) {
     >
       <View
         className="overflow-hidden rounded-[10px]"
-        style={{ height: coverHeight, backgroundColor: ReadupColors.surface }}
+        style={{ height: coverHeight, backgroundColor: colors.surface }}
       >
         {item.cover ? (
           <Image
@@ -42,14 +43,14 @@ export function BookCard({ item, onPress, width = 136 }: BookCardProps) {
           />
         ) : (
           <View className="h-full items-center justify-center px-3">
-            <Text className="text-center text-[13px] font-medium text-[#4A5550]">
+            <Text className="text-center text-[13px] font-medium text-[#4A5550] dark:text-[#B8C1BB]">
               {item.title}
             </Text>
           </View>
         )}
       </View>
       <Text
-        className="mt-2 text-[14px] font-medium leading-[18px] tracking-[-0.56px] text-[#4A5550]"
+        className="mt-2 text-[14px] font-medium leading-[18px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
         numberOfLines={2}
       >
         {item.title}

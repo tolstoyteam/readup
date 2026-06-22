@@ -1,3 +1,5 @@
+import { useColorScheme } from "react-native";
+
 export const ReadupColors = {
   brand: "#059669",
   brandDark: "#047857",
@@ -13,6 +15,25 @@ export const ReadupColors = {
   /** Focus rings and inline links (Figma “Info”) */
   info: "#2563EB",
 } as const;
+
+export const ReadupDarkColors = {
+  brand: "#34D399",
+  brandDark: "#10B981",
+  background: "#101512",
+  surface: "#19211D",
+  elevated: "#26302B",
+  text: "#F3F4EE",
+  textSecondary: "#B8C1BB",
+  textTertiary: "#8F9A93",
+  textInverse: "#101512",
+  border: "#3A4740",
+  white: "#FFFFFF",
+  info: "#60A5FA",
+} as const satisfies Record<keyof typeof ReadupColors, string>;
+
+export function useReadupColors() {
+  return useColorScheme() === "dark" ? ReadupDarkColors : ReadupColors;
+}
 
 export const ReadupRadii = {
   chip: 999,

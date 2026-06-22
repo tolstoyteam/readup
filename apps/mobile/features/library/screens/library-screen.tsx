@@ -23,9 +23,13 @@ import {
   useLibrary,
 } from "@/features/library";
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
-const SECTION_OPTIONS: { value: LibrarySection; label: string; empty: string }[] = [
+const SECTION_OPTIONS: {
+  value: LibrarySection;
+  label: string;
+  empty: string;
+}[] = [
   {
     value: "saved",
     label: "Saved",
@@ -44,14 +48,22 @@ const SECTION_OPTIONS: { value: LibrarySection; label: string; empty: string }[]
 ];
 
 export default function LibraryScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const listRef = useRef<FlatListType<LibraryBookCard>>(null);
   const skipInitialScrollReset = useRef(true);
   const [activeSection, setActiveSection] = useState<LibrarySection>("saved");
   const [catalogBooks, setCatalogBooks] = useState<LibraryBookCard[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
-  const { records, savedBooks, inProgressBooks, completedBooks, loading, error, refresh } =
-    useLibrary();
+  const {
+    records,
+    savedBooks,
+    inProgressBooks,
+    completedBooks,
+    loading,
+    error,
+    refresh,
+  } = useLibrary();
 
   const loadCatalog = useCallback(async () => {
     try {
@@ -111,7 +123,10 @@ export default function LibraryScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <FlatList
         ref={listRef}
         data={visibleBooks}
@@ -125,12 +140,12 @@ export default function LibraryScreen() {
           <View className="gap-5 px-8 pt-8">
             <View className="flex-row items-center justify-between">
               <ReadupLogo />
-              <Text className="text-[22px] font-semibold tracking-[-0.88px] text-[#1A2420]">
+              <Text className="text-[22px] font-semibold tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]">
                 Library
               </Text>
             </View>
 
-            <View className="flex-row rounded-full bg-[#F2F0E6] p-1">
+            <View className="flex-row rounded-full bg-[#F2F0E6] dark:bg-[#19211D] p-1">
               {SECTION_OPTIONS.map((option) => {
                 const active = option.value === activeSection;
                 return (
@@ -141,15 +156,17 @@ export default function LibraryScreen() {
                     onPress={() => setActiveSection(option.value)}
                     className="flex-1 items-center rounded-full px-2 py-2 active:opacity-80"
                     style={{
-                      backgroundColor: active ? ReadupColors.brand : "transparent",
+                      backgroundColor: active
+                        ? colors.brand
+                        : "transparent",
                     }}
                   >
                     <Text
                       className="text-[12px] font-medium"
                       style={{
                         color: active
-                          ? ReadupColors.textInverse
-                          : ReadupColors.textSecondary,
+                          ? colors.textInverse
+                          : colors.textSecondary,
                       }}
                     >
                       {option.label}
@@ -163,13 +180,13 @@ export default function LibraryScreen() {
         ListEmptyComponent={
           <View className="min-h-[320px] items-center justify-center px-8">
             {isLoading ? (
-              <ActivityIndicator size="large" color={ReadupColors.brand} />
+              <ActivityIndicator size="large" color={colors.brand} />
             ) : error ? (
-              <Text className="text-center text-[15px] leading-6 text-[#4A5550]">
+              <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
                 {error}
               </Text>
             ) : (
-              <Text className="text-center text-[15px] leading-6 text-[#4A5550]">
+              <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
                 {activeEmpty}
               </Text>
             )}

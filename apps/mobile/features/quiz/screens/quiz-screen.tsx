@@ -1,6 +1,11 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ArrowLeft, CheckCircle2, RotateCcw, XCircle } from "lucide-react-native";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  RotateCcw,
+  XCircle,
+} from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,9 +23,10 @@ import {
   type QuizAttemptResult,
 } from "@/features/quiz/api/quiz";
 import { notifyEngagementRefresh } from "@/features/engagement/engagement-refresh";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 export default function QuizScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const params = useLocalSearchParams<{ bookId: string }>();
   const bookId = params.bookId ? decodeURIComponent(params.bookId) : "";
@@ -65,8 +71,7 @@ export default function QuizScreen() {
 
   const totalQuestions = quiz?.questions.length ?? 0;
   const allAnswered =
-    quiz != null &&
-    quiz.questions.every((q) => answers[q.id] != null);
+    quiz != null && quiz.questions.every((q) => answers[q.id] != null);
   const progress = useMemo(() => {
     if (!quiz || totalQuestions === 0) return 0;
     const answered = Object.keys(answers).length;
@@ -102,11 +107,21 @@ export default function QuizScreen() {
   }
 
   if (result && quiz) {
-    return <QuizResult result={result} quiz={quiz} onRetry={restart} onClose={() => router.back()} />;
+    return (
+      <QuizResult
+        result={result}
+        quiz={quiz}
+        onRetry={restart}
+        onClose={() => router.back()}
+      />
+    );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <StatusBar style="dark" />
 
       <View className="flex-row items-center justify-between px-5 py-3">
@@ -115,12 +130,12 @@ export default function QuizScreen() {
           accessibilityRole="button"
           accessibilityLabel="Закрыть тест"
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
-          <ArrowLeft size={22} color={ReadupColors.text} strokeWidth={2} />
+          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
         {quiz ? (
-          <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#4A5550]">
+          <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]">
             {currentIndex + 1} / {totalQuestions}
           </Text>
         ) : (
@@ -130,11 +145,11 @@ export default function QuizScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={ReadupColors.brand} />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : error || !quiz ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="mb-4 text-center text-[15px] leading-6 text-[#4A5550]">
+          <Text className="mb-4 text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
             {error ?? "Тест не найден"}
           </Text>
           <Pressable
@@ -152,7 +167,7 @@ export default function QuizScreen() {
           contentContainerClassName="px-6 pb-10"
           showsVerticalScrollIndicator={false}
         >
-          <View className="h-1.5 w-full overflow-hidden rounded-full bg-[#E8E6D8]">
+          <View className="h-1.5 w-full overflow-hidden rounded-full bg-[#E8E6D8] dark:bg-[#26302B]">
             <View
               className="h-full rounded-full bg-[#059669]"
               style={{ width: `${progress * 100}%` }}
@@ -161,10 +176,10 @@ export default function QuizScreen() {
 
           {quiz.questions.map((question, index) => (
             <View key={question.id} className="mt-7">
-              <Text className="text-[12px] uppercase tracking-[-0.48px] text-[#7A7868]">
+              <Text className="text-[12px] uppercase tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
                 Вопрос {index + 1}
               </Text>
-              <Text className="mt-1 text-[20px] font-semibold leading-[26px] tracking-[-0.8px] text-[#1A2420]">
+              <Text className="mt-1 text-[20px] font-semibold leading-[26px] tracking-[-0.8px] text-[#1A2420] dark:text-[#F3F4EE]">
                 {question.question}
               </Text>
               <View className="mt-4 gap-2.5">
@@ -176,32 +191,39 @@ export default function QuizScreen() {
                       accessibilityRole="radio"
                       accessibilityState={{ selected }}
                       onPress={() => {
-                        setAnswers((prev) => ({ ...prev, [question.id]: answer.id }));
+                        setAnswers((prev) => ({
+                          ...prev,
+                          [question.id]: answer.id,
+                        }));
                         setCurrentIndex(index);
                       }}
                       className="flex-row items-center gap-3 rounded-2xl border px-4 py-3 active:opacity-90"
                       style={{
                         borderColor: selected
-                          ? ReadupColors.brand
-                          : ReadupColors.elevated,
-                        backgroundColor: selected ? "#ECFDF5" : ReadupColors.surface,
+                          ? colors.brand
+                          : colors.elevated,
+                        backgroundColor: selected
+                          ? "#ECFDF5"
+                          : colors.surface,
                       }}
                     >
                       <View
                         className="h-5 w-5 items-center justify-center rounded-full border-2"
                         style={{
                           borderColor: selected
-                            ? ReadupColors.brand
-                            : ReadupColors.textTertiary,
-                          backgroundColor: selected ? ReadupColors.brand : "transparent",
+                            ? colors.brand
+                            : colors.textTertiary,
+                          backgroundColor: selected
+                            ? colors.brand
+                            : "transparent",
                         }}
                       >
                         {selected ? (
-                          <View className="h-2 w-2 rounded-full bg-[#FBFAF2]" />
+                          <View className="h-2 w-2 rounded-full bg-[#FBFAF2] dark:bg-[#101512]" />
                         ) : null}
                       </View>
                       <Text
-                        className="flex-1 text-[15px] tracking-[-0.6px] text-[#1A2420]"
+                        className="flex-1 text-[15px] tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
                         numberOfLines={3}
                       >
                         {answer.text}
@@ -220,13 +242,13 @@ export default function QuizScreen() {
             className="mt-8 min-h-[54px] items-center justify-center rounded-full border-2 active:opacity-90"
             style={{
               backgroundColor:
-                !allAnswered || submitting ? "#9CCFB9" : ReadupColors.brand,
+                !allAnswered || submitting ? "#9CCFB9" : colors.brand,
               borderColor:
-                !allAnswered || submitting ? "#9CCFB9" : ReadupColors.brandDark,
+                !allAnswered || submitting ? "#9CCFB9" : colors.brandDark,
             }}
           >
             {submitting ? (
-              <ActivityIndicator color={ReadupColors.textInverse} />
+              <ActivityIndicator color={colors.textInverse} />
             ) : (
               <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
                 Завершить тест
@@ -250,6 +272,7 @@ function QuizResult({
   onRetry: () => void;
   onClose: () => void;
 }) {
+  const colors = useReadupColors();
   const correctRatio = result.totalQuestions
     ? result.score / result.totalQuestions
     : 0;
@@ -263,7 +286,10 @@ function QuizResult({
   const questionsById = new Map(quiz.questions.map((q) => [q.id, q]));
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <StatusBar style="dark" />
 
       <View className="flex-row items-center justify-between px-5 py-3">
@@ -272,9 +298,9 @@ function QuizResult({
           accessibilityRole="button"
           accessibilityLabel="Закрыть"
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
-          <ArrowLeft size={22} color={ReadupColors.text} strokeWidth={2} />
+          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -284,10 +310,10 @@ function QuizResult({
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center pt-6">
-          <Text className="text-[34px] font-extrabold tracking-[-1.36px] text-[#1A2420]">
+          <Text className="text-[34px] font-extrabold tracking-[-1.36px] text-[#1A2420] dark:text-[#F3F4EE]">
             {result.score} / {result.totalQuestions}
           </Text>
-          <Text className="mt-2 text-[16px] tracking-[-0.64px] text-[#4A5550]">
+          <Text className="mt-2 text-[16px] tracking-[-0.64px] text-[#4A5550] dark:text-[#B8C1BB]">
             {headline}
           </Text>
         </View>
@@ -299,26 +325,28 @@ function QuizResult({
             return (
               <View
                 key={`${entry.question_id}-${index}`}
-                className="rounded-2xl border bg-[#F2F0E6] px-4 py-3"
+                className="rounded-2xl border bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-3"
                 style={{
-                  borderColor: entry.is_correct ? ReadupColors.brand : "#E8B0B0",
+                  borderColor: entry.is_correct
+                    ? colors.brand
+                    : "#E8B0B0",
                 }}
               >
                 <View className="flex-row items-center gap-2">
                   {entry.is_correct ? (
                     <CheckCircle2
                       size={18}
-                      color={ReadupColors.brand}
+                      color={colors.brand}
                       strokeWidth={2.2}
                     />
                   ) : (
                     <XCircle size={18} color="#B85C5C" strokeWidth={2.2} />
                   )}
-                  <Text className="text-[12px] uppercase tracking-[-0.48px] text-[#7A7868]">
+                  <Text className="text-[12px] uppercase tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
                     Вопрос {index + 1}
                   </Text>
                 </View>
-                <Text className="mt-1 text-[14px] tracking-[-0.56px] text-[#1A2420]">
+                <Text className="mt-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]">
                   {question.question}
                 </Text>
               </View>
@@ -329,10 +357,10 @@ function QuizResult({
         <Pressable
           onPress={onRetry}
           accessibilityRole="button"
-          className="mt-8 min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] active:opacity-90"
+          className="mt-8 min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] dark:border-[#34D399] active:opacity-90"
         >
-          <RotateCcw size={18} color={ReadupColors.brand} strokeWidth={2.2} />
-          <Text className="text-[16px] font-medium tracking-[-0.36px] text-[#059669]">
+          <RotateCcw size={18} color={colors.brand} strokeWidth={2.2} />
+          <Text className="text-[16px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
             Пройти ещё раз
           </Text>
         </Pressable>

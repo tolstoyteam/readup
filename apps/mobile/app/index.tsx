@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { getOnboardingComplete } from "@/shared/lib/onboarding-storage";
-
-const BG = "#FBFAF2";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 export default function Index() {
+  const colors = useReadupColors();
   const [ready, setReady] = useState(false);
   const [complete, setComplete] = useState(false);
 
@@ -27,9 +27,9 @@ export default function Index() {
     return (
       <View
         className="flex-1 items-center justify-center"
-        style={{ backgroundColor: BG }}
+        style={{ backgroundColor: colors.background }}
       >
-        <ActivityIndicator color="#059669" size="large" />
+        <ActivityIndicator color={colors.brand} size="large" />
       </View>
     );
   }

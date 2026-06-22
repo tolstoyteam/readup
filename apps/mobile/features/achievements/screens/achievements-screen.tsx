@@ -17,7 +17,7 @@ import type {
   AchievementCategory,
   AchievementViewModel,
 } from "@/features/achievements/types";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 const CATEGORY_ORDER: { category: AchievementCategory; label: string }[] = [
   { category: "streak", label: "Серии" },
@@ -49,6 +49,7 @@ function groupByCategory(
 }
 
 export default function AchievementsScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const { viewModels, unlockedCount, totalCount, loading, reload } =
     useAchievements();
@@ -62,7 +63,10 @@ export default function AchievementsScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <StatusBar style="dark" />
 
       <View className="flex-row items-center justify-between px-5 py-3">
@@ -71,11 +75,11 @@ export default function AchievementsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Назад"
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
-          <ArrowLeft size={22} color={ReadupColors.text} strokeWidth={2} />
+          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
-        <Text className="text-[18px] font-semibold tracking-[-0.72px] text-[#1A2420]">
+        <Text className="text-[18px] font-semibold tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]">
           Все достижения
         </Text>
         <View className="h-10 w-10" />
@@ -83,7 +87,7 @@ export default function AchievementsScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={ReadupColors.brand} />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : (
         <ScrollView
@@ -91,17 +95,17 @@ export default function AchievementsScreen() {
           contentContainerClassName="px-6 pb-10"
           showsVerticalScrollIndicator={false}
         >
-          <Text className="mt-1 text-[13px] tracking-[-0.52px] text-[#7A7868]">
+          <Text className="mt-1 text-[13px] tracking-[-0.52px] text-[#7A7868] dark:text-[#8F9A93]">
             {unlockedCount} из {totalCount} получено
           </Text>
           <View className="mt-5 gap-7">
             {sections.map((section) => (
               <View key={section.category} className="gap-3">
                 <View className="flex-row items-baseline justify-between">
-                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]">
+                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]">
                     {section.label}
                   </Text>
-                  <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868]">
+                  <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
                     {section.unlockedCount} из {section.items.length}
                   </Text>
                 </View>

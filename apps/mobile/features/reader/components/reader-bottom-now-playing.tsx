@@ -2,6 +2,7 @@ import type { BookDocument } from "@readup/db";
 import { audioProgressFraction } from "@/features/reader/audio/audio-progress";
 import { useReaderBookAudio } from "@/features/reader/audio/reader-book-audio-context";
 import { ReaderBottomBookProgress } from "@/features/reader/components/reader-bottom-book-progress";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { Pause, Play } from "lucide-react-native";
 import { Pressable } from "react-native";
 
@@ -10,6 +11,7 @@ export function ReaderBottomNowPlaying({
 }: {
   document: BookDocument;
 }) {
+  const colors = useReadupColors();
   const { audioUrl, isAudioLoading, status, togglePlayback } =
     useReaderBookAudio();
 
@@ -31,14 +33,14 @@ export function ReaderBottomNowPlaying({
           accessibilityLabel={status.playing ? "Pause audio" : "Play audio"}
           disabled={!canToggleAudio}
           onPress={togglePlayback}
-          className={`rounded-full border border-[#C8C6B2] bg-[#FBFAF2] p-1.5 active:opacity-80 ${!canToggleAudio ? "opacity-40" : ""}`}
+          className={`rounded-full border border-[#C8C6B2] dark:border-[#3A4740] bg-[#FBFAF2] dark:bg-[#101512] p-1.5 active:opacity-80 ${!canToggleAudio ? "opacity-40" : ""}`}
         >
           {status.playing ? (
-            <Pause size={24} color="#1A2420" strokeWidth={2} />
+            <Pause size={24} color={colors.text} strokeWidth={2} />
           ) : (
             <Play
               size={24}
-              color="#1A2420"
+              color={colors.text}
               strokeWidth={2}
               style={{ marginLeft: 3 }}
             />

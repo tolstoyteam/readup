@@ -29,7 +29,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import { fetchBooks } from "@/features/books/api/books";
-import { BookCard, type BookCardItem } from "@/features/books/components/book-card";
+import {
+  BookCard,
+  type BookCardItem,
+} from "@/features/books/components/book-card";
 import { AchievementIcon } from "@/features/achievements/components/achievement-icon";
 import { useAchievements } from "@/features/achievements/hooks/use-achievements";
 import {
@@ -46,7 +49,7 @@ import {
 import { GOALS, INTEREST_GROUPS } from "@/features/setup/constants";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import {
   buildBookCatalogMap,
@@ -54,7 +57,9 @@ import {
   useLibrary,
 } from "@/features/library";
 
-function readFullNameFromUser(user: { user_metadata?: Record<string, unknown> }): string {
+function readFullNameFromUser(user: {
+  user_metadata?: Record<string, unknown>;
+}): string {
   const raw = user.user_metadata?.full_name;
   return typeof raw === "string" ? raw : "";
 }
@@ -73,6 +78,7 @@ function hasEmailIdentity(
 }
 
 export default function ProfileScreen() {
+  const colors = useReadupColors();
   const { user, updateFullName } = useAuth();
   const { savedBooks, loading: libraryLoading } = useLibrary();
   const [fontsLoaded] = useFonts({
@@ -91,7 +97,9 @@ export default function ProfileScreen() {
   const [nameEditing, setNameEditing] = useState(false);
   const [interestsEditing, setInterestsEditing] = useState(false);
   const [goalEditing, setGoalEditing] = useState(false);
-  const [savingSection, setSavingSection] = useState<null | "name" | "interests" | "goal">(null);
+  const [savingSection, setSavingSection] = useState<
+    null | "name" | "interests" | "goal"
+  >(null);
   const [libraryItems, setLibraryItems] = useState<BookCardItem[]>([]);
   const {
     viewModels: achievementViewModels,
@@ -163,7 +171,10 @@ export default function ProfileScreen() {
     [profile],
   );
 
-  const selectedSet = useMemo(() => new Set(selectedInterests), [selectedInterests]);
+  const selectedSet = useMemo(
+    () => new Set(selectedInterests),
+    [selectedInterests],
+  );
 
   function toggleInterest(interest: string) {
     setSelectedInterests((current) =>
@@ -241,10 +252,12 @@ export default function ProfileScreen() {
     setGoalPickerOpen(false);
   }
 
-  const cardClass = "rounded-[20px] border border-[#E8E6D8] bg-[#F2F0E6] p-4";
+  const cardClass =
+    "rounded-[20px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-4";
   const nameDirty = fullName.trim() !== initialFullName.trim();
   const interestsDirty =
-    profile != null && !interestsEqual(selectedInterests, profile.selected_interests);
+    profile != null &&
+    !interestsEqual(selectedInterests, profile.selected_interests);
   const goalDirty = profile != null && goal !== profile.reading_goal;
 
   if (!fontsLoaded) {
@@ -257,18 +270,25 @@ export default function ProfileScreen() {
 
   if (loadingProfile) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#FBFAF2]" edges={["top"]}>
-        <ActivityIndicator size="large" color={ReadupColors.brand} />
+      <SafeAreaView
+        className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]"
+        edges={["top"]}
+      >
+        <ActivityIndicator size="large" color={colors.brand} />
       </SafeAreaView>
     );
   }
 
   if (profile == null) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#FBFAF2] px-8" edges={["top"]}>
+      <SafeAreaView
+        className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512] px-8"
+        edges={["top"]}
+      >
         <Text
-          className="text-center text-[14px] tracking-[-0.56px] text-[#4A5550]"
-          style={{ fontFamily: "Inter_400Regular" }}>
+          className="text-center text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
+          style={{ fontFamily: "Inter_400Regular" }}
+        >
           Не удалось загрузить профиль. Закройте экран и откройте снова.
         </Text>
       </SafeAreaView>
@@ -278,20 +298,25 @@ export default function ProfileScreen() {
   const displayNameSummary = initialFullName.trim();
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <ScrollView
         className="flex-1"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerClassName="gap-4 px-[30px] pb-10 pt-3">
+        contentContainerClassName="gap-4 px-[30px] pb-10 pt-3"
+      >
         <View className="items-center pb-1">
           <ReadupLogo />
         </View>
 
         <View className="flex-row items-center justify-between">
           <Text
-            className="text-[22px] leading-7 tracking-[-0.88px] text-[#1A2420]"
-            style={{ fontFamily: "Inter_600SemiBold" }}>
+            className="text-[22px] leading-7 tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]"
+            style={{ fontFamily: "Inter_600SemiBold" }}
+          >
             Профиль
           </Text>
           <View className="flex-row items-center gap-3">
@@ -300,16 +325,26 @@ export default function ProfileScreen() {
               accessibilityLabel="Уведомления"
               onPress={() => router.push("/notifications")}
               hitSlop={10}
-              className="active:opacity-70">
-              <Bell size={22} color={ReadupColors.textSecondary} strokeWidth={2} />
+              className="active:opacity-70"
+            >
+              <Bell
+                size={22}
+                color={colors.textSecondary}
+                strokeWidth={2}
+              />
             </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Настройки"
               onPress={() => router.push("/settings")}
               hitSlop={10}
-              className="active:opacity-70">
-              <Settings size={22} color={ReadupColors.textSecondary} strokeWidth={2} />
+              className="active:opacity-70"
+            >
+              <Settings
+                size={22}
+                color={colors.textSecondary}
+                strokeWidth={2}
+              />
             </Pressable>
           </View>
         </View>
@@ -317,43 +352,56 @@ export default function ProfileScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push("/subscription")}
-          className={`${cardClass} flex-row items-center justify-between active:opacity-90`}>
+          className={`${cardClass} flex-row items-center justify-between active:opacity-90`}
+        >
           <View className="flex-1 flex-row items-center gap-3">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-[#ECFDF5]">
-              <Crown size={20} color={ReadupColors.brand} strokeWidth={2.2} />
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-[#ECFDF5] dark:bg-[#123D2C]">
+              <Crown size={20} color={colors.brand} strokeWidth={2.2} />
             </View>
             <View className="flex-1">
               <Text
-                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
-                style={{ fontFamily: "Inter_600SemiBold" }}>
+                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
+                style={{ fontFamily: "Inter_600SemiBold" }}
+              >
                 {profile.is_premium ? "Readup Premium" : "Откройте Premium"}
               </Text>
               <Text
-                className="text-[13px] tracking-[-0.52px] text-[#4A5550]"
-                style={{ fontFamily: "Inter_400Regular" }}>
+                className="text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]"
+                style={{ fontFamily: "Inter_400Regular" }}
+              >
                 {profile.is_premium
                   ? "Все функции активны"
                   : "Все книги, аудио, тесты без рекламы"}
               </Text>
             </View>
           </View>
-          <ChevronRight size={20} color={ReadupColors.textTertiary} strokeWidth={2} />
+          <ChevronRight
+            size={20}
+            color={colors.textTertiary}
+            strokeWidth={2}
+          />
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push("/streak")}
-          className={`${cardClass} active:opacity-90`}>
+          className={`${cardClass} active:opacity-90`}
+        >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-3">
-              <Flame size={20} color={ReadupColors.brand} strokeWidth={2.2} />
+              <Flame size={20} color={colors.brand} strokeWidth={2.2} />
               <Text
-                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
-                style={{ fontFamily: "Inter_600SemiBold" }}>
+                className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
+                style={{ fontFamily: "Inter_600SemiBold" }}
+              >
                 Серия и прогресс
               </Text>
             </View>
-            <ChevronRight size={20} color={ReadupColors.textTertiary} strokeWidth={2} />
+            <ChevronRight
+              size={20}
+              color={colors.textTertiary}
+              strokeWidth={2}
+            />
           </View>
           <View className="mt-4 flex-row gap-3">
             <StatPill
@@ -377,40 +425,48 @@ export default function ProfileScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push("/achievements" as Href)}
-          className={`${cardClass} active:opacity-90`}>
+          className={`${cardClass} active:opacity-90`}
+        >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
-              <Trophy size={18} color={ReadupColors.brand} strokeWidth={2.2} />
+              <Trophy size={18} color={colors.brand} strokeWidth={2.2} />
               <View>
                 <Text
-                  className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]"
-                  style={{ fontFamily: "Inter_600SemiBold" }}>
+                  className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
+                  style={{ fontFamily: "Inter_600SemiBold" }}
+                >
                   Достижения
                 </Text>
                 <Text
-                  className="text-[13px] tracking-[-0.52px] text-[#7A7868]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
-                  {achievementsUnlockedCount} из {achievementsTotalCount} получено
+                  className="text-[13px] tracking-[-0.52px] text-[#7A7868] dark:text-[#8F9A93]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
+                  {achievementsUnlockedCount} из {achievementsTotalCount}{" "}
+                  получено
                 </Text>
               </View>
             </View>
-            <ChevronRight size={20} color={ReadupColors.textTertiary} strokeWidth={2} />
+            <ChevronRight
+              size={20}
+              color={colors.textTertiary}
+              strokeWidth={2}
+            />
           </View>
           {unlockedAchievementPreview.length > 0 ? (
             <View className="mt-3 flex-row flex-wrap gap-2">
               {unlockedAchievementPreview.map((achievement) => (
                 <View
                   key={achievement.slug}
-                  className="flex-row items-center gap-1.5 rounded-full border border-[#059669] bg-[#ECFDF5] px-3 py-1.5"
+                  className="flex-row items-center gap-1.5 rounded-full border border-[#059669] dark:border-[#34D399] bg-[#ECFDF5] dark:bg-[#123D2C] px-3 py-1.5"
                 >
                   <AchievementIcon
                     name={achievement.icon}
                     size={14}
-                    color={ReadupColors.brand}
+                    color={colors.brand}
                     strokeWidth={2}
                   />
                   <Text
-                    className="text-[12px] font-medium tracking-[-0.48px] text-[#059669]"
+                    className="text-[12px] font-medium tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
                     style={{ fontFamily: "Inter_500Medium" }}
                   >
                     {achievement.title}
@@ -423,8 +479,9 @@ export default function ProfileScreen() {
 
         <View className={cardClass}>
           <Text
-            className="text-[14px] tracking-[-0.56px] text-[#4A5550]"
-            style={{ fontFamily: "Inter_400Regular" }}>
+            className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
+            style={{ fontFamily: "Inter_400Regular" }}
+          >
             Имя
           </Text>
           {nameEditing ? (
@@ -448,10 +505,12 @@ export default function ProfileScreen() {
                 accessibilityRole="button"
                 disabled={savingSection === "name"}
                 onPress={cancelNameEdit}
-                className="items-center py-2 active:opacity-70">
+                className="items-center py-2 active:opacity-70"
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#7A7868]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Отмена
                 </Text>
               </Pressable>
@@ -462,17 +521,22 @@ export default function ProfileScreen() {
                 className="text-[18px] font-medium tracking-[-0.72px]"
                 style={{
                   fontFamily: "Inter_500Medium",
-                  color: displayNameSummary ? ReadupColors.text : ReadupColors.textTertiary,
-                }}>
+                  color: displayNameSummary
+                    ? colors.text
+                    : colors.textTertiary,
+                }}
+              >
                 {displayNameSummary || "Не указано"}
               </Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setNameEditing(true)}
-                className="self-start active:opacity-70">
+                className="self-start active:opacity-70"
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#059669]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Изменить
                 </Text>
               </Pressable>
@@ -482,8 +546,9 @@ export default function ProfileScreen() {
 
         <View className={cardClass}>
           <Text
-            className="text-[14px] tracking-[-0.56px] text-[#4A5550]"
-            style={{ fontFamily: "Inter_400Regular" }}>
+            className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
+            style={{ fontFamily: "Inter_400Regular" }}
+          >
             Интересы
           </Text>
           {interestsEditing ? (
@@ -491,8 +556,9 @@ export default function ProfileScreen() {
               {INTEREST_GROUPS.map((group) => (
                 <View key={group.title} className="gap-2">
                   <Text
-                    className="text-[18px] font-medium tracking-[-0.72px] text-[#1A2420]"
-                    style={{ fontFamily: "Inter_500Medium" }}>
+                    className="text-[18px] font-medium tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]"
+                    style={{ fontFamily: "Inter_500Medium" }}
+                  >
                     {group.title}
                   </Text>
                   <View className="flex-row flex-wrap gap-1">
@@ -506,15 +572,21 @@ export default function ProfileScreen() {
                           onPress={() => toggleInterest(interest)}
                           className="rounded-full border px-3 py-1 active:opacity-80"
                           style={{
-                            borderColor: ReadupColors.brand,
-                            backgroundColor: active ? ReadupColors.brand : "transparent",
-                          }}>
+                            borderColor: colors.brand,
+                            backgroundColor: active
+                              ? colors.brand
+                              : "transparent",
+                          }}
+                        >
                           <Text
                             className="text-center text-[14px] tracking-[-0.56px]"
                             style={{
                               fontFamily: "Inter_400Regular",
-                              color: active ? ReadupColors.textInverse : ReadupColors.text,
-                            }}>
+                              color: active
+                                ? colors.textInverse
+                                : colors.text,
+                            }}
+                          >
                             {interest}
                           </Text>
                         </Pressable>
@@ -533,10 +605,12 @@ export default function ProfileScreen() {
                 accessibilityRole="button"
                 disabled={savingSection === "interests"}
                 onPress={cancelInterestsEdit}
-                className="items-center py-2 active:opacity-70">
+                className="items-center py-2 active:opacity-70"
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#7A7868]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Отмена
                 </Text>
               </Pressable>
@@ -550,15 +624,17 @@ export default function ProfileScreen() {
                       key={interest}
                       className="rounded-full border px-3 py-1"
                       style={{
-                        borderColor: ReadupColors.brand,
-                        backgroundColor: ReadupColors.brand,
-                      }}>
+                        borderColor: colors.brand,
+                        backgroundColor: colors.brand,
+                      }}
+                    >
                       <Text
                         className="text-center text-[14px] tracking-[-0.56px]"
                         style={{
                           fontFamily: "Inter_400Regular",
-                          color: ReadupColors.textInverse,
-                        }}>
+                          color: colors.textInverse,
+                        }}
+                      >
                         {interest}
                       </Text>
                     </View>
@@ -566,18 +642,21 @@ export default function ProfileScreen() {
                 </View>
               ) : (
                 <Text
-                  className="text-[14px] tracking-[-0.56px] text-[#7A7868]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[14px] tracking-[-0.56px] text-[#7A7868] dark:text-[#8F9A93]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Не выбрано
                 </Text>
               )}
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setInterestsEditing(true)}
-                className="self-start active:opacity-70">
+                className="self-start active:opacity-70"
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#059669]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Изменить
                 </Text>
               </Pressable>
@@ -587,8 +666,9 @@ export default function ProfileScreen() {
 
         <View className={cardClass}>
           <Text
-            className="text-[14px] tracking-[-0.56px] text-[#4A5550]"
-            style={{ fontFamily: "Inter_400Regular" }}>
+            className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
+            style={{ fontFamily: "Inter_400Regular" }}
+          >
             Цель чтения
           </Text>
           {goalEditing ? (
@@ -596,24 +676,34 @@ export default function ProfileScreen() {
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setGoalPickerOpen((v) => !v)}
-                className="h-[48px] flex-row items-center justify-between rounded-[30px] border border-[#E8E6D8] bg-[#FBFAF2] px-4 active:opacity-80">
+                className="h-[48px] flex-row items-center justify-between rounded-[30px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-4 active:opacity-80"
+              >
                 <Text
                   className="flex-1 text-[14px] tracking-[-0.56px]"
                   style={{
                     fontFamily: "Inter_400Regular",
-                    color: goal ? ReadupColors.text : ReadupColors.textTertiary,
+                    color: goal ? colors.text : colors.textTertiary,
                   }}
-                  numberOfLines={1}>
+                  numberOfLines={1}
+                >
                   {goal ?? "Выберите цель"}
                 </Text>
                 {goalPickerOpen ? (
-                  <ChevronUp size={18} color={ReadupColors.textTertiary} strokeWidth={2} />
+                  <ChevronUp
+                    size={18}
+                    color={colors.textTertiary}
+                    strokeWidth={2}
+                  />
                 ) : (
-                  <ChevronDown size={18} color={ReadupColors.textTertiary} strokeWidth={2} />
+                  <ChevronDown
+                    size={18}
+                    color={colors.textTertiary}
+                    strokeWidth={2}
+                  />
                 )}
               </Pressable>
               {goalPickerOpen ? (
-                <View className="overflow-hidden rounded-[24px] border border-[#E8E6D8] bg-[#FBFAF2]">
+                <View className="overflow-hidden rounded-[24px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512]">
                   {GOALS.map((item, index) => (
                     <Pressable
                       key={item}
@@ -623,11 +713,15 @@ export default function ProfileScreen() {
                         setGoalPickerOpen(false);
                       }}
                       className={`px-4 py-3 active:opacity-80 ${
-                        index < GOALS.length - 1 ? "border-b border-[#E8E6D8]" : ""
-                      }`}>
+                        index < GOALS.length - 1
+                          ? "border-b border-[#E8E6D8] dark:border-[#2A3630]"
+                          : ""
+                      }`}
+                    >
                       <Text
-                        className="text-[14px] tracking-[-0.56px] text-[#1A2420]"
-                        style={{ fontFamily: "Inter_400Regular" }}>
+                        className="text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]"
+                        style={{ fontFamily: "Inter_400Regular" }}
+                      >
                         {item}
                       </Text>
                     </Pressable>
@@ -644,10 +738,12 @@ export default function ProfileScreen() {
                 accessibilityRole="button"
                 disabled={savingSection === "goal"}
                 onPress={cancelGoalEdit}
-                className="items-center py-2 active:opacity-70">
+                className="items-center py-2 active:opacity-70"
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#7A7868]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Отмена
                 </Text>
               </Pressable>
@@ -658,8 +754,11 @@ export default function ProfileScreen() {
                 className="text-[18px] font-medium leading-6 tracking-[-0.72px]"
                 style={{
                   fontFamily: "Inter_500Medium",
-                  color: profile.reading_goal ? ReadupColors.text : ReadupColors.textTertiary,
-                }}>
+                  color: profile.reading_goal
+                    ? colors.text
+                    : colors.textTertiary,
+                }}
+              >
                 {profile.reading_goal ?? "Не выбрана"}
               </Text>
               <Pressable
@@ -669,10 +768,12 @@ export default function ProfileScreen() {
                   setGoal(profile.reading_goal);
                   setGoalPickerOpen(false);
                 }}
-                className="self-start active:opacity-70">
+                className="self-start active:opacity-70"
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#059669]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Изменить
                 </Text>
               </Pressable>
@@ -680,31 +781,36 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <View className="gap-3 border-t border-[#E8E6D8] pt-5">
+        <View className="gap-3 border-t border-[#E8E6D8] dark:border-[#2A3630] pt-5">
           <Text
-            className="text-[22px] leading-7 tracking-[-0.88px] text-[#1A2420]"
-            style={{ fontFamily: "Inter_600SemiBold" }}>
+            className="text-[22px] leading-7 tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]"
+            style={{ fontFamily: "Inter_600SemiBold" }}
+          >
             Библиотека
           </Text>
 
           {libraryLoading ? (
             <View className="items-center justify-center py-6">
-              <ActivityIndicator size="small" color={ReadupColors.brand} />
+              <ActivityIndicator size="small" color={colors.brand} />
             </View>
           ) : libraryItems.length === 0 ? (
             <View className={cardClass}>
               <Text
-                className="text-[14px] tracking-[-0.56px] text-[#4A5550]"
-                style={{ fontFamily: "Inter_400Regular" }}>
-                Пока здесь пусто. Добавляйте книги из поиска — и они появятся в библиотеке.
+                className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
+                style={{ fontFamily: "Inter_400Regular" }}
+              >
+                Пока здесь пусто. Добавляйте книги из поиска — и они появятся в
+                библиотеке.
               </Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push("/(tabs)/library")}
-                className="mt-3 self-start active:opacity-70">
+                className="mt-3 self-start active:opacity-70"
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#059669]"
-                  style={{ fontFamily: "Inter_400Regular" }}>
+                  className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
+                  style={{ fontFamily: "Inter_400Regular" }}
+                >
                   Открыть библиотеку
                 </Text>
               </Pressable>
@@ -725,11 +831,16 @@ export default function ProfileScreen() {
                     <Pressable
                       accessibilityRole="button"
                       onPress={() => router.push("/(tabs)/library")}
-                      className="items-center justify-center rounded-[10px] border border-[#E8E6D8] bg-[#F2F0E6] active:opacity-80"
-                      style={{ width: 136, height: Math.round(136 * 1.44) + 28 }}>
+                      className="items-center justify-center rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
+                      style={{
+                        width: 136,
+                        height: Math.round(136 * 1.44) + 28,
+                      }}
+                    >
                       <Text
-                        className="text-center text-[14px] font-medium tracking-[-0.56px] text-[#059669]"
-                        style={{ fontFamily: "Inter_500Medium" }}>
+                        className="text-center text-[14px] font-medium tracking-[-0.56px] text-[#059669] dark:text-[#34D399]"
+                        style={{ fontFamily: "Inter_500Medium" }}
+                      >
                         Смотреть всё
                       </Text>
                     </Pressable>
@@ -750,7 +861,6 @@ export default function ProfileScreen() {
             />
           )}
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -766,20 +876,23 @@ function StatPill({
   unit: string;
 }) {
   return (
-    <View className="flex-1 items-center rounded-[14px] bg-[#FBFAF2] px-3 py-3">
+    <View className="flex-1 items-center rounded-[14px] bg-[#FBFAF2] dark:bg-[#101512] px-3 py-3">
       <Text
-        className="text-[11px] uppercase tracking-[-0.44px] text-[#7A7868]"
+        className="text-[11px] uppercase tracking-[-0.44px] text-[#7A7868] dark:text-[#8F9A93]"
         style={{ fontFamily: "Inter_400Regular" }}
       >
         {label}
       </Text>
       <Text
-        className="mt-1 text-[20px] font-semibold tracking-[-0.8px] text-[#1A2420]"
+        className="mt-1 text-[20px] font-semibold tracking-[-0.8px] text-[#1A2420] dark:text-[#F3F4EE]"
         style={{ fontFamily: "Inter_600SemiBold" }}
       >
         {value}
         {unit ? (
-          <Text className="text-[13px] tracking-[-0.52px] text-[#7A7868]"> {unit}</Text>
+          <Text className="text-[13px] tracking-[-0.52px] text-[#7A7868] dark:text-[#8F9A93]">
+            {" "}
+            {unit}
+          </Text>
         ) : null}
       </Text>
     </View>

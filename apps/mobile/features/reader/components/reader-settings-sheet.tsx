@@ -5,6 +5,7 @@ import {
   MARGIN_OPTIONS,
 } from "@/features/reader/settings/reader-settings";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { Check, Minus, Plus } from "lucide-react-native";
 import { Modal, Pressable, Text, View } from "react-native";
 
@@ -20,7 +21,7 @@ function SegmentedRow({
   onSelect: (value: number) => void;
 }) {
   return (
-    <View className="flex-row gap-1 rounded-xl border border-[#E8E6D8] bg-[#F2F0E6] p-1">
+    <View className="flex-row gap-1 rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-1">
       {options.map((option) => {
         const active = option.value === selected;
         return (
@@ -30,12 +31,14 @@ function SegmentedRow({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             className={`flex-1 items-center justify-center rounded-lg py-2.5 ${
-              active ? "bg-[#FBFAF2]" : "active:opacity-70"
+              active ? "bg-[#FBFAF2] dark:bg-[#101512]" : "active:opacity-70"
             }`}
           >
             <Text
               className={`text-[13px] font-semibold ${
-                active ? "text-[#1A2420]" : "text-[#7A7868]"
+                active
+                  ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                  : "text-[#7A7868] dark:text-[#8F9A93]"
               }`}
             >
               {option.label}
@@ -49,7 +52,7 @@ function SegmentedRow({
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#7A7868]">
+    <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#7A7868] dark:text-[#8F9A93]">
       {children}
     </Text>
   );
@@ -62,13 +65,9 @@ export function ReaderSettingsSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const {
-    settings,
-    setFontScale,
-    setLineSpacing,
-    setMargin,
-    setLanguage,
-  } = useReaderSettings();
+  const colors = useReadupColors();
+  const { settings, setFontScale, setLineSpacing, setMargin, setLanguage } =
+    useReaderSettings();
 
   const fontIndex = FONT_SCALE_STEPS.findIndex(
     (step) => step === settings.fontScale,
@@ -91,19 +90,16 @@ export function ReaderSettingsSheet({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable
-        className="flex-1 justify-end bg-black/55"
-        onPress={onClose}
-      >
+      <Pressable className="flex-1 justify-end bg-black/55" onPress={onClose}>
         <Pressable
-          className="gap-6 rounded-t-2xl border-t border-[#E8E6D8] bg-[#FBFAF2] px-5 pb-9 pt-5"
+          className="gap-6 rounded-t-2xl border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-5 pb-9 pt-5"
           onPress={(e) => e.stopPropagation()}
         >
           <View className="-mt-1 mb-1 items-center">
-            <View className="h-1 w-10 rounded-full bg-[#C8C6B2]" />
+            <View className="h-1 w-10 rounded-full bg-[#C8C6B2] dark:bg-[#344039]" />
           </View>
 
-          <Text className="text-lg font-semibold text-[#1A2420]">
+          <Text className="text-lg font-semibold text-[#1A2420] dark:text-[#F3F4EE]">
             Reader settings
           </Text>
 
@@ -115,14 +111,17 @@ export function ReaderSettingsSheet({
                 disabled={!canDecreaseFont}
                 accessibilityRole="button"
                 accessibilityLabel="Decrease font size"
-                className={`h-12 flex-1 items-center justify-center rounded-xl border border-[#C8C6B2] bg-[#F2F0E6] ${
+                className={`h-12 flex-1 items-center justify-center rounded-xl border border-[#C8C6B2] dark:border-[#3A4740] bg-[#F2F0E6] dark:bg-[#19211D] ${
                   canDecreaseFont ? "active:opacity-80" : "opacity-40"
                 }`}
               >
-                <Minus size={20} color="#1A2420" strokeWidth={2.5} />
+                <Minus size={20} color={colors.text} strokeWidth={2.5} />
               </Pressable>
               <View className="min-w-[56px] items-center">
-                <Text className="font-reader font-semibold text-[#1A2420]" style={{ fontSize: 16 * settings.fontScale }}>
+                <Text
+                  className="font-reader font-semibold text-[#1A2420] dark:text-[#F3F4EE]"
+                  style={{ fontSize: 16 * settings.fontScale }}
+                >
                   Aa
                 </Text>
               </View>
@@ -131,11 +130,11 @@ export function ReaderSettingsSheet({
                 disabled={!canIncreaseFont}
                 accessibilityRole="button"
                 accessibilityLabel="Increase font size"
-                className={`h-12 flex-1 items-center justify-center rounded-xl border border-[#C8C6B2] bg-[#F2F0E6] ${
+                className={`h-12 flex-1 items-center justify-center rounded-xl border border-[#C8C6B2] dark:border-[#3A4740] bg-[#F2F0E6] dark:bg-[#19211D] ${
                   canIncreaseFont ? "active:opacity-80" : "opacity-40"
                 }`}
               >
-                <Plus size={20} color="#1A2420" strokeWidth={2.5} />
+                <Plus size={20} color={colors.text} strokeWidth={2.5} />
               </Pressable>
             </View>
           </View>
@@ -160,7 +159,7 @@ export function ReaderSettingsSheet({
 
           <View>
             <SectionLabel>Language</SectionLabel>
-            <View className="rounded-xl border border-[#E8E6D8] bg-[#F2F0E6] p-1">
+            <View className="rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-1">
               {LANGUAGE_OPTIONS.map((option) => {
                 const active = option.value === settings.language;
                 return (
@@ -170,12 +169,16 @@ export function ReaderSettingsSheet({
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
                     className={`flex-row items-center justify-between rounded-lg px-3.5 py-3 ${
-                      active ? "bg-[#FBFAF2]" : "active:opacity-70"
+                      active
+                        ? "bg-[#FBFAF2] dark:bg-[#101512]"
+                        : "active:opacity-70"
                     }`}
                   >
                     <Text
                       className={`text-base font-medium ${
-                        active ? "text-[#1A2420]" : "text-[#4A5550]"
+                        active
+                          ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                          : "text-[#4A5550] dark:text-[#B8C1BB]"
                       }`}
                     >
                       {option.label}

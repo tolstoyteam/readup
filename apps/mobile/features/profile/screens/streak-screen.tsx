@@ -31,7 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { saveDailyReadingGoal } from "@/features/profile/api/profile";
 import { generateLastNDays, useReadingStats } from "@/features/reading-stats";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
 const GOAL_OPTIONS = [5, 10, 20, 30];
@@ -39,9 +39,11 @@ const CHART_PLOT_HEIGHT = 120;
 const WEEKDAY_LABELS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
 export default function StreakScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const { user } = useAuth();
-  const { profile, log, todayKey, stats, loading, reload } = useReadingStats(14);
+  const { profile, log, todayKey, stats, loading, reload } =
+    useReadingStats(14);
   const [savingGoal, setSavingGoal] = useState(false);
 
   const [fontsLoaded] = useFonts({
@@ -70,39 +72,37 @@ export default function StreakScreen() {
     return map;
   }, [log]);
 
-  const chartDays = useMemo(
-    () => generateLastNDays(todayKey, 14),
-    [todayKey],
-  );
+  const chartDays = useMemo(() => generateLastNDays(todayKey, 14), [todayKey]);
 
   const todayMinutes = logByDate.get(todayKey) ?? 0;
   const dailyProgress = Math.min(todayMinutes / Math.max(dailyGoal, 1), 1);
 
-  const { maxLogMinutes, avgMinutes, peakDate, activeDayCount } = useMemo(() => {
-    let max = 0;
-    let sum = 0;
-    let active = 0;
-    let peak: string | null = null;
-    let peakValue = 0;
-    for (const day of chartDays) {
-      const minutes = logByDate.get(day) ?? 0;
-      if (minutes > max) max = minutes;
-      if (minutes > 0) {
-        sum += minutes;
-        active += 1;
-        if (minutes > peakValue) {
-          peakValue = minutes;
-          peak = day;
+  const { maxLogMinutes, avgMinutes, peakDate, activeDayCount } =
+    useMemo(() => {
+      let max = 0;
+      let sum = 0;
+      let active = 0;
+      let peak: string | null = null;
+      let peakValue = 0;
+      for (const day of chartDays) {
+        const minutes = logByDate.get(day) ?? 0;
+        if (minutes > max) max = minutes;
+        if (minutes > 0) {
+          sum += minutes;
+          active += 1;
+          if (minutes > peakValue) {
+            peakValue = minutes;
+            peak = day;
+          }
         }
       }
-    }
-    return {
-      maxLogMinutes: Math.max(max, dailyGoal, 1),
-      avgMinutes: active > 0 ? Math.round(sum / active) : 0,
-      peakDate: peak,
-      activeDayCount: active,
-    };
-  }, [chartDays, logByDate, dailyGoal]);
+      return {
+        maxLogMinutes: Math.max(max, dailyGoal, 1),
+        avgMinutes: active > 0 ? Math.round(sum / active) : 0,
+        peakDate: peak,
+        activeDayCount: active,
+      };
+    }, [chartDays, logByDate, dailyGoal]);
 
   const last7 = useMemo(() => chartDays.slice(-7), [chartDays]);
 
@@ -123,7 +123,10 @@ export default function StreakScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <StatusBar style="dark" />
 
       <View className="flex-row items-center justify-between px-5 py-3">
@@ -132,12 +135,12 @@ export default function StreakScreen() {
           accessibilityRole="button"
           accessibilityLabel="Назад"
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
-          <ArrowLeft size={22} color={ReadupColors.text} strokeWidth={2} />
+          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
         <Text
-          className="text-[18px] tracking-[-0.72px] text-[#1A2420]"
+          className="text-[18px] tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]"
           style={{ fontFamily: "Inter_600SemiBold" }}
         >
           Прогресс
@@ -147,7 +150,7 @@ export default function StreakScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={ReadupColors.brand} />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : (
         <ScrollView
@@ -156,22 +159,26 @@ export default function StreakScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Streak hero */}
-          <View className="overflow-hidden rounded-[24px] border border-[#059669] bg-[#ECFDF5] p-5">
+          <View className="overflow-hidden rounded-[24px] border border-[#059669] dark:border-[#34D399] bg-[#ECFDF5] dark:bg-[#123D2C] p-5">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
-                <View className="h-9 w-9 items-center justify-center rounded-full bg-[#D1FAE5]">
-                  <Flame size={20} color={ReadupColors.brand} strokeWidth={2.4} />
+                <View className="h-9 w-9 items-center justify-center rounded-full bg-[#D1FAE5] dark:bg-[#164E3A]">
+                  <Flame
+                    size={20}
+                    color={colors.brand}
+                    strokeWidth={2.4}
+                  />
                 </View>
                 <Text
-                  className="text-[14px] tracking-[-0.56px] text-[#047857]"
+                  className="text-[14px] tracking-[-0.56px] text-[#047857] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Текущая серия
                 </Text>
               </View>
-              <View className="rounded-full bg-[#D1FAE5] px-3 py-1.5">
+              <View className="rounded-full bg-[#D1FAE5] dark:bg-[#164E3A] px-3 py-1.5">
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#047857]"
+                  className="text-[12px] tracking-[-0.48px] text-[#047857] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Рекорд: {stats.longestStreakDays}
@@ -181,13 +188,13 @@ export default function StreakScreen() {
 
             <View className="mt-3 flex-row items-baseline gap-2">
               <Text
-                className="text-[52px] leading-[56px] tracking-[-2px] text-[#1A2420]"
+                className="text-[52px] leading-[56px] tracking-[-2px] text-[#1A2420] dark:text-[#F3F4EE]"
                 style={{ fontFamily: "Inter_700Bold" }}
               >
                 {stats.currentStreakDays}
               </Text>
               <Text
-                className="text-[18px] tracking-[-0.72px] text-[#4A5550]"
+                className="text-[18px] tracking-[-0.72px] text-[#4A5550] dark:text-[#B8C1BB]"
                 style={{ fontFamily: "Inter_500Medium" }}
               >
                 {dayLabel(stats.currentStreakDays)}
@@ -203,20 +210,26 @@ export default function StreakScreen() {
                     <View
                       className="h-7 w-7 items-center justify-center rounded-full"
                       style={{
-                        backgroundColor: active ? ReadupColors.brand : "#D1FAE5",
+                        backgroundColor: active
+                          ? colors.brand
+                          : "#D1FAE5",
                         borderWidth: isToday ? 2 : 0,
-                        borderColor: ReadupColors.brandDark,
+                        borderColor: colors.brandDark,
                       }}
                     >
                       {active ? (
-                        <Flame size={13} color={ReadupColors.white} strokeWidth={2.4} />
+                        <Flame
+                          size={13}
+                          color={colors.white}
+                          strokeWidth={2.4}
+                        />
                       ) : null}
                     </View>
                     <Text
                       className="text-[10px] tracking-[-0.4px]"
                       style={{
                         fontFamily: "Inter_500Medium",
-                        color: isToday ? ReadupColors.brand : "#7A7868",
+                        color: isToday ? colors.brand : "#7A7868",
                       }}
                     >
                       {weekdayLabel(day)}
@@ -228,12 +241,12 @@ export default function StreakScreen() {
           </View>
 
           {/* Daily reading minutes — promoted key metric */}
-          <View className="rounded-[20px] border border-[#E8E6D8] bg-[#F2F0E6] p-5">
+          <View className="rounded-[20px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-5">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
-                <Clock size={18} color={ReadupColors.brand} strokeWidth={2.2} />
+                <Clock size={18} color={colors.brand} strokeWidth={2.2} />
                 <Text
-                  className="text-[14px] tracking-[-0.56px] text-[#4A5550]"
+                  className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Минут чтения за день
@@ -252,11 +265,19 @@ export default function StreakScreen() {
                   }}
                 >
                   {trend === "up" ? (
-                    <TrendingUp size={13} color={ReadupColors.brand} strokeWidth={2.4} />
+                    <TrendingUp
+                      size={13}
+                      color={colors.brand}
+                      strokeWidth={2.4}
+                    />
                   ) : trend === "down" ? (
                     <TrendingDown size={13} color="#DC2626" strokeWidth={2.4} />
                   ) : (
-                    <Minus size={13} color={ReadupColors.textTertiary} strokeWidth={2.4} />
+                    <Minus
+                      size={13}
+                      color={colors.textTertiary}
+                      strokeWidth={2.4}
+                    />
                   )}
                   <Text
                     className="text-[11px] tracking-[-0.44px]"
@@ -264,10 +285,10 @@ export default function StreakScreen() {
                       fontFamily: "Inter_500Medium",
                       color:
                         trend === "up"
-                          ? ReadupColors.brandDark
+                          ? colors.brandDark
                           : trend === "down"
                             ? "#DC2626"
-                            : ReadupColors.textTertiary,
+                            : colors.textTertiary,
                     }}
                   >
                     {trend === "up"
@@ -282,20 +303,20 @@ export default function StreakScreen() {
 
             <View className="mt-3 flex-row items-baseline gap-2">
               <Text
-                className="text-[40px] leading-[44px] tracking-[-1.6px] text-[#1A2420]"
+                className="text-[40px] leading-[44px] tracking-[-1.6px] text-[#1A2420] dark:text-[#F3F4EE]"
                 style={{ fontFamily: "Inter_700Bold" }}
               >
                 {todayMinutes}
               </Text>
               <Text
-                className="text-[15px] tracking-[-0.6px] text-[#7A7868]"
+                className="text-[15px] tracking-[-0.6px] text-[#7A7868] dark:text-[#8F9A93]"
                 style={{ fontFamily: "Inter_500Medium" }}
               >
                 / {dailyGoal} мин сегодня
               </Text>
             </View>
 
-            <View className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-[#E8E6D8]">
+            <View className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-[#E8E6D8] dark:bg-[#26302B]">
               <View
                 className="h-full rounded-full bg-[#059669]"
                 style={{ width: `${dailyProgress * 100}%` }}
@@ -303,7 +324,7 @@ export default function StreakScreen() {
             </View>
 
             <Text
-              className="mt-2 text-[12px] tracking-[-0.48px] text-[#7A7868]"
+              className="mt-2 text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
               style={{ fontFamily: "Inter_400Regular" }}
             >
               {hasAnyMinutes
@@ -323,8 +344,10 @@ export default function StreakScreen() {
                     disabled={savingGoal}
                     className="rounded-full border px-3.5 py-1.5 active:opacity-80"
                     style={{
-                      borderColor: ReadupColors.brand,
-                      backgroundColor: active ? ReadupColors.brand : "transparent",
+                      borderColor: colors.brand,
+                      backgroundColor: active
+                        ? colors.brand
+                        : "transparent",
                     }}
                   >
                     <Text
@@ -332,8 +355,8 @@ export default function StreakScreen() {
                       style={{
                         fontFamily: "Inter_500Medium",
                         color: active
-                          ? ReadupColors.textInverse
-                          : ReadupColors.brand,
+                          ? colors.textInverse
+                          : colors.brand,
                       }}
                     >
                       {option} мин
@@ -347,29 +370,51 @@ export default function StreakScreen() {
           {/* Secondary stats */}
           <View className="flex-row gap-3">
             <StatTile
-              icon={<Calendar size={18} color={ReadupColors.brand} strokeWidth={2.2} />}
+              icon={
+                <Calendar
+                  size={18}
+                  color={colors.brand}
+                  strokeWidth={2.2}
+                />
+              }
               label="Дней чтения"
               value={String(stats.totalReadingDays)}
             />
             <StatTile
-              icon={<BookOpen size={18} color={ReadupColors.brand} strokeWidth={2.2} />}
+              icon={
+                <BookOpen
+                  size={18}
+                  color={colors.brand}
+                  strokeWidth={2.2}
+                />
+              }
               label="Книг прочитано"
               value={String(stats.totalBooksCompleted)}
             />
             <StatTile
-              icon={<Trophy size={18} color={ReadupColors.brand} strokeWidth={2.2} />}
+              icon={
+                <Trophy
+                  size={18}
+                  color={colors.brand}
+                  strokeWidth={2.2}
+                />
+              }
               label="Всего минут"
               value={String(stats.totalReadingMinutes)}
             />
           </View>
 
           {/* Last 14 days chart */}
-          <View className="rounded-[20px] border border-[#E8E6D8] bg-[#F2F0E6] p-5">
+          <View className="rounded-[20px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-5">
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
-                <Target size={18} color={ReadupColors.brand} strokeWidth={2.2} />
+                <Target
+                  size={18}
+                  color={colors.brand}
+                  strokeWidth={2.2}
+                />
                 <Text
-                  className="text-[16px] tracking-[-0.64px] text-[#1A2420]"
+                  className="text-[16px] tracking-[-0.64px] text-[#1A2420] dark:text-[#F3F4EE]"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
                   Последние 14 дней
@@ -379,7 +424,7 @@ export default function StreakScreen() {
                 <View className="flex-row items-center gap-1.5">
                   <View className="h-0 w-3.5 border-t border-dashed border-[#7A7868]" />
                   <Text
-                    className="text-[11px] tracking-[-0.44px] text-[#7A7868]"
+                    className="text-[11px] tracking-[-0.44px] text-[#7A7868] dark:text-[#8F9A93]"
                     style={{ fontFamily: "Inter_400Regular" }}
                   >
                     среднее
@@ -408,7 +453,10 @@ export default function StreakScreen() {
                     const showValue = isPeak || (isToday && minutes > 0);
                     const barHeight =
                       minutes > 0
-                        ? Math.max(8, (minutes / maxLogMinutes) * CHART_PLOT_HEIGHT)
+                        ? Math.max(
+                            8,
+                            (minutes / maxLogMinutes) * CHART_PLOT_HEIGHT,
+                          )
                         : 4;
                     return (
                       <View
@@ -421,8 +469,8 @@ export default function StreakScreen() {
                             style={{
                               fontFamily: "Inter_600SemiBold",
                               color: isPeak
-                                ? ReadupColors.brandDark
-                                : ReadupColors.brand,
+                                ? colors.brandDark
+                                : colors.brand,
                             }}
                           >
                             {minutes}
@@ -435,11 +483,11 @@ export default function StreakScreen() {
                             backgroundColor:
                               minutes > 0
                                 ? isPeak
-                                  ? ReadupColors.brandDark
-                                  : ReadupColors.brand
-                                : ReadupColors.elevated,
+                                  ? colors.brandDark
+                                  : colors.brand
+                                : colors.elevated,
                             borderWidth: isToday ? 2 : 0,
-                            borderColor: ReadupColors.text,
+                            borderColor: colors.text,
                           }}
                         />
                       </View>
@@ -458,14 +506,14 @@ export default function StreakScreen() {
                               ? "Inter_600SemiBold"
                               : "Inter_400Regular",
                             color: isToday
-                              ? ReadupColors.brand
-                              : ReadupColors.textTertiary,
+                              ? colors.brand
+                              : colors.textTertiary,
                           }}
                         >
                           {weekdayLabel(day)}
                         </Text>
                         <Text
-                          className="text-[9px] tracking-[-0.36px] text-[#7A7868]"
+                          className="text-[9px] tracking-[-0.36px] text-[#7A7868] dark:text-[#8F9A93]"
                           style={{ fontFamily: "Inter_400Regular" }}
                         >
                           {day.slice(8, 10)}
@@ -476,16 +524,20 @@ export default function StreakScreen() {
                 </View>
               </>
             ) : (
-              <View className="mt-4 items-center justify-center rounded-[16px] bg-[#FBFAF2] px-5 py-8">
-                <BookOpen size={28} color={ReadupColors.textTertiary} strokeWidth={1.8} />
+              <View className="mt-4 items-center justify-center rounded-[16px] bg-[#FBFAF2] dark:bg-[#101512] px-5 py-8">
+                <BookOpen
+                  size={28}
+                  color={colors.textTertiary}
+                  strokeWidth={1.8}
+                />
                 <Text
-                  className="mt-3 text-center text-[14px] tracking-[-0.56px] text-[#4A5550]"
+                  className="mt-3 text-center text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
                   style={{ fontFamily: "Inter_500Medium" }}
                 >
                   Начните читать сегодня
                 </Text>
                 <Text
-                  className="mt-1 text-center text-[12px] tracking-[-0.48px] text-[#7A7868]"
+                  className="mt-1 text-center text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
                   Здесь появится статистика за последние 14 дней
@@ -522,18 +574,18 @@ function StatTile({
   value: string;
 }) {
   return (
-    <View className="flex-1 rounded-[16px] border border-[#E8E6D8] bg-[#F2F0E6] px-3 py-4">
-      <View className="mb-2 h-8 w-8 items-center justify-center rounded-full bg-[#ECFDF5]">
+    <View className="flex-1 rounded-[16px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-3 py-4">
+      <View className="mb-2 h-8 w-8 items-center justify-center rounded-full bg-[#ECFDF5] dark:bg-[#123D2C]">
         {icon}
       </View>
       <Text
-        className="text-[10px] uppercase tracking-[-0.4px] text-[#7A7868]"
+        className="text-[10px] uppercase tracking-[-0.4px] text-[#7A7868] dark:text-[#8F9A93]"
         style={{ fontFamily: "Inter_500Medium" }}
       >
         {label}
       </Text>
       <Text
-        className="mt-1 text-[22px] tracking-[-0.88px] text-[#1A2420]"
+        className="mt-1 text-[22px] tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]"
         style={{ fontFamily: "Inter_600SemiBold" }}
       >
         {value}

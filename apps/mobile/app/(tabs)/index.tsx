@@ -18,9 +18,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 export default function HomeScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const {
     items,
@@ -42,7 +43,10 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -50,9 +54,9 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={ReadupColors.brand}
-            colors={[ReadupColors.brand]}
-            progressBackgroundColor={ReadupColors.surface}
+            tintColor={colors.brand}
+            colors={[colors.brand]}
+            progressBackgroundColor={colors.surface}
           />
         }
         contentContainerClassName="pb-8"
@@ -63,19 +67,19 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Premium"
             onPress={() => router.push("/subscription")}
-            className="h-8 w-8 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+            className="h-8 w-8 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
           >
-            <Zap size={20} color={ReadupColors.brand} strokeWidth={2} />
+            <Zap size={20} color={colors.brand} strokeWidth={2} />
           </Pressable>
         </View>
 
         {loading ? (
           <View className="min-h-[420px] items-center justify-center p-6">
-            <ActivityIndicator size="large" color={ReadupColors.brand} />
+            <ActivityIndicator size="large" color={colors.brand} />
           </View>
         ) : error ? (
           <View className="min-h-[420px] items-center justify-center px-6">
-            <Text className="mb-4 text-center text-[15px] leading-[22px] text-[#4A5550]">
+            <Text className="mb-4 text-center text-[15px] leading-[22px] text-[#4A5550] dark:text-[#B8C1BB]">
               {error}
             </Text>
             <Pressable
@@ -89,7 +93,7 @@ export default function HomeScreen() {
           </View>
         ) : items.length === 0 ? (
           <View className="min-h-[420px] items-center justify-center px-6">
-            <Text className="text-center text-[15px] leading-[22px] text-[#4A5550]">
+            <Text className="text-center text-[15px] leading-[22px] text-[#4A5550] dark:text-[#B8C1BB]">
               No books in the catalog yet. Add a book in the admin panel.
             </Text>
           </View>
@@ -99,22 +103,22 @@ export default function HomeScreen() {
               <Pressable
                 accessibilityRole="button"
                 onPress={() => openContinue(continueBook)}
-                className="mx-8 mb-7 h-32 overflow-hidden rounded-[20px] bg-[#F2F0E6] active:opacity-90"
+                className="mx-8 mb-7 h-32 overflow-hidden rounded-[20px] bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-90"
               >
                 <View className="h-full flex-row items-center justify-between pl-3">
                   <View className="max-w-[154px] gap-10">
                     <Text
-                      className="text-[18px] font-medium leading-[22px] tracking-[-0.72px] text-[#1A2420]"
+                      className="text-[18px] font-medium leading-[22px] tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]"
                       numberOfLines={2}
                     >
                       {continueBook.title}
                     </Text>
-                    <Text className="text-[14px] tracking-[-0.56px] text-[#059669]">
+                    <Text className="text-[14px] tracking-[-0.56px] text-[#059669] dark:text-[#34D399]">
                       продолжить читать
                     </Text>
                   </View>
                   <View className="flex-row items-center">
-                    <View className="h-[118px] w-[82px] overflow-hidden rounded-[10px] bg-[#F2F0E6]">
+                    <View className="h-[118px] w-[82px] overflow-hidden rounded-[10px] bg-[#F2F0E6] dark:bg-[#19211D]">
                       {continueBook.cover ? (
                         <Image
                           source={{ uri: continueBook.cover }}
@@ -126,7 +130,7 @@ export default function HomeScreen() {
                       ) : (
                         <View className="h-full items-center justify-center px-2">
                           <Text
-                            className="text-center text-[11px] font-medium text-[#4A5550]"
+                            className="text-center text-[11px] font-medium text-[#4A5550] dark:text-[#B8C1BB]"
                             numberOfLines={4}
                           >
                             {continueBook.title}
@@ -134,11 +138,11 @@ export default function HomeScreen() {
                         </View>
                       )}
                     </View>
-                    <View className="ml-2 mr-[-20px] h-10 w-10 items-center justify-center rounded-full bg-[#FBFAF2]">
-                      <View className="h-9 w-9 items-center justify-center rounded-full bg-[#F2F0E6]">
+                    <View className="ml-2 mr-[-20px] h-10 w-10 items-center justify-center rounded-full bg-[#FBFAF2] dark:bg-[#101512]">
+                      <View className="h-9 w-9 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D]">
                         <ChevronRight
                           size={20}
-                          color={ReadupColors.text}
+                          color={colors.text}
                           strokeWidth={2}
                         />
                       </View>
@@ -156,7 +160,9 @@ export default function HomeScreen() {
                 <FlatList
                   horizontal
                   data={section.data}
-                  keyExtractor={(item) => `${section.title}-${item.id}-${item.bookId}`}
+                  keyExtractor={(item) =>
+                    `${section.title}-${item.id}-${item.bookId}`
+                  }
                   renderItem={({ item }) => (
                     <BookCard item={item} onPress={openBook} />
                   )}

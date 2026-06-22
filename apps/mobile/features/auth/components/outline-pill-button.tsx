@@ -7,7 +7,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 type OutlinePillButtonProps = Omit<PressableProps, "style"> & {
   label: string;
@@ -22,6 +22,7 @@ export function OutlinePillButton({
   style,
   ...props
 }: OutlinePillButtonProps) {
+  const colors = useReadupColors();
   const isDisabled = disabled || loading;
 
   return (
@@ -35,7 +36,7 @@ export function OutlinePillButton({
           justifyContent: "center",
           borderRadius: 100,
           borderWidth: 2,
-          borderColor: ReadupColors.brand,
+          borderColor: colors.brand,
           opacity: isDisabled ? 0.62 : 1,
           width: "100%",
         },
@@ -44,15 +45,16 @@ export function OutlinePillButton({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={ReadupColors.text} />
+        <ActivityIndicator color={colors.text} />
       ) : (
         <Text
           style={{
             fontSize: 18,
             fontWeight: "500",
-            color: ReadupColors.text,
+            color: colors.text,
             letterSpacing: -0.72,
-          }}>
+          }}
+        >
           {label}
         </Text>
       )}

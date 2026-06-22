@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 
-import { ReadupColors, ReadupRadii } from "@/shared/constants/readup-theme";
+import { ReadupRadii, useReadupColors } from "@/shared/constants/readup-theme";
 
 type ReadupTextFieldProps = {
   label: string;
@@ -23,17 +23,33 @@ export function ReadupTextField({
   onBlur,
   ...rest
 }: ReadupTextFieldProps) {
+  const colors = useReadupColors();
   const [focused, setFocused] = useState(false);
 
   return (
     <View style={styles.wrap}>
-      <Text style={[styles.label, labelFontFamily != null && { fontFamily: labelFontFamily }]}>
+      <Text
+        style={[
+          styles.label,
+          { color: colors.text },
+          labelFontFamily != null && { fontFamily: labelFontFamily },
+        ]}
+      >
         {label}
       </Text>
       <TextInput
         {...rest}
-        style={[styles.input, focused ? styles.inputFocused : styles.inputIdle, style]}
-        placeholderTextColor={ReadupColors.textTertiary}
+        style={[
+          styles.input,
+          {
+            backgroundColor: colors.surface,
+            color: colors.text,
+            borderColor: focused ? colors.info : colors.elevated,
+            borderWidth: focused ? 2 : 1,
+          },
+          style,
+        ]}
+        placeholderTextColor={colors.textTertiary}
         onFocus={(e) => {
           setFocused(true);
           onFocus?.(e);
@@ -55,24 +71,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#000000",
     letterSpacing: -0.56,
   },
   input: {
-    backgroundColor: ReadupColors.surface,
     borderRadius: ReadupRadii.input,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
-    color: ReadupColors.text,
     letterSpacing: -0.56,
-  },
-  inputIdle: {
-    borderWidth: 1,
-    borderColor: ReadupColors.elevated,
-  },
-  inputFocused: {
-    borderWidth: 2,
-    borderColor: ReadupColors.info,
   },
 });

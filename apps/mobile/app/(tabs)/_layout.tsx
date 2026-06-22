@@ -5,10 +5,11 @@ import { ActivityIndicator, Text, View } from "react-native";
 
 import { fetchProfile, type Profile } from "@/features/profile/api/profile";
 import { HapticTab } from "@/shared/components/haptic-tab";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
 export default function TabLayout() {
+  const colors = useReadupColors();
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -47,8 +48,8 @@ export default function TabLayout() {
 
   if (loading || profileLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#FBFAF2]">
-        <ActivityIndicator size="large" color={ReadupColors.brand} />
+      <View className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]">
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
@@ -59,8 +60,8 @@ export default function TabLayout() {
 
   if (profileError) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#FBFAF2] px-8">
-        <Text className="text-center text-[15px] leading-6 text-[#4A5550]">
+      <View className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512] px-8">
+        <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
           {profileError}
         </Text>
       </View>
@@ -79,12 +80,12 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="index"
       screenOptions={{
-        tabBarActiveTintColor: ReadupColors.text,
-        tabBarInactiveTintColor: ReadupColors.textSecondary,
+        tabBarActiveTintColor: colors.brand,
+        tabBarInactiveTintColor: colors.textTertiary,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: ReadupColors.surface,
-          borderTopColor: ReadupColors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           minHeight: 72,
           paddingTop: 8,
@@ -94,7 +95,8 @@ export default function TabLayout() {
           fontWeight: "500",
         },
         tabBarButton: (props) => <HapticTab {...props} />,
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{

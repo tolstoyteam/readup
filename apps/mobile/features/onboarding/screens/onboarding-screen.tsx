@@ -20,13 +20,11 @@ import {
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
+import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { markOnboardingComplete } from "@/shared/lib/onboarding-storage";
 
 /** Tokens from Figma `readup. design` onboarding-info section (node 55:237). */
-const BG = "#FBFAF2";
-const BRAND = "#059669";
-const TEXT_MUTED = "#7A7868";
-const DOT_INACTIVE = "#D9D7C4";
 
 /** Reference Figma frame for proportional scaling (node 16:4 page). */
 const FIGMA_FRAME_W = 402;
@@ -87,6 +85,8 @@ const PAGES: OnboardingPage[] = [
 const watermarkAsset = require("@/assets/images/onboarding/readup-logo.png");
 
 export default function OnboardingScreen() {
+  const colors = useReadupColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
   const { width, height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
@@ -146,9 +146,9 @@ export default function OnboardingScreen() {
     return (
       <View
         className="flex-1 items-center justify-center"
-        style={{ backgroundColor: BG }}
+        style={{ backgroundColor: colors.background }}
       >
-        <ActivityIndicator color={BRAND} size="large" />
+        <ActivityIndicator color={colors.brand} size="large" />
       </View>
     );
   }
@@ -156,10 +156,10 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView
       className="flex-1"
-      style={{ backgroundColor: BG }}
+      style={{ backgroundColor: colors.background }}
       edges={["top", "bottom"]}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
       <View style={{ flex: 1, flexDirection: "column" }}>
         <View
@@ -247,7 +247,7 @@ export default function OnboardingScreen() {
                     <Text
                       className="text-center"
                       style={{
-                        color: BRAND,
+                        color: colors.brand,
                         fontFamily: "Inter_500Medium",
                         fontSize: 18,
                         lineHeight: 22,
@@ -281,7 +281,7 @@ export default function OnboardingScreen() {
           className="flex-row items-center justify-between px-8 pt-2"
           style={{
             paddingBottom: navBottomPad,
-            backgroundColor: BG,
+            backgroundColor: colors.background,
             minHeight: 44,
           }}
           collapsable={false}
@@ -299,7 +299,7 @@ export default function OnboardingScreen() {
           >
             <Text
               style={{
-                color: TEXT_MUTED,
+                color: colors.textTertiary,
                 fontFamily: "Inter_400Regular",
                 fontSize: 12,
                 letterSpacing: -0.48,
@@ -322,7 +322,7 @@ export default function OnboardingScreen() {
                   borderRadius: 4,
                   marginLeft: dotIdx === 0 ? 0 : 8,
                   backgroundColor:
-                    dotIdx === pageIndex ? TEXT_MUTED : DOT_INACTIVE,
+                    dotIdx === pageIndex ? colors.text : colors.border,
                 }}
               />
             ))}
@@ -341,7 +341,7 @@ export default function OnboardingScreen() {
           >
             <Text
               style={{
-                color: TEXT_MUTED,
+                color: colors.textTertiary,
                 fontFamily: "Inter_400Regular",
                 fontSize: 12,
                 letterSpacing: -0.48,

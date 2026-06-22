@@ -31,7 +31,7 @@ import {
   type NotificationPreferences,
   type Profile,
 } from "@/features/profile/api/profile";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
 const PREF_TOGGLES: { key: keyof NotificationPreferences; label: string }[] = [
@@ -72,6 +72,7 @@ function formatRelative(iso: string): string {
 }
 
 export default function NotificationsScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -105,7 +106,10 @@ export default function NotificationsScreen() {
     load();
   }, [load]);
 
-  async function togglePref(key: keyof NotificationPreferences, value: boolean) {
+  async function togglePref(
+    key: keyof NotificationPreferences,
+    value: boolean,
+  ) {
     if (!user || !profile) return;
     const next: NotificationPreferences = {
       ...profile.notification_preferences,
@@ -121,7 +125,10 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <StatusBar style="dark" />
 
       <View className="flex-row items-center justify-between px-5 py-3">
@@ -130,11 +137,11 @@ export default function NotificationsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Назад"
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
-          <ArrowLeft size={22} color={ReadupColors.text} strokeWidth={2} />
+          <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
-        <Text className="text-[18px] font-semibold tracking-[-0.72px] text-[#1A2420]">
+        <Text className="text-[18px] font-semibold tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]">
           Уведомления
         </Text>
         <View className="h-10 w-10" />
@@ -142,7 +149,7 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={ReadupColors.brand} />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : (
         <FlatList
@@ -152,8 +159,8 @@ export default function NotificationsScreen() {
           ListHeaderComponent={
             <View className="mb-4">
               {profile ? (
-                <View className="mb-6 gap-2 rounded-[20px] bg-[#F2F0E6] px-4 py-4">
-                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]">
+                <View className="mb-6 gap-2 rounded-[20px] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-4">
+                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]">
                     Настройки
                   </Text>
                   {PREF_TOGGLES.map((toggle) => (
@@ -161,17 +168,19 @@ export default function NotificationsScreen() {
                       key={toggle.key}
                       className="flex-row items-center justify-between py-1.5"
                     >
-                      <Text className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420]">
+                      <Text className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]">
                         {toggle.label}
                       </Text>
                       <Switch
-                        value={profile.notification_preferences[toggle.key] === true}
+                        value={
+                          profile.notification_preferences[toggle.key] === true
+                        }
                         onValueChange={(value) => togglePref(toggle.key, value)}
                         trackColor={{
-                          false: ReadupColors.elevated,
-                          true: ReadupColors.brand,
+                          false: colors.elevated,
+                          true: colors.brand,
                         }}
-                        thumbColor={ReadupColors.background}
+                        thumbColor={colors.background}
                       />
                     </View>
                   ))}
@@ -181,8 +190,12 @@ export default function NotificationsScreen() {
           }
           ListEmptyComponent={
             <View className="items-center justify-center px-6 pt-8">
-              <BellRing size={28} color={ReadupColors.textTertiary} strokeWidth={2} />
-              <Text className="mt-3 text-center text-[14px] tracking-[-0.56px] text-[#4A5550]">
+              <BellRing
+                size={28}
+                color={colors.textTertiary}
+                strokeWidth={2}
+              />
+              <Text className="mt-3 text-center text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]">
                 Здесь будут появляться напоминания, награды и обновления.
               </Text>
             </View>
@@ -190,20 +203,24 @@ export default function NotificationsScreen() {
           renderItem={({ item }) => {
             const Icon = iconForType(item.type);
             return (
-              <View className="mb-3 flex-row items-start gap-3 rounded-[16px] bg-[#F2F0E6] px-4 py-3.5">
-                <View className="h-9 w-9 items-center justify-center rounded-full bg-[#ECFDF5]">
-                  <Icon size={18} color={ReadupColors.brand} strokeWidth={2.2} />
+              <View className="mb-3 flex-row items-start gap-3 rounded-[16px] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-3.5">
+                <View className="h-9 w-9 items-center justify-center rounded-full bg-[#ECFDF5] dark:bg-[#123D2C]">
+                  <Icon
+                    size={18}
+                    color={colors.brand}
+                    strokeWidth={2.2}
+                  />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420]">
+                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]">
                     {item.title}
                   </Text>
                   {item.body ? (
-                    <Text className="mt-0.5 text-[13px] tracking-[-0.52px] text-[#4A5550]">
+                    <Text className="mt-0.5 text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
                       {item.body}
                     </Text>
                   ) : null}
-                  <Text className="mt-1.5 text-[11px] uppercase tracking-[-0.44px] text-[#7A7868]">
+                  <Text className="mt-1.5 text-[11px] uppercase tracking-[-0.44px] text-[#7A7868] dark:text-[#8F9A93]">
                     {formatRelative(item.createdAt)}
                   </Text>
                 </View>

@@ -21,10 +21,11 @@ import { OutlinePillButton } from "@/features/auth/components/outline-pill-butto
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
 export default function LoginScreen() {
+  const colors = useReadupColors();
   const { signIn, signInWithOAuth } = useAuth();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -72,7 +73,9 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -87,7 +90,7 @@ export default function LoginScreen() {
           <Text
             style={[
               styles.headline,
-              { fontFamily: "Inter_800ExtraBold" },
+              { fontFamily: "Inter_800ExtraBold", color: colors.brand },
             ]}>
             Давно не виделись!
           </Text>
@@ -125,7 +128,7 @@ export default function LoginScreen() {
               accessibilityRole="button"
               hitSlop={8}
               disabled={submitting || oauthBusy != null}>
-              <Text style={[styles.forgotText, { fontFamily: "Inter_400Regular" }]}>
+              <Text style={[styles.forgotText, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
                 Забыли пароль?
               </Text>
             </Pressable>
@@ -162,7 +165,7 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular", color: colors.textSecondary }]}>
               Нет аккаунта?{" "}
             </Text>
             <Link href="/signup" asChild>
@@ -170,7 +173,7 @@ export default function LoginScreen() {
                 accessibilityRole="link"
                 disabled={submitting || oauthBusy != null}
                 hitSlop={8}>
-                <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
                   Регистрация
                 </Text>
               </Pressable>

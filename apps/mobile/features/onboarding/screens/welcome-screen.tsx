@@ -18,13 +18,11 @@ import {
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
+import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { markOnboardingComplete } from "@/shared/lib/onboarding-storage";
 
 /** Tokens from Figma `readup. design` welcome frame (node 10:100). */
-const BG = "#FBFAF2";
-const BRAND = "#059669";
-const BRAND_DARK = "#047857";
-const TEXT_MUTED = "#1A2420";
 
 /**
  * Figma node `10:127` — watermark PNG: 3951.958×1085.04, anchor
@@ -43,6 +41,8 @@ const FIGMA_LOGO_TOP = FIGMA_FRAME_H / 2 - 337;
 const FIGMA_CTA_BOTTOM_INSET = 52;
 
 export default function WelcomeScreen() {
+  const colors = useReadupColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
   const { width, height: windowHeight } = useWindowDimensions();
   const [fontsLoaded] = useFonts({
@@ -87,9 +87,9 @@ export default function WelcomeScreen() {
     return (
       <View
         className="flex-1 items-center justify-center"
-        style={{ backgroundColor: BG }}
+        style={{ backgroundColor: colors.background }}
       >
-        <ActivityIndicator color={BRAND} size="large" />
+        <ActivityIndicator color={colors.brand} size="large" />
       </View>
     );
   }
@@ -97,10 +97,10 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView
       className="flex-1"
-      style={{ backgroundColor: BG }}
+      style={{ backgroundColor: colors.background }}
       edges={["top", "bottom"]}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <View style={styles.layerRoot}>
         <View
           pointerEvents="none"
@@ -117,7 +117,7 @@ export default function WelcomeScreen() {
               top: bgMarkTop,
               width: bgMarkW,
               height: bgMarkH,
-              opacity: 1,
+              opacity: colorScheme === "dark" ? 0.18 : 1,
             }}
             contentFit="contain"
           />
@@ -133,7 +133,7 @@ export default function WelcomeScreen() {
             <ReadupLogo width={66} height={18} />
 
             <Text
-              className="max-w-[320px] text-center text-[34px] text-[#059669]"
+              className="max-w-[320px] text-center text-[34px] text-[#059669] dark:text-[#34D399]"
               style={{
                 fontFamily: "Inter_800ExtraBold",
                 letterSpacing: -1.36,
@@ -180,7 +180,13 @@ export default function WelcomeScreen() {
               accessibilityLabel="Начать"
               onPress={onStart}
               activeOpacity={0.95}
-              style={styles.primaryCta}
+              style={[
+                styles.primaryCta,
+                {
+                  backgroundColor: colors.brandDark,
+                  borderColor: colors.brand,
+                },
+              ]}
             >
               <Text
                 style={{
@@ -198,18 +204,22 @@ export default function WelcomeScreen() {
               <Text
                 className="text-[18px]"
                 style={{
-                  color: TEXT_MUTED,
+                  color: colors.text,
                   fontFamily: "Inter_500Medium",
                   letterSpacing: -0.72,
                 }}
               >
                 Есть аккаунт?{" "}
               </Text>
-              <Pressable onPress={onLogin} hitSlop={12} accessibilityRole="link">
+              <Pressable
+                onPress={onLogin}
+                hitSlop={12}
+                accessibilityRole="link"
+              >
                 <Text
                   className="text-[18px]"
                   style={{
-                    color: BRAND,
+                    color: colors.brand,
                     fontFamily: "Inter_500Medium",
                     letterSpacing: -0.72,
                   }}
@@ -240,8 +250,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: "#059669",
-    backgroundColor: BRAND_DARK,
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",

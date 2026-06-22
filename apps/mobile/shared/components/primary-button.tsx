@@ -7,7 +7,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 type PrimaryButtonProps = Omit<PressableProps, "style"> & {
   label: string;
@@ -22,6 +22,7 @@ export function PrimaryButton({
   style,
   ...props
 }: PrimaryButtonProps) {
+  const colors = useReadupColors();
   const isDisabled = disabled || loading;
 
   return (
@@ -35,8 +36,8 @@ export function PrimaryButton({
           justifyContent: "center",
           borderRadius: 100,
           borderWidth: 2,
-          borderColor: ReadupColors.brandDark,
-          backgroundColor: ReadupColors.brand,
+          borderColor: colors.brandDark,
+          backgroundColor: colors.brand,
           opacity: isDisabled ? 0.62 : 1,
         },
         style,
@@ -44,7 +45,7 @@ export function PrimaryButton({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={ReadupColors.textInverse} />
+        <ActivityIndicator color={colors.textInverse} />
       ) : (
         <Text className="text-center text-[18px] font-medium tracking-[-0.72px] text-[#FBFAF2]">
           {label}

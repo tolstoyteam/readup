@@ -14,10 +14,11 @@ import { fetchProfile, saveInterests } from "@/features/profile/api/profile";
 import { INTEREST_GROUPS } from "@/features/setup/constants";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
 export default function InterestsScreen() {
+  const colors = useReadupColors();
   const { user, loading } = useAuth();
   const [selected, setSelected] = useState<string[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -75,8 +76,8 @@ export default function InterestsScreen() {
 
   if (loading || loadingProfile) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-[#FBFAF2]">
-        <ActivityIndicator size="large" color={ReadupColors.brand} />
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]">
+        <ActivityIndicator size="large" color={colors.brand} />
       </SafeAreaView>
     );
   }
@@ -86,11 +87,14 @@ export default function InterestsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top", "bottom"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top", "bottom"]}
+    >
       <View className="items-center pt-8">
         <ReadupLogo />
       </View>
-      <Text className="mx-auto mt-[86px] w-[319px] text-center text-[34px] font-extrabold leading-[36px] tracking-[-1.36px] text-[#059669]">
+      <Text className="mx-auto mt-[86px] w-[319px] text-center text-[34px] font-extrabold leading-[36px] tracking-[-1.36px] text-[#059669] dark:text-[#34D399]">
         Что тебя интересует?
       </Text>
 
@@ -100,7 +104,7 @@ export default function InterestsScreen() {
       >
         {INTEREST_GROUPS.map((group) => (
           <View key={group.title} className="gap-2">
-            <Text className="text-[18px] font-medium tracking-[-0.72px] text-[#1A2420]">
+            <Text className="text-[18px] font-medium tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]">
               {group.title}
             </Text>
             <View className="flex-row flex-wrap gap-1">
@@ -114,16 +118,18 @@ export default function InterestsScreen() {
                     onPress={() => toggleInterest(interest)}
                     className="rounded-full border px-3 py-1 active:opacity-80"
                     style={{
-                      borderColor: ReadupColors.brand,
+                      borderColor: colors.brand,
                       backgroundColor: active
-                        ? ReadupColors.brand
+                        ? colors.brand
                         : "transparent",
                     }}
                   >
                     <Text
                       className="text-center text-[14px] tracking-[-0.56px]"
                       style={{
-                        color: active ? ReadupColors.textInverse : ReadupColors.text,
+                        color: active
+                          ? colors.textInverse
+                          : colors.text,
                       }}
                     >
                       {interest}
@@ -148,7 +154,7 @@ export default function InterestsScreen() {
           onPress={() => submit([])}
           className="items-center py-3 active:opacity-70"
         >
-          <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868]">
+          <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
             Пропустить
           </Text>
         </Pressable>

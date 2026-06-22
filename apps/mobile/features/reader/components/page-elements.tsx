@@ -15,9 +15,12 @@ function KeywordsBlock({
       {items.map((kw, i) => (
         <View
           key={`${kw}-${i}`}
-          className="rounded-full border border-[#059669] bg-[#FBFAF2] px-3.5 py-2"
+          className="rounded-full border border-[#059669] dark:border-[#34D399] bg-[#FBFAF2] dark:bg-[#101512] px-3.5 py-2"
         >
-          <Text className="font-reader text-[#1A2420]" style={textStyle}>
+          <Text
+            className="font-reader text-[#1A2420] dark:text-[#F3F4EE]"
+            style={textStyle}
+          >
             {kw}
           </Text>
         </View>
@@ -50,7 +53,7 @@ export function PageElements({ elements }: { elements: BookPageElement[] }) {
             return (
               <Text
                 key={i}
-                className="mb-7 font-reader font-bold text-[#1A2420]"
+                className="mb-7 font-reader font-bold text-[#1A2420] dark:text-[#F3F4EE]"
                 style={styles.chapter}
               >
                 {el.content}
@@ -60,7 +63,7 @@ export function PageElements({ elements }: { elements: BookPageElement[] }) {
             return (
               <Text
                 key={i}
-                className="mb-5 font-reader text-[#1A2420]"
+                className="mb-5 font-reader text-[#1A2420] dark:text-[#F3F4EE]"
                 style={styles.text}
               >
                 {el.content}
@@ -70,14 +73,14 @@ export function PageElements({ elements }: { elements: BookPageElement[] }) {
             return (
               <View key={i} className="mb-6">
                 <Text
-                  className="mb-2 ml-0.5 font-reader text-[#7A7868]"
+                  className="mb-2 ml-0.5 font-reader text-[#7A7868] dark:text-[#8F9A93]"
                   style={styles.quoteMark}
                 >
                   ❞
                 </Text>
-                <View className="rounded-xl border border-[#E8E6D8] bg-[#F2F0E6] px-[18px] py-4">
+                <View className="rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-[18px] py-4">
                   <Text
-                    className="font-reader font-medium text-[#1A2420]"
+                    className="font-reader font-medium text-[#1A2420] dark:text-[#F3F4EE]"
                     style={styles.quote}
                   >
                     {el.content}
@@ -87,7 +90,11 @@ export function PageElements({ elements }: { elements: BookPageElement[] }) {
             );
           case "keywords":
             return (
-              <KeywordsBlock key={i} items={el.content} textStyle={styles.keyword} />
+              <KeywordsBlock
+                key={i}
+                items={el.content}
+                textStyle={styles.keyword}
+              />
             );
           default:
             return null;

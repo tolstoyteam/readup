@@ -22,13 +22,14 @@ import { OutlinePillButton } from "@/features/auth/components/outline-pill-butto
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
 const PRIVACY_POLICY_URL =
   process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://readup.app/privacy";
 
 export default function SignupScreen() {
+  const colors = useReadupColors();
   const { signUp, signInWithOAuth } = useAuth();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -90,7 +91,9 @@ export default function SignupScreen() {
   const busy = submitting || oauthBusy != null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: colors.background }]}
+      edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -102,7 +105,7 @@ export default function SignupScreen() {
             <ReadupLogo width={66} height={18} />
           </View>
 
-          <Text style={[styles.headline, { fontFamily: "Inter_800ExtraBold" }]}>
+          <Text style={[styles.headline, { fontFamily: "Inter_800ExtraBold", color: colors.brand }]}>
             Создайте аккаунт
           </Text>
 
@@ -197,12 +200,12 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular", color: colors.textSecondary }]}>
               Есть аккаунт?{" "}
             </Text>
             <Link href="/login" asChild>
               <Pressable accessibilityRole="link" disabled={busy} hitSlop={8}>
-                <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
                   Войти
                 </Text>
               </Pressable>

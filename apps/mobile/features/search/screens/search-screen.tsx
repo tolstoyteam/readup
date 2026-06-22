@@ -23,10 +23,7 @@ import {
   genresFromBooks,
   type GenreOption,
 } from "@/features/books/lib/genre-filters";
-import {
-  useLibrary,
-  useLibraryActions,
-} from "@/features/library";
+import { useLibrary, useLibraryActions } from "@/features/library";
 import { GenreChipRow } from "@/features/search/components/genre-chip-row";
 import {
   fetchSearchHistory,
@@ -35,7 +32,7 @@ import {
   type SearchHistoryEntry,
 } from "@/features/search/api/search-history";
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { ReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 
 type SearchBook = BookCardItem & {
@@ -43,6 +40,7 @@ type SearchBook = BookCardItem & {
 };
 
 export default function SearchScreen() {
+  const colors = useReadupColors();
   const { user } = useAuth();
   const router = useRouter();
   const { savedBooks } = useLibrary();
@@ -81,7 +79,9 @@ export default function SearchScreen() {
       setBooks(mapped);
       setGenres(catalogGenres ?? genresFromBooks(mapped));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Could not load books");
+      setError(
+        loadError instanceof Error ? loadError.message : "Could not load books",
+      );
     } finally {
       setLoading(false);
     }
@@ -184,7 +184,10 @@ export default function SearchScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <FlatList
         data={filtered}
         keyExtractor={(item) => `${item.id}-${item.bookId}`}
@@ -196,19 +199,23 @@ export default function SearchScreen() {
           <View className="gap-5 px-8 pt-8">
             <View className="flex-row items-center justify-between">
               <ReadupLogo />
-              <Text className="text-[22px] font-semibold tracking-[-0.88px] text-[#1A2420]">
+              <Text className="text-[22px] font-semibold tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]">
                 Search
               </Text>
             </View>
 
-            <View className="h-12 flex-row items-center gap-2 rounded-[30px] border border-[#E8E6D8] bg-[#F2F0E6] px-4">
-              <SearchIcon size={18} color={ReadupColors.textTertiary} strokeWidth={2} />
+            <View className="h-12 flex-row items-center gap-2 rounded-[30px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4">
+              <SearchIcon
+                size={18}
+                color={colors.textTertiary}
+                strokeWidth={2}
+              />
               <TextInput
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Search by title or author"
-                placeholderTextColor={ReadupColors.textTertiary}
-                className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420]"
+                placeholderTextColor={colors.textTertiary}
+                className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]"
                 autoCapitalize="none"
               />
             </View>
@@ -224,21 +231,21 @@ export default function SearchScreen() {
 
             {query.trim().length === 0 && history.length > 0 ? (
               <View className="gap-2">
-                <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#4A5550]">
+                <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
                   Недавние запросы
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
                   {history.map((entry) => (
                     <View
                       key={entry.query}
-                      className="flex-row items-center gap-1 rounded-full border border-[#E8E6D8] bg-[#F2F0E6] px-3 py-1.5"
+                      className="flex-row items-center gap-1 rounded-full border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-3 py-1.5"
                     >
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Search ${entry.query}`}
                         onPress={() => setQuery(entry.query)}
                       >
-                        <Text className="text-[13px] tracking-[-0.52px] text-[#1A2420]">
+                        <Text className="text-[13px] tracking-[-0.52px] text-[#1A2420] dark:text-[#F3F4EE]">
                           {entry.query}
                         </Text>
                       </Pressable>
@@ -248,7 +255,11 @@ export default function SearchScreen() {
                         hitSlop={8}
                         onPress={() => clearHistoryEntry(entry)}
                       >
-                        <X size={14} color={ReadupColors.textTertiary} strokeWidth={2} />
+                        <X
+                          size={14}
+                          color={colors.textTertiary}
+                          strokeWidth={2}
+                        />
                       </Pressable>
                     </View>
                   ))}
@@ -260,14 +271,15 @@ export default function SearchScreen() {
         ListEmptyComponent={
           <View className="min-h-[220px] items-center justify-center px-8">
             {loading ? (
-              <ActivityIndicator size="large" color={ReadupColors.brand} />
+              <ActivityIndicator size="large" color={colors.brand} />
             ) : error ? (
-              <Text className="text-center text-[15px] leading-6 text-[#4A5550]">
+              <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
                 {error}
               </Text>
             ) : (
-              <Text className="text-center text-[15px] leading-6 text-[#4A5550]">
-                Nothing matched that search. Try a broader category or shorter query.
+              <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
+                Nothing matched that search. Try a broader category or shorter
+                query.
               </Text>
             )}
           </View>
@@ -283,14 +295,16 @@ export default function SearchScreen() {
                 onPress={() => toggleSavedBook(item)}
                 className="items-center rounded-full border px-3 py-1.5 active:opacity-80"
                 style={{
-                  borderColor: ReadupColors.brand,
-                  backgroundColor: isSaved ? ReadupColors.brand : "transparent",
+                  borderColor: colors.brand,
+                  backgroundColor: isSaved ? colors.brand : "transparent",
                 }}
               >
                 <Text
                   className="text-[12px] font-medium"
                   style={{
-                    color: isSaved ? ReadupColors.textInverse : ReadupColors.brand,
+                    color: isSaved
+                      ? colors.textInverse
+                      : colors.brand,
                   }}
                 >
                   {isSaved ? "Unsave" : "Save"}

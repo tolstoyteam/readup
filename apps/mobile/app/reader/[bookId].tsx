@@ -21,6 +21,7 @@ import { useReaderSettings } from "@/features/reader/settings/reader-settings-co
 import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
 import { pageIndexFromSavedPage } from "@/features/reader/lib/page-index";
 import { useAuth } from "@/shared/context/auth-context";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -90,7 +91,7 @@ function ReaderChrome({
 
   return (
     <>
-      <View className="flex-1 bg-[#FBFAF2]">
+      <View className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]">
         {readMode === "read" && currentPage && (
           <ScrollView
             className="flex-1"
@@ -109,15 +110,16 @@ function ReaderChrome({
         )}
       </View>
 
-      {showLastPageActions && ((showFinishButton && onFinishBook) || onOpenQuiz) ? (
-        <View className="flex-row items-center justify-center gap-3 bg-[#FBFAF2] px-[22px] py-3">
+      {showLastPageActions &&
+      ((showFinishButton && onFinishBook) || onOpenQuiz) ? (
+        <View className="flex-row items-center justify-center gap-3 bg-[#FBFAF2] dark:bg-[#101512] px-[22px] py-3">
           {showFinishButton && onFinishBook ? (
             <Pressable
               onPress={onFinishBook}
               disabled={finishing}
               accessibilityRole="button"
               accessibilityLabel="Закончить книгу"
-              className={`min-h-[44px] items-center justify-center rounded-full border-2 border-[#047857] bg-[#059669] px-6 active:opacity-90 ${finishing ? "opacity-70" : ""}`}
+              className={`min-h-[44px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90 ${finishing ? "opacity-70" : ""}`}
             >
               {finishing ? (
                 <ActivityIndicator size="small" color="#FBFAF2" />
@@ -133,9 +135,9 @@ function ReaderChrome({
               onPress={onOpenQuiz}
               accessibilityRole="button"
               accessibilityLabel="Пройти тест"
-              className="min-h-[44px] items-center justify-center rounded-full border border-[#059669] bg-transparent px-6 active:opacity-80"
+              className="min-h-[44px] items-center justify-center rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
             >
-              <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#059669]">
+              <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#059669] dark:text-[#34D399]">
                 Пройти тест
               </Text>
             </Pressable>
@@ -143,14 +145,14 @@ function ReaderChrome({
         </View>
       ) : null}
 
-      <View className="flex-row items-center justify-center gap-5 border-t border-[#E8E6D8] bg-[#F2F0E6] py-3">
+      <View className="flex-row items-center justify-center gap-5 border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] py-3">
         <Pressable
           onPress={goPrev}
           disabled={pageIndex <= 0}
           className={`h-10 w-10 items-center justify-center rounded-[10px] ${
             pageIndex <= 0
-              ? "border border-[#E8E6D8] bg-[#FBFAF2]"
-              : "border border-[#C8C6B2] bg-[#FBFAF2] active:opacity-80"
+              ? "border border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512]"
+              : "border border-[#C8C6B2] dark:border-[#3A4740] bg-[#FBFAF2] dark:bg-[#101512] active:opacity-80"
           }`}
         >
           <ChevronLeft
@@ -159,7 +161,7 @@ function ReaderChrome({
             strokeWidth={2}
           />
         </Pressable>
-        <Text className="min-w-[72px] text-center text-sm font-medium text-[#4A5550]">
+        <Text className="min-w-[72px] text-center text-sm font-medium text-[#4A5550] dark:text-[#B8C1BB]">
           {pageLabel} of {totalPages || pages.length}
         </Text>
         <Pressable
@@ -167,8 +169,8 @@ function ReaderChrome({
           disabled={pageIndex >= pages.length - 1}
           className={`h-10 w-10 items-center justify-center rounded-[10px] ${
             pageIndex >= pages.length - 1
-              ? "border border-[#E8E6D8] bg-[#FBFAF2]"
-              : "border border-[#C8C6B2] bg-[#FBFAF2] active:opacity-80"
+              ? "border border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512]"
+              : "border border-[#C8C6B2] dark:border-[#3A4740] bg-[#FBFAF2] dark:bg-[#101512] active:opacity-80"
           }`}
         >
           <ChevronRight
@@ -192,6 +194,7 @@ function ReaderChrome({
 }
 
 export default function ReaderScreen() {
+  const colors = useReadupColors();
   const router = useRouter();
   const { user } = useAuth();
   const { bookId: bookIdParam, mode: modeParam } = useLocalSearchParams<{
@@ -199,7 +202,8 @@ export default function ReaderScreen() {
     mode?: string;
   }>();
   const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
-  const { record: libraryRecord, loading: libraryLoading } = useLibraryBook(bookId);
+  const { record: libraryRecord, loading: libraryLoading } =
+    useLibraryBook(bookId);
   const { recordReadingSession } = useLibraryActions();
   const wantsListenMode = modeParam === "listen";
 
@@ -308,9 +312,7 @@ export default function ReaderScreen() {
 
   const pages = useMemo(() => {
     if (!document?.pages?.length) return [];
-    return [...document.pages].sort(
-      (a, b) => a.page_number - b.page_number,
-    );
+    return [...document.pages].sort((a, b) => a.page_number - b.page_number);
   }, [document]);
 
   const currentPage = pages[pageIndex] ?? null;
@@ -348,8 +350,7 @@ export default function ReaderScreen() {
   const audioChecking = audioState.status === "checking" && !!document;
   const isLastPage = pages.length > 0 && pageIndex === pages.length - 1;
   const showLastPageActions = isLastPage && !!user;
-  const showFinishButton =
-    showLastPageActions && !isCompleted(libraryRecord);
+  const showFinishButton = showLastPageActions && !isCompleted(libraryRecord);
 
   const handleOpenQuiz = useCallback(() => {
     if (!document?.book_id) return;
@@ -386,10 +387,13 @@ export default function ReaderScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#FBFAF2]" edges={["top", "left", "right"]}>
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top", "left", "right"]}
+    >
       <StatusBar style="dark" />
 
-      <View className="flex-row items-center justify-between border-b border-[#E8E6D8] bg-[#FBFAF2] px-3 pb-2.5">
+      <View className="flex-row items-center justify-between border-b border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-3 pb-2.5">
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
@@ -397,19 +401,19 @@ export default function ReaderScreen() {
           accessibilityLabel="Close reader"
           className="active:opacity-70"
         >
-          <X size={28} color="#1A2420" strokeWidth={2} />
+          <X size={28} color={colors.text} strokeWidth={2} />
         </Pressable>
 
         {audioState.status === "checking" && document ? (
-          <View className="h-10 min-w-[120px] items-center justify-center rounded-[10px] border border-[#E8E6D8] bg-[#F2F0E6] px-4">
-            <ActivityIndicator size="small" color="#4A5550" />
+          <View className="h-10 min-w-[120px] items-center justify-center rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4">
+            <ActivityIndicator size="small" color={colors.textSecondary} />
           </View>
         ) : hasAudio ? (
-          <View className="flex-row gap-1 rounded-[12px] border border-[#E8E6D8] bg-[#F2F0E6] p-0.5">
+          <View className="flex-row gap-1 rounded-[12px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-0.5">
             <Pressable
               onPress={() => setReadMode("read")}
               className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
-                readMode === "read" ? "bg-[#FBFAF2]" : ""
+                readMode === "read" ? "bg-[#FBFAF2] dark:bg-[#101512]" : ""
               }`}
             >
               <FileText
@@ -419,7 +423,9 @@ export default function ReaderScreen() {
               />
               <Text
                 className={`text-[13px] font-semibold ${
-                  readMode === "read" ? "text-[#1A2420]" : "text-[#7A7868]"
+                  readMode === "read"
+                    ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                    : "text-[#7A7868] dark:text-[#8F9A93]"
                 }`}
               >
                 Read
@@ -428,7 +434,7 @@ export default function ReaderScreen() {
             <Pressable
               onPress={() => setReadMode("listen")}
               className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
-                readMode === "listen" ? "bg-[#FBFAF2]" : ""
+                readMode === "listen" ? "bg-[#FBFAF2] dark:bg-[#101512]" : ""
               }`}
             >
               <Headphones
@@ -438,7 +444,9 @@ export default function ReaderScreen() {
               />
               <Text
                 className={`text-[13px] font-semibold ${
-                  readMode === "listen" ? "text-[#1A2420]" : "text-[#7A7868]"
+                  readMode === "listen"
+                    ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                    : "text-[#7A7868] dark:text-[#8F9A93]"
                 }`}
               >
                 Listen
@@ -446,9 +454,11 @@ export default function ReaderScreen() {
             </Pressable>
           </View>
         ) : document ? (
-          <View className="flex-row items-center gap-1.5 rounded-[10px] border border-[#E8E6D8] bg-[#F2F0E6] px-4 py-2">
-            <FileText size={18} color="#7A7868" strokeWidth={2} />
-            <Text className="text-[13px] font-semibold text-[#7A7868]">Read</Text>
+          <View className="flex-row items-center gap-1.5 rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-2">
+            <FileText size={18} color={colors.textTertiary} strokeWidth={2} />
+            <Text className="text-[13px] font-semibold text-[#7A7868] dark:text-[#8F9A93]">
+              Read
+            </Text>
           </View>
         ) : (
           <View className="h-10 w-[120px]" />
@@ -461,7 +471,7 @@ export default function ReaderScreen() {
             accessibilityRole="button"
             accessibilityLabel="Open reader settings"
           >
-            <Menu size={26} color="#1A2420" strokeWidth={2} />
+            <Menu size={26} color={colors.text} strokeWidth={2} />
           </Pressable>
           <Pressable
             onPress={() => setSettingsOpen(true)}
@@ -469,7 +479,9 @@ export default function ReaderScreen() {
             accessibilityRole="button"
             accessibilityLabel="Open reader text settings"
           >
-            <Text className="text-lg font-semibold text-[#1A2420]">AA</Text>
+            <Text className="text-lg font-semibold text-[#1A2420] dark:text-[#F3F4EE]">
+              AA
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -479,7 +491,7 @@ export default function ReaderScreen() {
         onClose={() => setSettingsOpen(false)}
       />
 
-      <View className="flex-1 bg-[#FBFAF2]">
+      <View className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]">
         {loading && (
           <View className="flex-1 items-center justify-center p-6">
             <ActivityIndicator size="large" color="#059669" />
@@ -487,12 +499,12 @@ export default function ReaderScreen() {
         )}
         {!loading && error && (
           <View className="flex-1 items-center justify-center p-6">
-            <Text className="mb-4 text-center text-base text-[#4A5550]">
+            <Text className="mb-4 text-center text-base text-[#4A5550] dark:text-[#B8C1BB]">
               {error}
             </Text>
             <Pressable
               onPress={load}
-              className="min-h-[54px] items-center justify-center rounded-full border-2 border-[#047857] bg-[#059669] px-6 active:opacity-90"
+              className="min-h-[54px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90"
             >
               <Text className="text-lg font-medium text-[#FBFAF2]">Retry</Text>
             </Pressable>
@@ -501,8 +513,11 @@ export default function ReaderScreen() {
         {!loading && !error && document && audioChecking && (
           <ReaderListenLoading message="Проверяем наличие аудио…" />
         )}
-        {!loading && !error && document && !audioChecking && (
-          hasAudio && audioState.status === "available" ? (
+        {!loading &&
+          !error &&
+          document &&
+          !audioChecking &&
+          (hasAudio && audioState.status === "available" ? (
             <ReaderBookAudioProvider
               bookId={document.book_id}
               initialSource={audioState.source}
@@ -545,8 +560,7 @@ export default function ReaderScreen() {
               finishing={finishing}
               onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
             />
-          )
-        )}
+          ))}
       </View>
     </SafeAreaView>
   );
