@@ -31,7 +31,8 @@ import {
   useLibraryActions,
   useLibraryBook,
 } from "@/features/library";
-import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useAuth } from "@/shared/context/auth-context";
 
 function formatReadingTime(
@@ -49,6 +50,7 @@ function formatReadingTime(
 
 export default function BookDetailScreen() {
   const colors = useReadupColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
   const params = useLocalSearchParams<{ bookId: string }>();
@@ -140,7 +142,7 @@ export default function BookDetailScreen() {
       className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
       edges={["top"]}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
       <View className="flex-row items-center justify-between px-5 py-3">
         <Pressable

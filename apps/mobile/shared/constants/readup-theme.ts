@@ -1,4 +1,4 @@
-import { useColorScheme } from "react-native";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 
 export const ReadupColors = {
   brand: "#059669",
@@ -33,6 +33,12 @@ export const ReadupDarkColors = {
 
 export function useReadupColors() {
   return useColorScheme() === "dark" ? ReadupDarkColors : ReadupColors;
+}
+
+export function statusBarStyleForScheme(
+  scheme: ReturnType<typeof useColorScheme>,
+): "light" | "dark" {
+  return scheme === "dark" ? "light" : "dark";
 }
 
 export const ReadupRadii = {

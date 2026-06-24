@@ -157,13 +157,28 @@ export default function SignupScreen() {
               hitSlop={6}
               onPress={() => setPrivacyAccepted((v) => !v)}
               style={styles.consentDotHit}>
-              <View style={[styles.consentDot, privacyAccepted && styles.consentDotOn]} />
+              <View
+                style={[
+                  styles.consentDot,
+                  { backgroundColor: colors.elevated },
+                  privacyAccepted && [
+                    styles.consentDotOn,
+                    { backgroundColor: colors.brand },
+                  ],
+                ]}
+              />
             </Pressable>
-            <Text style={[styles.consentText, { fontFamily: "Inter_400Regular" }]}>
+            <Text
+              style={[
+                styles.consentText,
+                { fontFamily: "Inter_400Regular", color: colors.textSecondary },
+              ]}>
               <Text onPress={() => !busy && setPrivacyAccepted((v) => !v)}>
                 Я соглашаюсь с{" "}
               </Text>
-              <Text style={styles.consentLink} onPress={() => !busy && openPrivacy()}>
+              <Text
+                style={[styles.consentLink, { color: colors.info }]}
+                onPress={() => !busy && openPrivacy()}>
                 политикой конфиденциальности
               </Text>
             </Text>
@@ -270,21 +285,16 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 999,
-    backgroundColor: ReadupColors.elevated,
   },
-  consentDotOn: {
-    backgroundColor: ReadupColors.brand,
-  },
+  consentDotOn: {},
   consentText: {
     flex: 1,
     flexWrap: "wrap",
     fontSize: 12,
-    color: ReadupColors.textSecondary,
     letterSpacing: -0.48,
     lineHeight: 16,
   },
   consentLink: {
-    color: ReadupColors.info,
     letterSpacing: -0.48,
   },
   errorText: {

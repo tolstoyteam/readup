@@ -21,7 +21,8 @@ import { useReaderSettings } from "@/features/reader/settings/reader-settings-co
 import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
 import { pageIndexFromSavedPage } from "@/features/reader/lib/page-index";
 import { useAuth } from "@/shared/context/auth-context";
-import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -195,6 +196,7 @@ function ReaderChrome({
 
 export default function ReaderScreen() {
   const colors = useReadupColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
   const { bookId: bookIdParam, mode: modeParam } = useLocalSearchParams<{
@@ -391,7 +393,7 @@ export default function ReaderScreen() {
       className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
       edges={["top", "left", "right"]}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
       <View className="flex-row items-center justify-between border-b border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-3 pb-2.5">
         <Pressable

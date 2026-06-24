@@ -47,7 +47,10 @@ export function PrimaryButton({
       {loading ? (
         <ActivityIndicator color={colors.textInverse} />
       ) : (
-        <Text className="text-center text-[18px] font-medium tracking-[-0.72px] text-[#FBFAF2]">
+        <Text
+          className="text-center text-[18px] font-medium tracking-[-0.72px]"
+          style={{ color: colors.textInverse }}
+        >
           {label}
         </Text>
       )}

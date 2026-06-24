@@ -31,7 +31,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { saveDailyReadingGoal } from "@/features/profile/api/profile";
 import { generateLastNDays, useReadingStats } from "@/features/reading-stats";
-import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useAuth } from "@/shared/context/auth-context";
 
 const GOAL_OPTIONS = [5, 10, 20, 30];
@@ -40,6 +41,7 @@ const WEEKDAY_LABELS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
 export default function StreakScreen() {
   const colors = useReadupColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
   const { profile, log, todayKey, stats, loading, reload } =
@@ -127,7 +129,7 @@ export default function StreakScreen() {
       className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
       edges={["top"]}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
       <View className="flex-row items-center justify-between px-5 py-3">
         <Pressable

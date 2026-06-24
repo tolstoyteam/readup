@@ -21,7 +21,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { fetchProfile, type Profile } from "@/features/profile/api/profile";
-import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useAuth } from "@/shared/context/auth-context";
 
 type PlanCardProps = {
@@ -59,6 +60,7 @@ const BENEFITS = [
 
 export default function SubscriptionScreen() {
   const colors = useReadupColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -91,7 +93,7 @@ export default function SubscriptionScreen() {
       className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
       edges={["top"]}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
       <View className="flex-row items-center justify-between px-5 py-3">
         <View className="h-10 w-10" />

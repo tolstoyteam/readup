@@ -14,6 +14,14 @@ import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useThemePreference } from "@/shared/context/theme-preference-context";
+import type { ThemePreference } from "@/shared/theme/theme-preference";
+
+const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
+  { label: "Светлая", value: "light" },
+  { label: "Тёмная", value: "dark" },
+  { label: "Системная", value: "system" },
+];
 
 function hasEmailIdentity(
   user: { identities?: { provider: string }[] | null } | null,
@@ -27,6 +35,7 @@ function looksLikeEmail(value: string): boolean {
 
 export default function SettingsScreen() {
   const colors = useReadupColors();
+  const { preference, setPreference } = useThemePreference();
   const { user, updateEmail, updatePassword, signOut } = useAuth();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -171,6 +180,43 @@ export default function SettingsScreen() {
             Настройки
           </Text>
           <View style={{ width: 22 }} />
+        </View>
+
+        <View className={cardClass}>
+          <Text
+            className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
+            style={{ fontFamily: "Inter_400Regular" }}
+          >
+            Оформление
+          </Text>
+
+          <View className="mt-3 flex-row gap-1 rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-1">
+            {THEME_OPTIONS.map((option) => {
+              const active = preference === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setPreference(option.value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  className={`flex-1 items-center justify-center rounded-lg py-2.5 ${
+                    active ? "bg-[#FBFAF2] dark:bg-[#101512]" : "active:opacity-70"
+                  }`}
+                >
+                  <Text
+                    className={`text-[13px] font-semibold ${
+                      active
+                        ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                        : "text-[#7A7868] dark:text-[#8F9A93]"
+                    }`}
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <View className={cardClass}>

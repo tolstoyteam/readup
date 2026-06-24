@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { AuthProvider } from "@/shared/context/auth-context";
+import { ThemePreferenceProvider } from "@/shared/context/theme-preference-context";
 import { LibraryProvider } from "@/features/library";
 import { ReaderSettingsProvider } from "@/features/reader/settings/reader-settings-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
@@ -53,81 +54,83 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider
-        value={
-          colorScheme === "dark" ? darkNavigationTheme : lightNavigationTheme
-        }
-      >
-        <AuthProvider>
-          <LibraryProvider>
-            <ReaderSettingsProvider>
-              <Stack>
-                <Stack.Screen
-                  name="(onboarding)"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                <Stack.Screen name="(setup)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="settings"
-                  options={{
-                    headerShown: false,
-                    animation: "slide_from_right",
-                  }}
-                />
-                <Stack.Screen
-                  name="reader/[bookId]"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="book/[bookId]"
-                  options={{
-                    headerShown: false,
-                    animation: "slide_from_right",
-                  }}
-                />
-                <Stack.Screen
-                  name="quiz/[bookId]"
-                  options={{
-                    headerShown: false,
-                    animation: "slide_from_bottom",
-                  }}
-                />
-                <Stack.Screen
-                  name="streak"
-                  options={{
-                    headerShown: false,
-                    animation: "slide_from_right",
-                  }}
-                />
-                <Stack.Screen
-                  name="achievements"
-                  options={{
-                    headerShown: false,
-                    animation: "slide_from_right",
-                  }}
-                />
-                <Stack.Screen
-                  name="subscription"
-                  options={{
-                    headerShown: false,
-                    animation: "slide_from_bottom",
-                  }}
-                />
-                <Stack.Screen
-                  name="notifications"
-                  options={{
-                    headerShown: false,
-                    animation: "slide_from_right",
-                  }}
-                />
-              </Stack>
-            </ReaderSettingsProvider>
-          </LibraryProvider>
-          <StatusBar style="auto" />
-        </AuthProvider>
+      <ThemePreferenceProvider>
+        <ThemeProvider
+          value={
+            colorScheme === "dark" ? darkNavigationTheme : lightNavigationTheme
+          }
+        >
+          <AuthProvider>
+            <LibraryProvider>
+              <ReaderSettingsProvider>
+                <Stack>
+                  <Stack.Screen
+                    name="(onboarding)"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(setup)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="settings"
+                    options={{
+                      headerShown: false,
+                      animation: "slide_from_right",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="reader/[bookId]"
+                    options={{ headerShown: false }}
+                  />
+                  <Stack.Screen
+                    name="book/[bookId]"
+                    options={{
+                      headerShown: false,
+                      animation: "slide_from_right",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="quiz/[bookId]"
+                    options={{
+                      headerShown: false,
+                      animation: "slide_from_bottom",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="streak"
+                    options={{
+                      headerShown: false,
+                      animation: "slide_from_right",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="achievements"
+                    options={{
+                      headerShown: false,
+                      animation: "slide_from_right",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="subscription"
+                    options={{
+                      headerShown: false,
+                      animation: "slide_from_bottom",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="notifications"
+                    options={{
+                      headerShown: false,
+                      animation: "slide_from_right",
+                    }}
+                  />
+                </Stack>
+              </ReaderSettingsProvider>
+            </LibraryProvider>
+            <StatusBar style="auto" />
+          </AuthProvider>
       </ThemeProvider>
+      </ThemePreferenceProvider>
     </GestureHandlerRootView>
   );
 }
