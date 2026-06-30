@@ -19,14 +19,11 @@ export function HapticTab({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       style={style}
-      onPress={process.env.EXPO_OS === "web" ? onPress : undefined}
+      onPress={onPress}
       onPressIn={(event) => {
         onPressIn?.(event);
         if (process.env.EXPO_OS === "ios") {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        }
-        if (process.env.EXPO_OS !== "web") {
-          onPress?.(event);
         }
       }}
     >

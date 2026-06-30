@@ -9,6 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,7 +18,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { TouchableOpacity } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
@@ -286,16 +286,14 @@ export default function OnboardingScreen() {
           }}
           collapsable={false}
         >
-          <TouchableOpacity
+          <Pressable
             onPress={goToTabs}
-            hitSlop={16}
             accessibilityRole="button"
             accessibilityLabel="Пропустить"
-            activeOpacity={0.6}
-            style={{
-              paddingVertical: 8,
-              paddingHorizontal: 4,
-            }}
+            style={({ pressed }) => [
+              styles.footerAction,
+              pressed && styles.footerActionPressed,
+            ]}
           >
             <Text
               style={{
@@ -307,7 +305,7 @@ export default function OnboardingScreen() {
             >
               Пропустить
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <View
             className="flex-row items-center"
@@ -328,16 +326,14 @@ export default function OnboardingScreen() {
             ))}
           </View>
 
-          <TouchableOpacity
+          <Pressable
             onPress={handleNext}
-            hitSlop={16}
             accessibilityRole="button"
             accessibilityLabel="Дальше"
-            activeOpacity={0.6}
-            style={{
-              paddingVertical: 8,
-              paddingHorizontal: 4,
-            }}
+            style={({ pressed }) => [
+              styles.footerAction,
+              pressed && styles.footerActionPressed,
+            ]}
           >
             <Text
               style={{
@@ -349,9 +345,22 @@ export default function OnboardingScreen() {
             >
               Дальше
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  footerAction: {
+    minHeight: 44,
+    minWidth: 96,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  footerActionPressed: {
+    opacity: 0.62,
+  },
+});

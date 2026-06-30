@@ -6,7 +6,7 @@ import {
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -15,7 +15,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { TouchableOpacity } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
@@ -56,13 +55,8 @@ export default function WelcomeScreen() {
   const scaleY = windowHeight / FIGMA_FRAME_H;
   const rawImgW = Math.min(318, width - 48);
   const rawImgH = (426 / 318) * rawImgW;
-  /** Keep hero inside the viewport (non-scroll layout). */
-  const maxIllustrationH = Math.min(rawImgH, windowHeight * 0.8);
-  const [illustrationSlotH, setIllustrationSlotH] = useState(0);
-  const imgH =
-    illustrationSlotH > 0
-      ? Math.min(maxIllustrationH, illustrationSlotH)
-      : maxIllustrationH;
+  /** Keep hero inside the viewport with permanent room for the CTA. */
+  const imgH = Math.min(rawImgH, windowHeight * 0.36);
   const imgW = (318 / 426) * imgH;
 
   const logoPaddingTop = Math.max(8, Math.round(FIGMA_LOGO_TOP * scaleY));
@@ -73,6 +67,10 @@ export default function WelcomeScreen() {
   const anchorY = BG_ANCHOR_Y * scaleY;
   const bgMarkLeft = anchorX - bgMarkW / 2;
   const bgMarkTop = anchorY - bgMarkH / 2;
+  const footerBottomPad = Math.max(
+    16,
+    Math.min(32, FIGMA_CTA_BOTTOM_INSET * scaleY),
+  );
 
   const onStart = useCallback(() => {
     router.push("/onboarding");
@@ -145,13 +143,7 @@ export default function WelcomeScreen() {
             </Text>
           </View>
 
-          <View
-            className="min-h-0 flex-1 justify-center overflow-hidden px-5 pb-2"
-            onLayout={(e) => {
-              const h = e.nativeEvent.layout.height;
-              if (h > 0) setIllustrationSlotH(h);
-            }}
-          >
+          <View className="min-h-0 flex-1 justify-center overflow-hidden px-5 pb-2">
             <Image
               accessibilityIgnoresInvertColors
               pointerEvents="none"
@@ -169,36 +161,41 @@ export default function WelcomeScreen() {
           <View
             className="px-6 pt-2"
             style={{
-              paddingBottom: FIGMA_CTA_BOTTOM_INSET * scaleY,
-              zIndex: 2,
-              elevation: 4,
+              ...styles.footer,
+              paddingBottom: footerBottomPad,
             }}
             collapsable={false}
           >
-            <TouchableOpacity
+            <Pressable
               accessibilityRole="button"
               accessibilityLabel="Начать"
               onPress={onStart}
-              activeOpacity={0.95}
-              style={[
-                styles.primaryCta,
-                {
-                  backgroundColor: colors.brandDark,
-                  borderColor: colors.brand,
-                },
+              style={({ pressed }) => [
+                styles.primaryCtaHit,
+                pressed && styles.primaryCtaPressed,
               ]}
             >
-              <Text
-                style={{
-                  color: "#fbfaf2",
-                  fontFamily: "Inter_500Medium",
-                  fontSize: 18,
-                  letterSpacing: -0.72,
-                }}
+              <View
+                style={[
+                  styles.ctaChrome,
+                  {
+                    backgroundColor: colors.brandDark,
+                    borderColor: colors.brand,
+                  },
+                ]}
               >
-                Начать
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={{
+                    color: "#fbfaf2",
+                    fontFamily: "Inter_500Medium",
+                    fontSize: 18,
+                    letterSpacing: -0.72,
+                  }}
+                >
+                  Начать
+                </Text>
+              </View>
+            </Pressable>
 
             <View className="mt-6 flex-row flex-wrap items-center justify-center">
               <Text
@@ -213,8 +210,11 @@ export default function WelcomeScreen() {
               </Text>
               <Pressable
                 onPress={onLogin}
-                hitSlop={12}
                 accessibilityRole="link"
+                style={({ pressed }) => [
+                  styles.loginLinkHit,
+                  pressed && styles.textActionPressed,
+                ]}
               >
                 <Text
                   className="text-[18px]"
@@ -241,18 +241,40 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   contentOnTop: {
+    flex: 1,
     zIndex: 1,
   },
-  primaryCta: {
-    height: 54,
+  footer: {
+    zIndex: 2,
+    elevation: 4,
+  },
+  primaryCtaHit: {
+    minHeight: 54,
     width: "100%",
     maxWidth: 338,
     alignSelf: "center",
+  },
+  ctaChrome: {
+    minHeight: 54,
+    width: "100%",
     borderRadius: 100,
     borderWidth: 1,
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
+  },
+  primaryCtaPressed: {
+    opacity: 0.92,
+  },
+  loginLinkHit: {
+    minHeight: 44,
+    minWidth: 72,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  textActionPressed: {
+    opacity: 0.62,
   },
 });
