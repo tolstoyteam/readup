@@ -3,6 +3,7 @@ import {
   LANGUAGE_OPTIONS,
   LINE_SPACING_OPTIONS,
   MARGIN_OPTIONS,
+  type ReaderLanguage,
 } from "@/features/reader/settings/reader-settings";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { useReadupColors } from "@/shared/constants/readup-theme";
@@ -61,9 +62,11 @@ function SectionLabel({ children }: { children: string }) {
 export function ReaderSettingsSheet({
   visible,
   onClose,
+  onLanguageChange,
 }: {
   visible: boolean;
   onClose: () => void;
+  onLanguageChange?: (language: ReaderLanguage) => void;
 }) {
   const colors = useReadupColors();
   const { settings, setFontScale, setLineSpacing, setMargin, setLanguage } =
@@ -165,7 +168,11 @@ export function ReaderSettingsSheet({
                 return (
                   <Pressable
                     key={option.value}
-                    onPress={() => setLanguage(option.value)}
+                    onPress={() =>
+                      onLanguageChange
+                        ? onLanguageChange(option.value)
+                        : setLanguage(option.value)
+                    }
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
                     className={`flex-row items-center justify-between rounded-lg px-3.5 py-3 ${

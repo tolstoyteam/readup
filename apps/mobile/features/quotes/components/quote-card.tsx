@@ -1,6 +1,10 @@
 import type { UserQuote } from "@readup/db";
 import { ExpandableQuoteText } from "@/features/quotes/components/expandable-quote-text";
 import { useQuotes } from "@/features/quotes/hooks/use-quotes";
+import {
+  logQuoteSourceNavigation,
+  quoteSourceReaderPath,
+} from "@/features/quotes/lib/quote-source-navigation";
 import { useRouter } from "expo-router";
 import { Trash2 } from "lucide-react-native";
 import { Alert, Pressable, Text, View } from "react-native";
@@ -24,9 +28,14 @@ export function QuoteCard({ item }: { item: QuoteCardItem }) {
   const { deleteQuote } = useQuotes();
 
   function openSource() {
-    router.push(
-      `/reader/${encodeURIComponent(String(item.editionBookId))}?focusQuoteId=${encodeURIComponent(item.id)}`,
-    );
+    const path = quoteSourceReaderPath(item);
+    logQuoteSourceNavigation("navigate to source", {
+      quoteId: item.id,
+      editionBookId: item.editionBookId,
+      language: item.language,
+      path,
+    });
+    router.push(path);
   }
 
   function confirmDelete() {

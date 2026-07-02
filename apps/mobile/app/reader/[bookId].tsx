@@ -23,13 +23,22 @@ import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
 import { useChapterQuotes, useQuotes } from "@/features/quotes";
 import { SelectionToolbar } from "@/features/quotes/components/selection-toolbar";
 import { resolveQuotePageIndex } from "@/features/quotes/lib/resolve-quote-navigation";
+import {
+  isQuoteSourceNavigation,
+  logQuoteSourceNavigation,
+  parseFocusQuoteIdParam,
+  quoteEditionMatchesDocument,
+  quoteSourceReaderPath,
+  shouldSuppressEditionRedirect,
+} from "@/features/quotes/lib/quote-source-navigation";
 import type { TextSelectionState } from "@/features/quotes/lib/quote-types";
 import { resolvePageIndex } from "@/features/reader/lib/resolve-reading-position";
+import type { ReaderLanguage } from "@/features/reader/settings/reader-settings";
 import { useAuth } from "@/shared/context/auth-context";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { StatusBar } from "expo-status-bar";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import {
   ChevronLeft,
   ChevronRight,
@@ -254,10 +263,11 @@ export default function ReaderScreen() {
   const { bookId: bookIdParam, mode: modeParam, focusQuoteId: focusQuoteIdParam } = useLocalSearchParams<{
     bookId: string;
     mode?: string;
-    focusQuoteId?: string;
+    focusQuoteId?: string | string[];
   }>();
   const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
-  const { settings, loaded: settingsLoaded } = useReaderSettings();
+  const focusQuoteId = parseFocusQuoteIdParam(focusQuoteIdParam);
+  const { settings, loaded: settingsLoaded, setLanguage } = useReaderSettings();
   const { record: libraryRecord, loading: libraryLoading } =
     useLibraryBook(bookId);
   const { recordReadingSession } = useLibraryActions();
@@ -265,6 +275,10 @@ export default function ReaderScreen() {
 
   const { saveQuote: persistQuote, quotesById } = useQuotes();
 
+  const quoteSourceSessionRef = useRef(!!focusQuoteId);
+  if (focusQuoteId) {
+    quoteSourceSessionRef.current = true;
+  }
   const audioCheckedBookIdRef = useRef<string | null>(null);
   const resumeAppliedRef = useRef<string | null>(null);
   const quoteFocusAppliedRef = useRef<string | null>(null);
@@ -277,8 +291,8 @@ export default function ReaderScreen() {
     null,
   );
   const [savingQuote, setSavingQuote] = useState(false);
-  const [emphasizeQuoteId, setEmphasizeQuoteId] = useState<string | undefined>(
-    focusQuoteIdParam ? decodeURIComponent(focusQuoteIdParam) : undefined,
+  const [emphasizedQuoteId, setEmphasizedQuoteId] = useState<string | undefined>(
+    focusQuoteId,
   );
 
   const [loading, setLoading] = useState(true);
@@ -296,17 +310,20 @@ export default function ReaderScreen() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
+    if (focusQuoteId) {
+      setEmphasizedQuoteId(focusQuoteId);
+    } else {
+      quoteSourceSessionRef.current = false;
+      setEmphasizedQuoteId(undefined);
+    }
     audioCheckedBookIdRef.current = null;
     resumeAppliedRef.current = null;
     quoteFocusAppliedRef.current = null;
     setSelectingBlockId(null);
     setSelectionState(null);
-    setEmphasizeQuoteId(
-      focusQuoteIdParam ? decodeURIComponent(focusQuoteIdParam) : undefined,
-    );
     setAudioState({ status: "checking", source: null, message: null });
     setHasQuiz(false);
-  }, [bookId, focusQuoteIdParam]);
+  }, [bookId, focusQuoteId]);
 
   useEffect(() => {
     if (!bookId) return;
@@ -403,7 +420,7 @@ export default function ReaderScreen() {
   const { highlightsByBlockId } = useChapterQuotes(
     document?.book_id,
     chapterStableId,
-    emphasizeQuoteId,
+    emphasizedQuoteId,
   );
 
   useEffect(() => {
@@ -411,9 +428,9 @@ export default function ReaderScreen() {
   }, [pageIndex, chapterStableId]);
 
   const focusQuote = useMemo(() => {
-    if (!emphasizeQuoteId) return null;
-    return quotesById.get(emphasizeQuoteId) ?? null;
-  }, [emphasizeQuoteId, quotesById]);
+    if (!focusQuoteId) return null;
+    return quotesById.get(focusQuoteId) ?? null;
+  }, [focusQuoteId, quotesById]);
 
   const sessionTracker = useReadingSessionTracker({
     enabled: !!user && !!document?.book_id && totalPages > 0,
@@ -426,6 +443,14 @@ export default function ReaderScreen() {
 
   useEffect(() => {
     if (!bookId || !document || libraryLoading) return;
+    if (
+      isQuoteSourceNavigation({
+        focusQuoteId,
+        quoteSourceSession: quoteSourceSessionRef.current,
+      })
+    ) {
+      return;
+    }
     const workKey = document.work_id ?? bookId;
     if (resumeAppliedRef.current === workKey) return;
 
@@ -438,6 +463,7 @@ export default function ReaderScreen() {
   }, [
     bookId,
     document,
+    focusQuoteId,
     libraryLoading,
     libraryRecord?.progress,
     pages,
@@ -445,18 +471,24 @@ export default function ReaderScreen() {
   ]);
 
   useEffect(() => {
-    if (!document || !emphasizeQuoteId || !focusQuote) return;
-    const focusKey = `${document.book_id}:${emphasizeQuoteId}`;
+    if (!document || !focusQuoteId || !focusQuote) return;
+    if (!quoteEditionMatchesDocument(focusQuote, document.book_id)) {
+      router.replace(quoteSourceReaderPath(focusQuote) as Href);
+      return;
+    }
+
+    const focusKey = `${document.book_id}:${focusQuoteId}`;
     if (quoteFocusAppliedRef.current === focusKey) return;
 
     quoteFocusAppliedRef.current = focusKey;
     skipPageTrackingRef.current = true;
     const quotePageIndex = resolveQuotePageIndex(focusQuote, pages);
     setPageIndex(quotePageIndex);
-  }, [document, emphasizeQuoteId, focusQuote, pages]);
+  }, [document, focusQuoteId, focusQuote, pages, router]);
 
   useEffect(() => {
-    if (!focusQuote || !emphasizeQuoteId) return;
+    if (!focusQuote || !focusQuoteId || !document?.book_id) return;
+    if (!quoteEditionMatchesDocument(focusQuote, document.book_id)) return;
     const y = blockLayoutYRef.current.get(focusQuote.blockStableId);
     if (y === undefined) return;
     const timer = setTimeout(() => {
@@ -466,22 +498,26 @@ export default function ReaderScreen() {
       });
     }, 120);
     return () => clearTimeout(timer);
-  }, [focusQuote, emphasizeQuoteId, pageIndex]);
+  }, [document?.book_id, focusQuote, focusQuoteId, pageIndex]);
 
   useEffect(() => {
-    if (!emphasizeQuoteId || !document?.book_id) return;
+    if (!emphasizedQuoteId || !document?.book_id) return;
     const timer = setTimeout(() => {
-      setEmphasizeQuoteId(undefined);
-      router.replace(`/reader/${encodeURIComponent(document.book_id)}`);
+      setEmphasizedQuoteId(undefined);
     }, 1400);
     return () => clearTimeout(timer);
-  }, [document?.book_id, emphasizeQuoteId, router]);
+  }, [document?.book_id, emphasizedQuoteId]);
 
   const hasAudio = audioState.status === "available";
   const audioChecking = audioState.status === "checking" && !!document;
   const isLastPage = pages.length > 0 && pageIndex === pages.length - 1;
   const showLastPageActions = isLastPage && !!user;
   const showFinishButton = showLastPageActions && !isCompleted(libraryRecord);
+
+  const suppressEditionRedirect = shouldSuppressEditionRedirect({
+    quoteSourceSession: quoteSourceSessionRef.current,
+    focusQuoteId,
+  });
 
   const preferredBookId = useMemo(() => {
     if (!document) return bookId;
@@ -493,26 +529,66 @@ export default function ReaderScreen() {
   }, [bookId, document, settings.language]);
 
   const needsEditionRedirect =
-    settingsLoaded && !!document && preferredBookId !== bookId;
+    settingsLoaded &&
+    !!document &&
+    preferredBookId !== bookId &&
+    !suppressEditionRedirect;
   const awaitingEditionResolution = !settingsLoaded || needsEditionRedirect;
 
   useEffect(() => {
     if (!settingsLoaded || !document) return;
+
+    const suppress = isQuoteSourceNavigation({
+      focusQuoteId: parseFocusQuoteIdParam(focusQuoteIdParam),
+      quoteSourceSession: quoteSourceSessionRef.current,
+    });
+
+    if (suppress) {
+      logQuoteSourceNavigation("edition redirect suppressed", {
+        bookId,
+        preferredBookId,
+        focusQuoteId: parseFocusQuoteIdParam(focusQuoteIdParam),
+        quoteSourceSession: quoteSourceSessionRef.current,
+      });
+      return;
+    }
+
     if (preferredBookId === bookId) return;
+
+    logQuoteSourceNavigation("edition redirect", {
+      fromBookId: bookId,
+      toBookId: preferredBookId,
+      settingsLanguage: settings.language,
+    });
+
     const params = new URLSearchParams();
     if (wantsListenMode) params.set("mode", "listen");
-    if (emphasizeQuoteId) params.set("focusQuoteId", emphasizeQuoteId);
     const suffix = params.toString() ? `?${params.toString()}` : "";
     router.replace(`/reader/${encodeURIComponent(preferredBookId)}${suffix}`);
   }, [
     bookId,
     document,
-    emphasizeQuoteId,
+    focusQuoteIdParam,
     preferredBookId,
     router,
+    settings.language,
     settingsLoaded,
     wantsListenMode,
   ]);
+
+  const handleLanguageChange = useCallback(
+    (language: ReaderLanguage) => {
+      quoteSourceSessionRef.current = false;
+      logQuoteSourceNavigation("manual language change", { language });
+      setLanguage(language);
+    },
+    [setLanguage],
+  );
+
+  const handleCloseReader = useCallback(() => {
+    quoteSourceSessionRef.current = false;
+    router.back();
+  }, [router]);
 
   const handleOpenQuiz = useCallback(() => {
     if (!document?.book_id) return;
@@ -659,7 +735,7 @@ export default function ReaderScreen() {
 
       <View className="flex-row items-center justify-between border-b border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-3 pb-2.5">
         <Pressable
-          onPress={() => router.back()}
+          onPress={handleCloseReader}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Close reader"
@@ -753,6 +829,7 @@ export default function ReaderScreen() {
       <ReaderSettingsSheet
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+        onLanguageChange={handleLanguageChange}
       />
 
       <View className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]">

@@ -12,3 +12,8 @@ export {
   groupQuotesByBlockId,
   resolveQuotePageIndex,
 } from "@/features/quotes/lib/resolve-quote-navigation";
+export {
+  quoteEditionMatchesDocument,
+  quoteSourceReaderPath,
+  shouldSuppressEditionRedirect,
+} from "@/features/quotes/lib/quote-source-navigation";
