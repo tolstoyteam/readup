@@ -5,6 +5,8 @@ import type {
 } from "@readup/db";
 import { supabase, supabaseCoverPublicUrl } from "@/shared/lib/supabase";
 
+import { embedKeywordsInLastChapter } from "@/features/books/lib/embed-book-keywords";
+
 import { fetchBookByBookId } from "./books";
 
 /**
@@ -117,16 +119,7 @@ export async function fetchBookContent(
     })
     .filter((name): name is string => !!name);
 
-  const finalPages: BookPage[] =
-    record.keywords && record.keywords.length > 0
-      ? [
-          ...pages,
-          {
-            page_number: pages.length + 1,
-            elements: [{ type: "keywords" as const, content: record.keywords }],
-          },
-        ]
-      : pages;
+  const finalPages = embedKeywordsInLastChapter(pages, record.keywords);
 
   let availableEditions: BookDocument["available_editions"] = [];
   if (record.work_id) {

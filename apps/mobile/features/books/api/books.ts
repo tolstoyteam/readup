@@ -1,5 +1,6 @@
 import type { BookDataColumn, BookDocument, BookPage } from "@readup/db";
 import { genreRuLabel, isBookGenre } from "@readup/db";
+import { embedKeywordsInLastChapter } from "@/features/books/lib/embed-book-keywords";
 import { pickEdition } from "@/features/books/lib/pick-edition";
 import type { ReaderLanguage } from "@/features/reader/settings/reader-settings";
 import { loadReaderSettings } from "@/features/reader/settings/reader-settings-storage";
@@ -143,7 +144,7 @@ function normalizeOneBook(obj: Record<string, unknown>): BookDocument | null {
   if (!book_id) return null;
 
   const title = stringish(obj.title) ?? "Untitled";
-  const pages = normalizePages(obj.pages);
+  const pages = embedKeywordsInLastChapter(normalizePages(obj.pages));
   const author = typeof obj.author === "string" ? obj.author : "";
   const language = typeof obj.language === "string" ? obj.language : "";
   const genres = Array.isArray(obj.genres)
@@ -292,8 +293,19 @@ export async function fetchBookByBookId(
       if (row.status && row.status !== "published") return null;
       const fromLegacy = normalizeBooksFromCell(row.data);
       if (fromLegacy.length > 0) {
-        const match = fromLegacy.find((doc) => doc.book_id === bookId) ?? fromLegacy[0];
-        if (match) return { id: row.id, document: match };
+        const match =
+          fromLegacy.find((doc) => doc.book_id === bookId) ?? fromLegacy[0];
+        if (match) {
+          const pages = embedKeywordsInLastChapter(match.pages, row.keywords);
+          return {
+            id: row.id,
+            document: {
+              ...match,
+              pages,
+              total_pages: Math.max(pages.length, 1),
+            },
+          };
+        }
       }
       return { id: row.id, document: documentFromRelationalRow(row) };
     }
