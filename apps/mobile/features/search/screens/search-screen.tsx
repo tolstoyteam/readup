@@ -196,15 +196,16 @@ export default function SearchScreen() {
         contentContainerClassName="gap-6 pb-8"
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View className="gap-5 px-8 pt-8">
-            <View className="flex-row items-center justify-between">
+          <View className="gap-5 pt-8">
+            <View className="flex-row items-center justify-between px-8">
               <ReadupLogo />
               <Text className="text-[22px] font-semibold tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]">
                 Search
               </Text>
             </View>
 
-            <View className="h-12 flex-row items-center gap-2 rounded-[30px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4">
+            <View className="px-8">
+              <View className="h-12 flex-row items-center gap-2 rounded-[30px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4">
               <SearchIcon
                 size={18}
                 color={colors.textTertiary}
@@ -218,6 +219,7 @@ export default function SearchScreen() {
                 className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]"
                 autoCapitalize="none"
               />
+              </View>
             </View>
 
             {genres.length > 0 ? (
@@ -230,7 +232,7 @@ export default function SearchScreen() {
             ) : null}
 
             {query.trim().length === 0 && history.length > 0 ? (
-              <View className="gap-2">
+              <View className="gap-2 px-8">
                 <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
                   Недавние запросы
                 </Text>

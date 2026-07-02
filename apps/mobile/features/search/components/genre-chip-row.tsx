@@ -20,7 +20,7 @@ export function GenreChipRow({
 
   return (
     <View className="gap-2">
-      <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
+      <Text className="px-8 text-[13px] font-medium tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
         {label}
       </Text>
       <ScrollView
@@ -28,36 +28,35 @@ export function GenreChipRow({
         nestedScrollEnabled
         keyboardShouldPersistTaps="handled"
         showsHorizontalScrollIndicator={false}
+        contentContainerClassName="gap-2 px-8"
       >
-        <View className="flex-row gap-2">
-          {genres.map((genre) => {
-            const active = selectedSlugs.has(genre.slug);
-            return (
-              <Pressable
-                key={genre.slug}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                onPress={() => onToggle(genre.slug)}
-                className="rounded-full border px-3 py-1.5 active:opacity-80"
+        {genres.map((genre) => {
+          const active = selectedSlugs.has(genre.slug);
+          return (
+            <Pressable
+              key={genre.slug}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => onToggle(genre.slug)}
+              className="rounded-full border px-3 py-1.5 active:opacity-80"
+              style={{
+                borderColor: colors.brand,
+                backgroundColor: active ? colors.brand : "transparent",
+              }}
+            >
+              <Text
+                className="text-[13px] tracking-[-0.52px]"
                 style={{
-                  borderColor: colors.brand,
-                  backgroundColor: active ? colors.brand : "transparent",
+                  color: active
+                    ? colors.textInverse
+                    : colors.text,
                 }}
               >
-                <Text
-                  className="text-[13px] tracking-[-0.52px]"
-                  style={{
-                    color: active
-                      ? colors.textInverse
-                      : colors.text,
-                  }}
-                >
-                  {genre.labelRu}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                {genre.labelRu}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );
