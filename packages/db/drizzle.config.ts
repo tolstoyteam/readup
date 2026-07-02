@@ -7,6 +7,7 @@ import { normalizeDatabaseUrl } from "./src/database-url";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 config({ path: path.resolve(rootDir, "../../.env") });
+config({ path: path.resolve(rootDir, "../../apps/admin/.env") });
 
 const rawUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!rawUrl) {

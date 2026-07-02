@@ -11,8 +11,8 @@ export default function Home() {
           Short books workspace
         </h1>
         <p className="mt-4 text-sm leading-relaxed text-text-secondary">
-          Build chapter-by-chapter content, save the full book to your database,
-          or let AI draft a summary you can refine before publishing.
+          Build chapter-by-chapter content manually, or use AI to generate English
+          source books with quizzes and optional translations.
         </p>
         <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link

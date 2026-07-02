@@ -30,8 +30,37 @@ export const BOOK_EDITION_STATUSES = [
 ] as const;
 export type BookEditionStatus = (typeof BOOK_EDITION_STATUSES)[number];
 
-export const GENERATION_JOB_TYPES = ["translation", "tts"] as const;
+export const GENERATION_JOB_TYPES = [
+  "translation",
+  "tts",
+  "book_generation",
+  "cover",
+] as const;
 export type GenerationJobType = (typeof GENERATION_JOB_TYPES)[number];
+
+export const BOOK_LENGTHS = ["short", "medium", "long"] as const;
+export type BookLength = (typeof BOOK_LENGTHS)[number];
+
+export const READING_LEVELS = ["beginner", "intermediate", "advanced"] as const;
+export type ReadingLevel = (typeof READING_LEVELS)[number];
+
+export type BookGenerationSettings = {
+  topic: string;
+  audience: string;
+  genres: string[];
+  reading_level: ReadingLevel;
+  length: BookLength;
+  quiz_enabled: boolean;
+};
+
+export type BookGenerationMetadata = {
+  source_language: "en";
+  generated_languages: string[];
+  settings: BookGenerationSettings;
+  subtitle?: string;
+  description?: string;
+  generated_at: string;
+};
 
 export const GENERATION_JOB_STATUSES = ["queued", "running", "succeeded", "failed"] as const;
 export type GenerationJobStatus = (typeof GENERATION_JOB_STATUSES)[number];
@@ -174,7 +203,7 @@ export const booksTable = pgTable(
     }),
     translationError: text("translation_error"),
     ttsError: text("tts_error"),
-    generationMetadata: jsonb("generation_metadata").$type<Record<string, unknown> | null>(),
+    generationMetadata: jsonb("generation_metadata").$type<BookGenerationMetadata | null>(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     /** Supabase Storage path for the cover image. Kept in the requested cover_image_url column. */
     coverImageUrl: text("cover_image_url"),
@@ -526,7 +555,10 @@ export const generationJobsTable = pgTable(
     index("generation_jobs_work_id_idx").on(table.workId),
     index("generation_jobs_edition_id_idx").on(table.editionId),
     index("generation_jobs_status_idx").on(table.status),
-    check("generation_jobs_type_check", sql`${table.type} in ('translation', 'tts')`),
+    check(
+      "generation_jobs_type_check",
+      sql`${table.type} in ('translation', 'tts', 'book_generation', 'cover')`,
+    ),
     check("generation_jobs_status_check", sql`${table.status} in ('queued', 'running', 'succeeded', 'failed')`),
   ],
 );

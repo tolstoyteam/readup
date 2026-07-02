@@ -12,6 +12,7 @@ import {
   quizQuestionsTable,
   quizzesTable,
   type BookEditionStatus,
+  type BookGenerationMetadata,
   type BookRecord,
   type ChapterBlockContent,
   type ChapterBlockType,
@@ -212,6 +213,7 @@ export async function createEditionForWork(args: {
   input: BookContentInput;
   status?: BookEditionStatus;
   sourceEditionId?: number | null;
+  generationMetadata?: BookGenerationMetadata | null;
 }): Promise<BookWithContent> {
   const [created] = await db.transaction(async (tx) => {
     const [book] = await tx
@@ -226,6 +228,7 @@ export async function createEditionForWork(args: {
         publishedAt: args.status === "published" ? new Date() : null,
         coverImageUrl: args.input.cover_image_url ?? null,
         keywords: args.input.keywords,
+        generationMetadata: args.generationMetadata ?? null,
       })
       .returning({ id: booksTable.id });
 
@@ -629,6 +632,16 @@ export async function getBookWithContent(bookId: number): Promise<BookWithConten
     })),
     ...(quiz ? { quiz } : {}),
   };
+}
+
+export async function updateEditionGenerationMetadata(
+  bookId: number,
+  metadata: BookGenerationMetadata | null,
+): Promise<void> {
+  await db
+    .update(booksTable)
+    .set({ generationMetadata: metadata })
+    .where(eq(booksTable.id, bookId));
 }
 
 export async function getEditionByWorkLanguage(

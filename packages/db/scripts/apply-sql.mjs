@@ -9,6 +9,7 @@ const packageDir = path.resolve(rootDir, "..");
 const repoRoot = path.resolve(packageDir, "../..");
 
 config({ path: path.resolve(repoRoot, ".env") });
+config({ path: path.resolve(repoRoot, "apps/admin/.env") });
 
 const rawUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!rawUrl) {
@@ -30,6 +31,7 @@ function normalizeDatabaseUrl(raw) {
 const DRIZZLE_MIGRATIONS = [
   "0006_multilingual_book_architecture.sql",
   "0007_work_library_consolidation.sql",
+  "0008_generation_job_types.sql",
 ];
 
 const SQL_FILES = [
