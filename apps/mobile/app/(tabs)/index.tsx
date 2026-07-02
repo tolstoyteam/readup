@@ -154,7 +154,10 @@ export default function HomeScreen() {
 
             {sections.map((section) => (
               <View key={section.title} className="mb-8">
-                <Text className="px-8 text-[22px] font-semibold tracking-[-0.88px] text-black">
+                <Text
+                  className="px-8 text-[22px] font-semibold tracking-[-0.88px]"
+                  style={{ color: colors.text }}
+                >
                   {section.title}
                 </Text>
                 <FlatList
