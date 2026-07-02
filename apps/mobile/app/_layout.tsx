@@ -11,6 +11,7 @@ import "react-native-reanimated";
 import { AuthProvider } from "@/shared/context/auth-context";
 import { ThemePreferenceProvider } from "@/shared/context/theme-preference-context";
 import { LibraryProvider } from "@/features/library";
+import { QuotesProvider } from "@/features/quotes";
 import { ReaderSettingsProvider } from "@/features/reader/settings/reader-settings-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import {
@@ -62,6 +63,7 @@ export default function RootLayout() {
         >
           <AuthProvider>
             <LibraryProvider>
+              <QuotesProvider>
               <ReaderSettingsProvider>
                 <Stack>
                   <Stack.Screen
@@ -126,6 +128,7 @@ export default function RootLayout() {
                   />
                 </Stack>
               </ReaderSettingsProvider>
+              </QuotesProvider>
             </LibraryProvider>
             <StatusBar style="auto" />
           </AuthProvider>

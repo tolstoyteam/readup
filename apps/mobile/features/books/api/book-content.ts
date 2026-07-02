@@ -6,6 +6,7 @@ import type {
 import { supabase, supabaseCoverPublicUrl } from "@/shared/lib/supabase";
 
 import { embedKeywordsInLastChapter } from "@/features/books/lib/embed-book-keywords";
+import { assignLegacyStableIds } from "@/features/books/lib/legacy-stable-ids";
 
 import { fetchBookByBookId } from "./books";
 
@@ -80,9 +81,21 @@ export async function fetchBookContent(
         const text = block.content?.text ?? "";
         if (!text) return [];
         if (block.type === "quote") {
-          return [{ type: "quote" as const, content: text }];
+          return [
+            {
+              type: "quote" as const,
+              content: text,
+              block_stable_id: block.stable_id,
+            },
+          ];
         }
-        return [{ type: "text" as const, content: text }];
+        return [
+          {
+            type: "text" as const,
+            content: text,
+            block_stable_id: block.stable_id,
+          },
+        ];
       }),
     ];
 
@@ -119,7 +132,10 @@ export async function fetchBookContent(
     })
     .filter((name): name is string => !!name);
 
-  const finalPages = embedKeywordsInLastChapter(pages, record.keywords);
+  const finalPages = assignLegacyStableIds(
+    embedKeywordsInLastChapter(pages, record.keywords),
+    String(record.id),
+  );
 
   let availableEditions: BookDocument["available_editions"] = [];
   if (record.work_id) {

@@ -83,10 +83,14 @@ export type BookTtsAudio = {
   updated_at?: string;
 };
 
+export type TextElementMeta = {
+  block_stable_id?: string;
+};
+
 export type LegacyBookPageElement =
   | { type: "chapter_name"; content: string }
-  | { type: "text"; content: string }
-  | { type: "quote"; content: string }
+  | ({ type: "text"; content: string } & TextElementMeta)
+  | ({ type: "quote"; content: string } & TextElementMeta)
   | { type: "keywords"; content: string[] };
 
 export type LegacyBookDocument = {
@@ -113,7 +117,9 @@ export type LegacyBookDocument = {
 export type BookPageElement = LegacyBookPageElement;
 
 /** @deprecated Mobile-only legacy JSON types until the app uses the relational schema. */
-export type BookPage = LegacyBookDocument["pages"][number];
+export type BookPage = LegacyBookDocument["pages"][number] & {
+  chapter_stable_id?: string;
+};
 
 /** @deprecated Mobile-only legacy JSON types until the app uses the relational schema. */
 export type BookDocument = LegacyBookDocument & { book_id: string };
@@ -443,6 +449,66 @@ export type QuizAttemptAnswer = {
   is_correct: boolean;
 };
 
+export type UserQuote = {
+  id: string;
+  userId: string;
+  workId: string;
+  editionBookId: number;
+  language: string;
+  chapterStableId: string;
+  chapterTitle?: string | null;
+  pageNumber: number;
+  blockStableId: string;
+  startOffset: number;
+  endOffset: number;
+  selectedText: string;
+  createdAt: string;
+};
+
+export type CreateUserQuoteInput = Omit<UserQuote, "id" | "userId" | "createdAt">;
+
+export const userQuotesTable = pgTable(
+  "user_quotes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    workId: uuid("work_id")
+      .notNull()
+      .references(() => bookWorksTable.id, { onDelete: "cascade" }),
+    editionBookId: integer("edition_book_id")
+      .notNull()
+      .references(() => booksTable.id, { onDelete: "cascade" }),
+    language: varchar("language", { length: 32 }).notNull(),
+    chapterStableId: text("chapter_stable_id").notNull(),
+    chapterTitle: text("chapter_title"),
+    pageNumber: integer("page_number").notNull(),
+    blockStableId: text("block_stable_id").notNull(),
+    startOffset: integer("start_offset").notNull(),
+    endOffset: integer("end_offset").notNull(),
+    selectedText: text("selected_text").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("user_quotes_user_created_idx").on(table.userId, table.createdAt),
+    index("user_quotes_user_edition_chapter_idx").on(
+      table.userId,
+      table.editionBookId,
+      table.chapterStableId,
+    ),
+    uniqueIndex("user_quotes_unique_anchor_idx").on(
+      table.userId,
+      table.editionBookId,
+      table.blockStableId,
+      table.startOffset,
+      table.endOffset,
+    ),
+    check("user_quotes_start_offset_check", sql`${table.startOffset} >= 0`),
+    check("user_quotes_end_offset_check", sql`${table.endOffset} > ${table.startOffset}`),
+  ],
+);
+
 export const userQuizAttemptsTable = pgTable(
   "user_quiz_attempts",
   {
@@ -575,6 +641,7 @@ export type QuizAnswerRecord = typeof quizAnswersTable.$inferSelect;
 export type ProfileRecord = typeof profilesTable.$inferSelect;
 export type UserWorkLibraryRecord = typeof userWorkLibraryTable.$inferSelect;
 export type UserSearchHistoryRecord = typeof userSearchHistoryTable.$inferSelect;
+export type UserQuoteRecord = typeof userQuotesTable.$inferSelect;
 export type UserQuizAttemptRecord = typeof userQuizAttemptsTable.$inferSelect;
 export type AchievementRecord = typeof achievementsTable.$inferSelect;
 export type UserAchievementRecord = typeof userAchievementsTable.$inferSelect;

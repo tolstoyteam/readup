@@ -32,6 +32,7 @@ const DRIZZLE_MIGRATIONS = [
   "0006_multilingual_book_architecture.sql",
   "0007_work_library_consolidation.sql",
   "0008_generation_job_types.sql",
+  "0009_user_quotes.sql",
 ];
 
 const SQL_FILES = [
@@ -40,6 +41,7 @@ const SQL_FILES = [
   "supabase-books-anon-select.sql",
   "supabase-content-read.sql",
   "supabase-engagement-rls.sql",
+  "supabase-quotes-rls.sql",
   "supabase-views.sql",
   "supabase-rpcs.sql",
   "supabase-achievements-seed.sql",

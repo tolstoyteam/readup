@@ -20,6 +20,10 @@ import { ReaderListenLoading } from "@/features/reader/components/reader-listen-
 import { ReaderSettingsSheet } from "@/features/reader/components/reader-settings-sheet";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
+import { useChapterQuotes, useQuotes } from "@/features/quotes";
+import { SelectionToolbar } from "@/features/quotes/components/selection-toolbar";
+import { resolveQuotePageIndex } from "@/features/quotes/lib/resolve-quote-navigation";
+import type { TextSelectionState } from "@/features/quotes/lib/quote-types";
 import { resolvePageIndex } from "@/features/reader/lib/resolve-reading-position";
 import { useAuth } from "@/shared/context/auth-context";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
@@ -34,7 +38,7 @@ import {
   Menu,
   X,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -69,6 +73,17 @@ function ReaderChrome({
   finishing,
   onOpenQuiz,
   showLastPageActions,
+  scrollViewRef,
+  highlightsByBlockId,
+  selectingBlockId,
+  onBlockLongPress,
+  onSelectionChange,
+  onBlockLayoutY,
+  onSelectionDismiss,
+  selectionToolbarVisible,
+  onSaveQuote,
+  savingQuote,
+  onDismissSelection,
 }: {
   document: BookDocument;
   hasAudio: boolean;
@@ -85,6 +100,22 @@ function ReaderChrome({
   finishing?: boolean;
   onOpenQuiz?: () => void;
   showLastPageActions?: boolean;
+  scrollViewRef: RefObject<ScrollView | null>;
+  highlightsByBlockId: Map<string, import("@/features/quotes").QuoteRange[]>;
+  selectingBlockId: string | null;
+  onBlockLongPress: (blockStableId: string) => void;
+  onSelectionChange: (
+    blockStableId: string,
+    start: number,
+    end: number,
+    selectedText: string,
+  ) => void;
+  onBlockLayoutY: (blockStableId: string, y: number) => void;
+  onSelectionDismiss: () => void;
+  selectionToolbarVisible: boolean;
+  onSaveQuote: () => void;
+  savingQuote: boolean;
+  onDismissSelection: () => void;
 }) {
   const currentPage = pages[pageIndex] ?? null;
   const pageProgress =
@@ -95,17 +126,37 @@ function ReaderChrome({
     <>
       <View className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]">
         {readMode === "read" && currentPage && (
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{
-              paddingHorizontal: settings.margin,
-              paddingTop: 8,
-              paddingBottom: 24,
-            }}
-            showsVerticalScrollIndicator={false}
-          >
-            <PageElements elements={currentPage.elements} />
-          </ScrollView>
+          <View className="relative flex-1">
+            <SelectionToolbar
+              visible={selectionToolbarVisible}
+              onSave={onSaveQuote}
+              onDismiss={onDismissSelection}
+              saving={savingQuote}
+            />
+            <ScrollView
+              ref={scrollViewRef}
+              className="flex-1"
+              contentContainerStyle={{
+                paddingHorizontal: settings.margin,
+                paddingTop: 8,
+                paddingBottom: 24,
+              }}
+              showsVerticalScrollIndicator={false}
+              onScrollBeginDrag={onDismissSelection}
+            >
+              <PageElements
+                elements={currentPage.elements}
+                bookId={document.book_id}
+                pageNumber={currentPage.page_number}
+                highlightsByBlockId={highlightsByBlockId}
+                selectingBlockId={selectingBlockId}
+                onBlockLongPress={onBlockLongPress}
+                onSelectionChange={onSelectionChange}
+                onBlockLayoutY={onBlockLayoutY}
+                onSelectionDismiss={onSelectionDismiss}
+              />
+            </ScrollView>
+          </View>
         )}
         {readMode === "listen" && hasAudio && (
           <BookListenPlayer document={document} onRetryAudio={onRetryAudio} />
@@ -200,9 +251,10 @@ export default function ReaderScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
-  const { bookId: bookIdParam, mode: modeParam } = useLocalSearchParams<{
+  const { bookId: bookIdParam, mode: modeParam, focusQuoteId: focusQuoteIdParam } = useLocalSearchParams<{
     bookId: string;
     mode?: string;
+    focusQuoteId?: string;
   }>();
   const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
   const { settings, loaded: settingsLoaded } = useReaderSettings();
@@ -211,8 +263,23 @@ export default function ReaderScreen() {
   const { recordReadingSession } = useLibraryActions();
   const wantsListenMode = modeParam === "listen";
 
+  const { saveQuote: persistQuote, quotesById } = useQuotes();
+
   const audioCheckedBookIdRef = useRef<string | null>(null);
   const resumeAppliedRef = useRef<string | null>(null);
+  const quoteFocusAppliedRef = useRef<string | null>(null);
+  const skipPageTrackingRef = useRef(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const blockLayoutYRef = useRef<Map<string, number>>(new Map());
+
+  const [selectingBlockId, setSelectingBlockId] = useState<string | null>(null);
+  const [selectionState, setSelectionState] = useState<TextSelectionState | null>(
+    null,
+  );
+  const [savingQuote, setSavingQuote] = useState(false);
+  const [emphasizeQuoteId, setEmphasizeQuoteId] = useState<string | undefined>(
+    focusQuoteIdParam ? decodeURIComponent(focusQuoteIdParam) : undefined,
+  );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -231,9 +298,15 @@ export default function ReaderScreen() {
   useEffect(() => {
     audioCheckedBookIdRef.current = null;
     resumeAppliedRef.current = null;
+    quoteFocusAppliedRef.current = null;
+    setSelectingBlockId(null);
+    setSelectionState(null);
+    setEmphasizeQuoteId(
+      focusQuoteIdParam ? decodeURIComponent(focusQuoteIdParam) : undefined,
+    );
     setAudioState({ status: "checking", source: null, message: null });
     setHasQuiz(false);
-  }, [bookId]);
+  }, [bookId, focusQuoteIdParam]);
 
   useEffect(() => {
     if (!bookId) return;
@@ -326,6 +399,22 @@ export default function ReaderScreen() {
     currentPage && "chapter_stable_id" in currentPage
       ? (currentPage as { chapter_stable_id?: string }).chapter_stable_id
       : undefined;
+
+  const { highlightsByBlockId } = useChapterQuotes(
+    document?.book_id,
+    chapterStableId,
+    emphasizeQuoteId,
+  );
+
+  useEffect(() => {
+    blockLayoutYRef.current.clear();
+  }, [pageIndex, chapterStableId]);
+
+  const focusQuote = useMemo(() => {
+    if (!emphasizeQuoteId) return null;
+    return quotesById.get(emphasizeQuoteId) ?? null;
+  }, [emphasizeQuoteId, quotesById]);
+
   const sessionTracker = useReadingSessionTracker({
     enabled: !!user && !!document?.book_id && totalPages > 0,
     bookId: document?.book_id,
@@ -355,6 +444,39 @@ export default function ReaderScreen() {
     sessionTracker,
   ]);
 
+  useEffect(() => {
+    if (!document || !emphasizeQuoteId || !focusQuote) return;
+    const focusKey = `${document.book_id}:${emphasizeQuoteId}`;
+    if (quoteFocusAppliedRef.current === focusKey) return;
+
+    quoteFocusAppliedRef.current = focusKey;
+    skipPageTrackingRef.current = true;
+    const quotePageIndex = resolveQuotePageIndex(focusQuote, pages);
+    setPageIndex(quotePageIndex);
+  }, [document, emphasizeQuoteId, focusQuote, pages]);
+
+  useEffect(() => {
+    if (!focusQuote || !emphasizeQuoteId) return;
+    const y = blockLayoutYRef.current.get(focusQuote.blockStableId);
+    if (y === undefined) return;
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(y - 24, 0),
+        animated: true,
+      });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [focusQuote, emphasizeQuoteId, pageIndex]);
+
+  useEffect(() => {
+    if (!emphasizeQuoteId || !document?.book_id) return;
+    const timer = setTimeout(() => {
+      setEmphasizeQuoteId(undefined);
+      router.replace(`/reader/${encodeURIComponent(document.book_id)}`);
+    }, 1400);
+    return () => clearTimeout(timer);
+  }, [document?.book_id, emphasizeQuoteId, router]);
+
   const hasAudio = audioState.status === "available";
   const audioChecking = audioState.status === "checking" && !!document;
   const isLastPage = pages.length > 0 && pageIndex === pages.length - 1;
@@ -377,11 +499,15 @@ export default function ReaderScreen() {
   useEffect(() => {
     if (!settingsLoaded || !document) return;
     if (preferredBookId === bookId) return;
-    const suffix = wantsListenMode ? "?mode=listen" : "";
+    const params = new URLSearchParams();
+    if (wantsListenMode) params.set("mode", "listen");
+    if (emphasizeQuoteId) params.set("focusQuoteId", emphasizeQuoteId);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
     router.replace(`/reader/${encodeURIComponent(preferredBookId)}${suffix}`);
   }, [
     bookId,
     document,
+    emphasizeQuoteId,
     preferredBookId,
     router,
     settingsLoaded,
@@ -411,15 +537,117 @@ export default function ReaderScreen() {
 
   useEffect(() => {
     if (!user || !document?.book_id || pages.length === 0) return;
+    if (skipPageTrackingRef.current) {
+      skipPageTrackingRef.current = false;
+      return;
+    }
     sessionTracker.onPageChange(pageIndex);
   }, [document?.book_id, pageIndex, pages.length, sessionTracker, user]);
 
+  const dismissSelection = useCallback(() => {
+    setSelectingBlockId(null);
+    setSelectionState(null);
+  }, []);
+
+  const handleBlockLongPress = useCallback(
+    (blockStableId: string) => {
+      if (!user) {
+        Alert.alert("Sign in required", "Sign in to save quotes from your reading.");
+        return;
+      }
+      setSelectingBlockId(blockStableId);
+      setSelectionState(null);
+    },
+    [user],
+  );
+
+  const handleSelectionChange = useCallback(
+    (blockStableId: string, start: number, end: number, selectedText: string) => {
+      if (start === end || !selectedText.trim()) {
+        setSelectionState(null);
+        return;
+      }
+      setSelectionState({
+        blockStableId,
+        start,
+        end,
+        selectedText,
+      });
+    },
+    [],
+  );
+
+  const handleBlockLayoutY = useCallback((blockStableId: string, y: number) => {
+    blockLayoutYRef.current.set(blockStableId, y);
+  }, []);
+
+  const handleSaveQuote = useCallback(async () => {
+    if (!user || !document || !currentPage || !selectionState) return;
+    if (!selectionState.selectedText.trim()) {
+      Alert.alert("Nothing selected", "Select some text before saving a quote.");
+      return;
+    }
+
+    const chapterTitle = currentPage.elements.find(
+      (element) => element.type === "chapter_name",
+    )?.content;
+
+    setSavingQuote(true);
+    try {
+      await persistQuote({
+        workId: document.work_id ?? document.book_id,
+        editionBookId: Number(document.book_id),
+        language: document.language,
+        chapterStableId:
+          (currentPage as { chapter_stable_id?: string }).chapter_stable_id ??
+          `legacy:${document.book_id}:${currentPage.page_number}`,
+        chapterTitle: chapterTitle ?? null,
+        pageNumber: currentPage.page_number,
+        blockStableId: selectionState.blockStableId,
+        startOffset: selectionState.start,
+        endOffset: selectionState.end,
+        selectedText: selectionState.selectedText,
+      });
+      dismissSelection();
+    } catch (error) {
+      Alert.alert(
+        "Could not save quote",
+        error instanceof Error ? error.message : "Check your connection and try again.",
+      );
+    } finally {
+      setSavingQuote(false);
+    }
+  }, [
+    currentPage,
+    dismissSelection,
+    document,
+    persistQuote,
+    selectionState,
+    user,
+  ]);
+
   const goNext = () => {
+    dismissSelection();
     if (pageIndex < pages.length - 1) setPageIndex((i) => i + 1);
   };
 
   const goPrev = () => {
+    dismissSelection();
     if (pageIndex > 0) setPageIndex((i) => i - 1);
+  };
+
+  const quoteChromeProps = {
+    scrollViewRef,
+    highlightsByBlockId,
+    selectingBlockId,
+    onBlockLongPress: handleBlockLongPress,
+    onSelectionChange: handleSelectionChange,
+    onBlockLayoutY: handleBlockLayoutY,
+    onSelectionDismiss: dismissSelection,
+    selectionToolbarVisible: !!selectingBlockId && !!selectionState?.selectedText,
+    onSaveQuote: handleSaveQuote,
+    savingQuote,
+    onDismissSelection: dismissSelection,
   };
 
   return (
@@ -582,6 +810,7 @@ export default function ReaderScreen() {
                 onFinishBook={handleFinishBook}
                 finishing={finishing}
                 onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
+                {...quoteChromeProps}
               />
             </ReaderBookAudioProvider>
           ) : (
@@ -600,6 +829,7 @@ export default function ReaderScreen() {
               onFinishBook={handleFinishBook}
               finishing={finishing}
               onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
+              {...quoteChromeProps}
             />
           ))}
       </View>

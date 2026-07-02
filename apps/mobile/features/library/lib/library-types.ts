@@ -5,4 +5,4 @@ export type {
   WorkLibraryProgress,
 } from "@readup/db";
 
-export type LibrarySection = "saved" | "in_progress" | "completed";
+export type LibrarySection = "saved" | "in_progress" | "completed" | "quotes";

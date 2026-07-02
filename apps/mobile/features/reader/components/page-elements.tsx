@@ -1,4 +1,6 @@
 import type { BookPageElement } from "@readup/db";
+import { HighlightableTextBlock } from "@/features/quotes/components/highlightable-text-block";
+import type { QuoteRange } from "@/features/quotes/lib/quote-types";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { useMemo } from "react";
 import { Text, View, type TextStyle } from "react-native";
@@ -29,7 +31,47 @@ function KeywordsBlock({
   );
 }
 
-export function PageElements({ elements }: { elements: BookPageElement[] }) {
+function getBlockStableId(
+  element: BookPageElement,
+  index: number,
+  bookIdFallback: string,
+  pageNumber: number,
+): string {
+  if (element.type !== "text" && element.type !== "quote") return "";
+  return (
+    element.block_stable_id ??
+    `legacy:${bookIdFallback}:${pageNumber}:${index}`
+  );
+}
+
+type PageElementsProps = {
+  elements: BookPageElement[];
+  bookId?: string;
+  pageNumber?: number;
+  highlightsByBlockId?: Map<string, QuoteRange[]>;
+  selectingBlockId?: string | null;
+  onBlockLongPress?: (blockStableId: string) => void;
+  onSelectionChange?: (
+    blockStableId: string,
+    start: number,
+    end: number,
+    selectedText: string,
+  ) => void;
+  onBlockLayoutY?: (blockStableId: string, y: number) => void;
+  onSelectionDismiss?: () => void;
+};
+
+export function PageElements({
+  elements,
+  bookId = "",
+  pageNumber = 1,
+  highlightsByBlockId,
+  selectingBlockId = null,
+  onBlockLongPress,
+  onSelectionChange,
+  onBlockLayoutY,
+  onSelectionDismiss,
+}: PageElementsProps) {
   const { settings } = useReaderSettings();
   const { fontScale, lineSpacing } = settings;
 
@@ -59,17 +101,27 @@ export function PageElements({ elements }: { elements: BookPageElement[] }) {
                 {el.content}
               </Text>
             );
-          case "text":
+          case "text": {
+            const blockStableId = getBlockStableId(el, i, bookId, pageNumber);
             return (
-              <Text
-                key={i}
-                className="mb-5 font-reader text-[#1A2420] dark:text-[#F3F4EE]"
-                style={styles.text}
-              >
-                {el.content}
-              </Text>
+              <View key={i} className="mb-5">
+                <HighlightableTextBlock
+                  blockStableId={blockStableId}
+                  text={el.content}
+                  textStyle={styles.text}
+                  textClassName="font-reader text-[#1A2420] dark:text-[#F3F4EE]"
+                  highlights={highlightsByBlockId?.get(blockStableId)}
+                  isSelecting={selectingBlockId === blockStableId}
+                  onLongPress={onBlockLongPress}
+                  onSelectionChange={onSelectionChange}
+                  onLayoutY={onBlockLayoutY}
+                  onSelectionDismiss={onSelectionDismiss}
+                />
+              </View>
             );
-          case "quote":
+          }
+          case "quote": {
+            const blockStableId = getBlockStableId(el, i, bookId, pageNumber);
             return (
               <View key={i} className="mb-6">
                 <Text
@@ -79,15 +131,22 @@ export function PageElements({ elements }: { elements: BookPageElement[] }) {
                   ❞
                 </Text>
                 <View className="rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-[18px] py-4">
-                  <Text
-                    className="font-reader font-medium text-[#1A2420] dark:text-[#F3F4EE]"
-                    style={styles.quote}
-                  >
-                    {el.content}
-                  </Text>
+                  <HighlightableTextBlock
+                    blockStableId={blockStableId}
+                    text={el.content}
+                    textStyle={styles.quote}
+                    textClassName="font-reader font-medium text-[#1A2420] dark:text-[#F3F4EE]"
+                    highlights={highlightsByBlockId?.get(blockStableId)}
+                    isSelecting={selectingBlockId === blockStableId}
+                    onLongPress={onBlockLongPress}
+                    onSelectionChange={onSelectionChange}
+                    onLayoutY={onBlockLayoutY}
+                    onSelectionDismiss={onSelectionDismiss}
+                  />
                 </View>
               </View>
             );
+          }
           case "keywords":
             return (
               <KeywordsBlock
