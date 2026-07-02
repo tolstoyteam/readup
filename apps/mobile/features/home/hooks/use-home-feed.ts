@@ -14,10 +14,12 @@ import {
   type RecommendedBook,
 } from "@/features/books/api/recommendations";
 import { useLibrary } from "@/features/library";
+import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { useAuth } from "@/shared/context/auth-context";
 
 export type HomeBook = BookCardItem & {
   genres: string[];
+  workId: string;
 };
 
 export type HomeSection = {
@@ -27,7 +29,8 @@ export type HomeSection = {
 
 export function useHomeFeed() {
   const { user } = useAuth();
-  const { continueBook: continueRecord } = useLibrary();
+  const { settings, loaded: settingsLoaded } = useReaderSettings();
+  const { continueBook: continueRecord, registerEditionMapping } = useLibrary();
   const [items, setItems] = useState<HomeBook[]>([]);
   const [genres, setGenres] = useState<GenreOption[]>([]);
   const [recommended, setRecommended] = useState<RecommendedBook[]>([]);
@@ -39,8 +42,9 @@ export function useHomeFeed() {
   const load = useCallback(async () => {
     try {
       setError(null);
+      const preferredLanguage = settingsLoaded ? settings.language : undefined;
       const [{ books }, recs, trending, catalogGenres] = await Promise.all([
-        fetchBooks(),
+        fetchBooks(preferredLanguage),
         user ? fetchRecommendedBooks(12).catch(() => []) : Promise.resolve([]),
         fetchTrendingBookIds(12).catch(() => []),
         fetchGenres().catch(() => null),
@@ -51,13 +55,25 @@ export function useHomeFeed() {
         title: r.document.title,
         author: r.document.author,
         bookId: r.document.book_id,
+        workId: r.document.work_id ?? r.document.book_id,
         cover: coverUrl(r.document.cover_image_path),
         genres: r.document.genres,
       }));
 
       setItems(mapped);
+      for (const item of mapped) {
+        registerEditionMapping(item.bookId, item.workId);
+      }
+      for (const row of books) {
+        for (const edition of row.document.available_editions ?? []) {
+          registerEditionMapping(
+            edition.book_id,
+            row.document.work_id ?? row.document.book_id,
+          );
+        }
+      }
       setRecommended(recs);
-      setTrendingIds(trending.map((row) => row.book_id));
+      setTrendingIds(trending.map((row) => row.work_id || row.book_id));
       setGenres(catalogGenres ?? genresFromBooks(mapped));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load books");
@@ -69,7 +85,7 @@ export function useHomeFeed() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [settings.language, settingsLoaded, user, registerEditionMapping]);
 
   useEffect(() => {
     load();
@@ -82,18 +98,23 @@ export function useHomeFeed() {
 
   const continueBook = useMemo(() => {
     if (!continueRecord) return null;
-    return items.find((item) => item.bookId === continueRecord.bookId) ?? null;
+    return (
+      items.find((item) => item.workId === continueRecord.workId) ??
+      items.find((item) => item.bookId === continueRecord.bookId) ??
+      null
+    );
   }, [continueRecord, items]);
 
   const sections = useMemo<HomeSection[]>(() => {
     const byBookId = new Map(items.map((item) => [item.bookId, item]));
+    const byWorkId = new Map(items.map((item) => [item.workId, item]));
 
     const recommendedSection: HomeBook[] = recommended
-      .map((rec) => byBookId.get(rec.bookId))
+      .map((rec) => byBookId.get(rec.bookId) ?? byWorkId.get(rec.bookId))
       .filter((item): item is HomeBook => !!item);
 
     const trendingSection: HomeBook[] = trendingIds
-      .map((id) => byBookId.get(id))
+      .map((id) => byBookId.get(id) ?? byWorkId.get(id))
       .filter((item): item is HomeBook => !!item);
 
     const trendingFallback =

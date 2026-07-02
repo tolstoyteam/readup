@@ -24,7 +24,7 @@ export async function fetchBookContent(
   const { data: bookRow, error: bookError } = await supabase
     .from("books")
     .select(
-      "id, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))",
+      "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))",
     )
     .eq("id", numericId)
     .maybeSingle();
@@ -32,11 +32,15 @@ export async function fetchBookContent(
   if (bookError || !bookRow) {
     return fetchBookByBookId(bookId);
   }
+  const status = (bookRow as { status?: string | null }).status;
+  if (status && status !== "published") {
+    return null;
+  }
 
   const { data: chapterRows, error: chaptersError } = await supabase
     .from("chapters")
     .select(
-      "id, title, order_index, chapter_blocks(id, type, content, order_index)",
+      "id, stable_id, title, order_index, chapter_blocks(id, stable_id, type, content, order_index)",
     )
     .eq("book_id", numericId)
     .order("order_index", { ascending: true });
@@ -53,10 +57,12 @@ export async function fetchBookContent(
   const pages: BookPage[] = chapterRows.map((row, index) => {
     const record = row as {
       id: number;
+      stable_id: string;
       title: string;
       order_index: number;
       chapter_blocks: Array<{
         id: number;
+        stable_id: string;
         type: string;
         content: { text?: string; source?: string } | null;
         order_index: number;
@@ -80,12 +86,14 @@ export async function fetchBookContent(
 
     return {
       page_number: record.order_index + 1 || index + 1,
+      chapter_stable_id: record.stable_id,
       elements,
     };
   });
 
   const record = bookRow as unknown as {
     id: number;
+    work_id: string | null;
     title: string;
     author: string | null;
     language: string | null;
@@ -109,8 +117,38 @@ export async function fetchBookContent(
     })
     .filter((name): name is string => !!name);
 
+  const finalPages: BookPage[] =
+    record.keywords && record.keywords.length > 0
+      ? [
+          ...pages,
+          {
+            page_number: pages.length + 1,
+            elements: [{ type: "keywords" as const, content: record.keywords }],
+          },
+        ]
+      : pages;
+
+  let availableEditions: BookDocument["available_editions"] = [];
+  if (record.work_id) {
+    const { data: siblingRows } = await supabase
+      .from("books")
+      .select("id, language")
+      .eq("work_id", record.work_id)
+      .eq("status", "published")
+      .order("id", { ascending: true });
+    availableEditions = (siblingRows ?? [])
+      .map((row) => ({
+        book_id: String((row as { id: number }).id),
+        language: ((row as { language?: string | null }).language ?? "").trim(),
+      }))
+      .filter((edition) => edition.language.length > 0);
+  }
+
   const document: BookDocument = {
     book_id: String(record.id),
+    work_id: record.work_id ?? String(record.id),
+    available_languages: availableEditions.map((edition) => edition.language),
+    available_editions: availableEditions,
     title: record.title,
     author: record.author ?? "",
     language: record.language ?? "",
@@ -118,8 +156,8 @@ export async function fetchBookContent(
     cover_image_path: record.cover_image_url ?? undefined,
     difficulty: record.data?.difficulty,
     reading_time_minutes: record.data?.reading_time_minutes,
-    total_pages: Math.max(pages.length, 1),
-    pages,
+    total_pages: Math.max(finalPages.length, 1),
+    pages: finalPages,
   };
 
   return { id: record.id, document };

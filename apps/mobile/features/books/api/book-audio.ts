@@ -170,8 +170,18 @@ async function publicAudioObjectExists(url: string): Promise<boolean> {
   }
 }
 
-/** Admin layout: `{numericBookId}/tts/part-000-nova.mp3` */
+/** Admin layout: `editions/{numericBookId}/tts/part-000-nova.mp3` */
 export function adminTtsObjectPath(
+  bookId: string,
+  voice: BookAudioVoice,
+  partIndex = 0,
+): string {
+  const numericId = parseNumericBookId(bookId) ?? bookId.trim();
+  const part = String(partIndex).padStart(3, "0");
+  return `editions/${numericId}/tts/part-${part}-${voice}.mp3`;
+}
+
+export function legacyAdminTtsObjectPath(
   bookId: string,
   voice: BookAudioVoice,
   partIndex = 0,
@@ -199,8 +209,9 @@ function guessedStoragePaths(
   partIndex: number,
 ): string[] {
   const admin = adminTtsObjectPath(bookId, voice, partIndex);
+  const legacyAdmin = legacyAdminTtsObjectPath(bookId, voice, partIndex);
   const legacy = legacyBookAudioObjectPath(bookId, voice, partIndex);
-  return admin === legacy ? [admin] : [admin, legacy];
+  return [...new Set([admin, legacyAdmin, legacy])];
 }
 
 /** @deprecated Use adminTtsObjectPath; kept for callers that import the old name. */

@@ -1,14 +1,9 @@
 import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
-import { supabaseCoverPublicUrl } from "@/shared/lib/supabase";
+import { supabase, supabaseCoverPublicUrl } from "@/shared/lib/supabase";
 
 import { fetchBookContent } from "./book-content";
 
-/**
- * Lightweight book-detail payload assembled from existing tables.
- * The `books` schema itself is unchanged — we surface what we need by joining
- * `book_genres` + `genres` and falling back to legacy `data` JSON for
- * difficulty/reading time where present.
- */
+/** Lightweight book-detail payload for the resolved published edition of a work. */
 export type BookDetail = {
   id: number;
   bookId: string;
@@ -21,6 +16,8 @@ export type BookDetail = {
   readingTimeMinutes: number | null;
   totalPages: number | null;
   hasQuiz: boolean;
+  workId: string;
+  availableEditions: { bookId: string; language: string }[];
 };
 
 function toNumber(value: unknown): number | null {
@@ -50,6 +47,22 @@ export async function fetchBookDetail(bookId: string): Promise<BookDetail | null
     hasQuiz = false;
   }
 
+  let availableEditions: { bookId: string; language: string }[] = [];
+  if (document.work_id) {
+    const { data } = await supabase
+      .from("books")
+      .select("id, language")
+      .eq("work_id", document.work_id)
+      .eq("status", "published")
+      .order("id", { ascending: true });
+    availableEditions = (data ?? [])
+      .map((edition) => ({
+        bookId: String((edition as { id: number }).id),
+        language: ((edition as { language?: string | null }).language ?? "").trim(),
+      }))
+      .filter((edition) => edition.language.length > 0);
+  }
+
   return {
     id,
     bookId: document.book_id,
@@ -62,5 +75,7 @@ export async function fetchBookDetail(bookId: string): Promise<BookDetail | null
     readingTimeMinutes: toNumber(document.reading_time_minutes),
     totalPages: toNumber(document.total_pages),
     hasQuiz,
+    workId: document.work_id ?? document.book_id,
+    availableEditions,
   };
 }

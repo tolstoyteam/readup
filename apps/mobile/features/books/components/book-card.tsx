@@ -6,6 +6,7 @@ import { useReadupColors } from "@/shared/constants/readup-theme";
 export type BookCardItem = {
   id: number;
   bookId: string;
+  workId?: string;
   title: string;
   author?: string;
   cover: string | null;

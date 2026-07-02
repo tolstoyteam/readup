@@ -12,6 +12,8 @@ export type RecordReadingSessionFn = (args: {
   totalPages: number;
   minutesDelta?: number;
   audioPositionMs?: number;
+  chapterStableId?: string;
+  blockStableId?: string;
 }) => Promise<unknown>;
 
 export type ReadingSessionTrackerConfig = {
@@ -19,6 +21,7 @@ export type ReadingSessionTrackerConfig = {
   bookId: string | undefined;
   pageLabel: number;
   totalPages: number;
+  chapterStableId?: string;
   recordReadingSession: RecordReadingSessionFn;
 };
 
@@ -35,19 +38,26 @@ export function useReadingSessionTracker({
   bookId,
   pageLabel,
   totalPages,
+  chapterStableId,
   recordReadingSession,
 }: ReadingSessionTrackerConfig) {
   const lastSaveAtRef = useRef(Date.now());
   const lastFlushedPageRef = useRef<number | null>(null);
   const bookCompletedRef = useRef(false);
-  const configRef = useRef({ bookId, pageLabel, totalPages, recordReadingSession });
-  configRef.current = { bookId, pageLabel, totalPages, recordReadingSession };
+  const configRef = useRef({
+    bookId,
+    pageLabel,
+    totalPages,
+    chapterStableId,
+    recordReadingSession,
+  });
+  configRef.current = { bookId, pageLabel, totalPages, chapterStableId, recordReadingSession };
 
   const flush = useCallback(
     async (options?: { completing?: boolean; audioPositionMs?: number }) => {
       if (bookCompletedRef.current && options?.completing !== true) return;
 
-      const { bookId: id, pageLabel, totalPages: pages, recordReadingSession: record } =
+      const { bookId: id, pageLabel, totalPages: pages, chapterStableId: stableId, recordReadingSession: record } =
         configRef.current;
       if (!enabled || !id || pages <= 0) return;
 
@@ -73,6 +83,7 @@ export function useReadingSessionTracker({
           totalPages: pages,
           minutesDelta,
           audioPositionMs: options?.audioPositionMs,
+          chapterStableId: stableId,
         });
       } catch (error) {
         if (isCompleting) {

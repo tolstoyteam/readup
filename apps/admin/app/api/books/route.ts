@@ -16,6 +16,8 @@ function successResponse(book: BookWithContent, extras: Record<string, unknown>,
     ok: true,
     id: book.id,
     book_id: String(book.id),
+    work_id: book.workId,
+    status: book.status,
     ...(book.coverImageUrl
       ? { cover_image_url: book.coverImageUrl, cover_image_path: book.coverImageUrl }
       : {}),
@@ -84,7 +86,7 @@ async function postMultipart(request: Request) {
 
   let bookForTts = book;
   if (cover.cover) {
-    const uploaded = await uploadCover(book.id, cover.cover);
+    const uploaded = await uploadCover(book.workId, cover.cover);
     if (!uploaded.ok) {
       return Response.json({ error: uploaded.message }, { status: uploaded.status });
     }
@@ -121,10 +123,10 @@ async function validateCoverField(field: FormDataEntryValue | null): Promise<Val
 }
 
 async function uploadCover(
-  bookId: number,
+  workId: string,
   cover: { buffer: Buffer; mime: string; extension: string },
 ): Promise<{ ok: true; path: string } | { ok: false; message: string; status: number }> {
-  const objectPath = `${bookId}/cover.${cover.extension}`;
+  const objectPath = `works/${workId}/cover.${cover.extension}`;
 
   try {
     const supabase = getSupabaseAdmin();

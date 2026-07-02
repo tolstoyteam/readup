@@ -1,5 +1,8 @@
 import type { BookDataColumn, BookDocument, BookPage } from "@readup/db";
 import { genreRuLabel, isBookGenre } from "@readup/db";
+import { pickEdition } from "@/features/books/lib/pick-edition";
+import type { ReaderLanguage } from "@/features/reader/settings/reader-settings";
+import { loadReaderSettings } from "@/features/reader/settings/reader-settings-storage";
 import { supabase, supabaseCoverPublicUrl } from "@/shared/lib/supabase";
 
 export type BookRow = {
@@ -15,6 +18,8 @@ export type FetchBooksResult = {
 
 type RelationalBookRow = {
   id: number;
+  work_id: string | null;
+  status: string | null;
   title: string;
   author: string | null;
   language: string | null;
@@ -27,7 +32,7 @@ type RelationalBookRow = {
 };
 
 const BOOK_LIST_SELECT =
-  "id, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))";
+  "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))";
 
 export function extractGenresFromJoin(
   bookGenres: RelationalBookRow["book_genres"],
@@ -50,6 +55,7 @@ export function documentFromRelationalRow(row: RelationalBookRow): BookDocument 
   const legacy = asRecord(row.data);
   return {
     book_id: String(row.id),
+    work_id: row.work_id ?? String(row.id),
     title: row.title,
     author: row.author ?? "",
     language: row.language ?? "",
@@ -63,6 +69,39 @@ export function documentFromRelationalRow(row: RelationalBookRow): BookDocument 
         : undefined,
     total_pages: 1,
     pages: [],
+  };
+}
+
+function pickEditionForWork(
+  rows: RelationalBookRow[],
+  preferredLanguage: string,
+): RelationalBookRow {
+  const published = rows.filter((row) => !row.status || row.status === "published");
+  const candidates = published.length > 0 ? published : rows;
+  const normalized = candidates.map((row) => ({
+    ...row,
+    language: row.language ?? "",
+  }));
+  return pickEdition(normalized, preferredLanguage) ?? normalized[0]!;
+}
+
+function withAvailableLanguages(document: BookDocument, rows: RelationalBookRow[]): BookDocument {
+  return {
+    ...document,
+    available_languages: [
+      ...new Set(
+        rows
+          .map((row) => row.language)
+          .filter((language): language is string => typeof language === "string" && language.length > 0),
+      ),
+    ],
+    available_editions: rows
+      .filter((row) => !row.status || row.status === "published")
+      .map((row) => ({
+        book_id: String(row.id),
+        language: row.language ?? "",
+      }))
+      .filter((edition) => edition.language.length > 0),
   };
 }
 
@@ -186,7 +225,12 @@ export function coverUrl(path: string | undefined): string | null {
   return supabaseCoverPublicUrl(path);
 }
 
-export async function fetchBooks(): Promise<FetchBooksResult> {
+export async function fetchBooks(
+  preferredLanguage?: ReaderLanguage,
+): Promise<FetchBooksResult> {
+  const settings = preferredLanguage
+    ? { language: preferredLanguage }
+    : await loadReaderSettings().catch(() => ({ language: "ru" as const }));
   const { data, error } = await supabase
     .from("books")
     .select(BOOK_LIST_SELECT)
@@ -196,16 +240,27 @@ export async function fetchBooks(): Promise<FetchBooksResult> {
 
   const rows = (data ?? []) as RelationalBookRow[];
   const books: { id: number; document: BookDocument }[] = [];
+  const byWork = new Map<string, RelationalBookRow[]>();
 
   for (const row of rows) {
+    if (row.status && row.status !== "published") continue;
+    const workId = row.work_id ?? String(row.id);
+    const group = byWork.get(workId) ?? [];
+    group.push(row);
+    byWork.set(workId, group);
+  }
+
+  for (const workRows of byWork.values()) {
+    const row = pickEditionForWork(workRows, settings.language);
     const fromLegacy = normalizeBooksFromCell(row.data);
     if (fromLegacy.length > 0) {
-      for (const document of fromLegacy) {
-        books.push({ id: row.id, document });
-      }
+      const match =
+        fromLegacy.find((document) => document.language === settings.language) ??
+        fromLegacy[0];
+      if (match) books.push({ id: row.id, document: withAvailableLanguages(match, workRows) });
       continue;
     }
-    books.push({ id: row.id, document: documentFromRelationalRow(row) });
+    books.push({ id: row.id, document: withAvailableLanguages(documentFromRelationalRow(row), workRows) });
   }
 
   if (__DEV__ && rows.length === 0) {
@@ -234,6 +289,7 @@ export async function fetchBookByBookId(
 
     if (!error && data) {
       const row = data as RelationalBookRow;
+      if (row.status && row.status !== "published") return null;
       const fromLegacy = normalizeBooksFromCell(row.data);
       if (fromLegacy.length > 0) {
         const match = fromLegacy.find((doc) => doc.book_id === bookId) ?? fromLegacy[0];

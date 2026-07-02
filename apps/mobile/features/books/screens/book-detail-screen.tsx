@@ -137,6 +137,11 @@ export default function BookDetailScreen() {
     router.push(`/quiz/${encodeURIComponent(book.bookId)}`);
   }
 
+  function switchLanguage(nextBookId: string) {
+    if (nextBookId === book?.bookId) return;
+    router.replace(`/book/${encodeURIComponent(nextBookId)}`);
+  }
+
   return (
     <SafeAreaView
       className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
@@ -250,6 +255,37 @@ export default function BookDetailScreen() {
                     </Text>
                   </View>
                 ))}
+              </View>
+            ) : null}
+
+            {book.availableEditions.length > 1 ? (
+              <View className="mt-4 flex-row flex-wrap justify-center gap-2">
+                {book.availableEditions.map((edition) => {
+                  const active = edition.bookId === book.bookId;
+                  return (
+                    <Pressable
+                      key={edition.bookId}
+                      onPress={() => switchLanguage(edition.bookId)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      className={
+                        active
+                          ? "rounded-full bg-[#059669] px-3 py-1.5"
+                          : "rounded-full border border-[#D6D2C4] dark:border-[#2D3731] px-3 py-1.5"
+                      }
+                    >
+                      <Text
+                        className={
+                          active
+                            ? "text-[12px] font-semibold uppercase text-[#FBFAF2]"
+                            : "text-[12px] font-semibold uppercase text-[#4A5550] dark:text-[#B8C1BB]"
+                        }
+                      >
+                        {edition.language}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             ) : null}
 

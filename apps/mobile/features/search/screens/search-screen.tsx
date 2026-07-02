@@ -24,6 +24,7 @@ import {
   type GenreOption,
 } from "@/features/books/lib/genre-filters";
 import { useLibrary, useLibraryActions } from "@/features/library";
+import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { GenreChipRow } from "@/features/search/components/genre-chip-row";
 import {
   fetchSearchHistory,
@@ -42,6 +43,7 @@ type SearchBook = BookCardItem & {
 export default function SearchScreen() {
   const colors = useReadupColors();
   const { user } = useAuth();
+  const { settings, loaded: settingsLoaded } = useReaderSettings();
   const router = useRouter();
   const { savedBooks } = useLibrary();
   const { toggleSave } = useLibraryActions();
@@ -62,8 +64,9 @@ export default function SearchScreen() {
     try {
       setLoading(true);
       setError(null);
+      const preferredLanguage = settingsLoaded ? settings.language : undefined;
       const [{ books: rows }, catalogGenres] = await Promise.all([
-        fetchBooks(),
+        fetchBooks(preferredLanguage),
         fetchGenres().catch(() => null),
       ]);
 
@@ -85,7 +88,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [settings.language, settingsLoaded]);
 
   useEffect(() => {
     load();

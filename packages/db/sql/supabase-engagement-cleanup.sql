@@ -3,6 +3,7 @@
 -- Safe to run repeatedly (IF EXISTS).
 
 -- Remediation RPC overloads
+drop function if exists public.record_reading_session(text, integer, integer, integer, integer);
 drop function if exists public.record_reading_session(text, integer, integer, date, integer, integer);
 drop function if exists public._maybe_unlock_achievements(uuid, date);
 drop function if exists public.effective_streak_days(integer, date, date);

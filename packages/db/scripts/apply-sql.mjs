@@ -27,6 +27,11 @@ function normalizeDatabaseUrl(raw) {
   return s;
 }
 
+const DRIZZLE_MIGRATIONS = [
+  "0006_multilingual_book_architecture.sql",
+  "0007_work_library_consolidation.sql",
+];
+
 const SQL_FILES = [
   "supabase-engagement-cleanup.sql",
   "supabase-profiles-library.sql",
@@ -43,6 +48,14 @@ const url = normalizeDatabaseUrl(rawUrl);
 const sql = postgres(url, { max: 1, connect_timeout: 30 });
 
 async function main() {
+  for (const file of DRIZZLE_MIGRATIONS) {
+    const filePath = path.resolve(packageDir, "drizzle", file);
+    const contents = readFileSync(filePath, "utf8");
+    process.stdout.write(`Applying drizzle/${file}... `);
+    await sql.unsafe(contents);
+    process.stdout.write("ok\n");
+  }
+
   for (const file of SQL_FILES) {
     const filePath = path.resolve(packageDir, "sql", file);
     const contents = readFileSync(filePath, "utf8");
@@ -57,6 +70,7 @@ async function main() {
     where routine_schema = 'public'
       and routine_name in (
         'record_reading_session',
+        'toggle_work_save',
         'complete_quiz',
         'get_recommended_books'
       )
@@ -95,8 +109,18 @@ async function main() {
 
   if (sessionRpcs.length > 1) {
     console.warn(
-      `WARN: ${sessionRpcs.length} record_reading_session overloads found; expected one 5-parameter version.`,
+      `WARN: ${sessionRpcs.length} record_reading_session overloads found; expected one 7-parameter version.`,
     );
+  }
+
+  const hasStableIdParams = sessionRpcs.some((row) =>
+    String(row.args).includes("p_chapter_stable_id"),
+  );
+  if (!hasStableIdParams && sessionRpcs.length > 0) {
+    console.error(
+      "ERROR: record_reading_session missing p_chapter_stable_id — expected work-level 7-parameter RPC.",
+    );
+    process.exit(1);
   }
 
   const remediationTriggers = await sql`

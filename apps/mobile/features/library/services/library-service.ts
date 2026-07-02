@@ -1,6 +1,7 @@
 import type { UserBookRecord } from "@readup/db";
 
 import {
+  dedupeByWorkId,
   filterByReadingStatus,
   filterSaved,
   getContinueBookRecord,
@@ -8,36 +9,20 @@ import {
 import * as libraryRepository from "@/features/library/repository/library-repository";
 
 export async function loadLibrary(userId: string): Promise<UserBookRecord[]> {
-  return libraryRepository.fetchAllLibraryRecords(userId);
+  const records = await libraryRepository.fetchAllLibraryRecords(userId);
+  return dedupeByWorkId(records);
 }
 
 export async function saveBook(userId: string, bookId: string): Promise<UserBookRecord> {
-  const existing = await libraryRepository.fetchLibraryRecord(userId, bookId);
-  return libraryRepository.upsertLibraryRecord({
-    userId,
-    bookId,
-    isSaved: true,
-    readingStatus: existing?.readingStatus ?? "not_started",
-    progress: existing?.progress ?? null,
-  });
+  const result = await libraryRepository.toggleWorkSave(bookId, true);
+  if (!result) {
+    throw new Error("Could not save book");
+  }
+  return result;
 }
 
 export async function unsaveBook(userId: string, bookId: string): Promise<UserBookRecord | null> {
-  const existing = await libraryRepository.fetchLibraryRecord(userId, bookId);
-  if (!existing) return null;
-
-  if (existing.readingStatus === "not_started") {
-    await libraryRepository.deleteLibraryRecord(userId, bookId);
-    return null;
-  }
-
-  return libraryRepository.upsertLibraryRecord({
-    userId,
-    bookId,
-    isSaved: false,
-    readingStatus: existing.readingStatus,
-    progress: existing.progress,
-  });
+  return libraryRepository.toggleWorkSave(bookId, false);
 }
 
 export async function toggleSave(
@@ -57,6 +42,8 @@ export async function recordReadingSession(args: {
   totalPages: number;
   minutesDelta?: number;
   audioPositionMs?: number;
+  chapterStableId?: string;
+  blockStableId?: string;
 }): Promise<UserBookRecord | null> {
   return libraryRepository.recordReadingSession(args);
 }

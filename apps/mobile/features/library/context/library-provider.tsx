@@ -10,6 +10,7 @@ import {
 } from "react";
 import { AppState } from "react-native";
 
+import { resolveWorkId } from "@/features/library/lib/resolve-work-id";
 import {
   getCompletedBooks,
   getContinueBook,
@@ -24,6 +25,7 @@ import { useAuth } from "@/shared/context/auth-context";
 
 type LibraryContextValue = {
   records: UserBookRecord[];
+  recordsByWorkId: Map<string, UserBookRecord>;
   recordsByBookId: Map<string, UserBookRecord>;
   loading: boolean;
   error: string | null;
@@ -39,20 +41,54 @@ type LibraryContextValue = {
     totalPages: number;
     minutesDelta?: number;
     audioPositionMs?: number;
+    chapterStableId?: string;
+    blockStableId?: string;
   }) => Promise<void>;
+  registerEditionMapping: (bookId: string, workId: string) => void;
 };
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
-function recordsToMap(records: UserBookRecord[]): Map<string, UserBookRecord> {
-  return new Map(records.map((record) => [record.bookId, record]));
+function buildWorkMap(records: UserBookRecord[]): Map<string, UserBookRecord> {
+  return new Map(records.map((record) => [record.workId, record]));
+}
+
+function buildBookMap(
+  records: UserBookRecord[],
+  editionToWork: Map<string, string>,
+): Map<string, UserBookRecord> {
+  const byWork = buildWorkMap(records);
+  const byBook = new Map<string, UserBookRecord>();
+
+  for (const record of records) {
+    byBook.set(record.bookId, record);
+  }
+
+  for (const [bookId, workId] of editionToWork) {
+    const record = byWork.get(workId);
+    if (record) {
+      byBook.set(bookId, record);
+    }
+  }
+
+  return byBook;
 }
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [records, setRecords] = useState<UserBookRecord[]>([]);
+  const [editionToWork, setEditionToWork] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const registerEditionMapping = useCallback((bookId: string, workId: string) => {
+    setEditionToWork((prev) => {
+      if (prev.get(bookId) === workId) return prev;
+      const next = new Map(prev);
+      next.set(bookId, workId);
+      return next;
+    });
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -88,24 +124,36 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [refresh, user]);
 
-  const applyRecord = useCallback((record: UserBookRecord | null, bookId: string) => {
+  const applyRecord = useCallback((record: UserBookRecord | null, workId: string) => {
     setRecords((prev) => {
-      const without = prev.filter((item) => item.bookId !== bookId);
+      const without = prev.filter((item) => item.workId !== workId);
       if (!record) return without;
       return [record, ...without];
     });
+    if (record) {
+      setEditionToWork((prev) => {
+        const next = new Map(prev);
+        next.set(record.bookId, record.workId);
+        return next;
+      });
+    }
   }, []);
 
   const toggleSave = useCallback(
     async (bookId: string) => {
       if (!user) return;
-      const current = records.find((record) => record.bookId === bookId);
+      const workId = (await resolveWorkId(bookId)) ?? bookId;
+      const current =
+        records.find((record) => record.workId === workId) ??
+        records.find((record) => record.bookId === bookId) ??
+        null;
       const wasSaved = current?.isSaved === true;
       const optimistic: UserBookRecord | null = wasSaved
         ? current?.readingStatus === "not_started"
           ? null
           : { ...current!, isSaved: false }
         : {
+            workId,
             bookId,
             isSaved: true,
             readingStatus: current?.readingStatus ?? "not_started",
@@ -113,13 +161,13 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
             updatedAt: new Date().toISOString(),
           };
 
-      applyRecord(optimistic, bookId);
+      applyRecord(optimistic, workId);
 
       try {
         const result = await toggleSaveService(user.id, bookId, wasSaved);
-        applyRecord(result, bookId);
+        applyRecord(result, workId);
       } catch {
-        applyRecord(current ?? null, bookId);
+        applyRecord(current, workId);
         throw new Error("Could not update saved state");
       }
     },
@@ -133,10 +181,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       totalPages: number;
       minutesDelta?: number;
       audioPositionMs?: number;
+      chapterStableId?: string;
+      blockStableId?: string;
     }) => {
       const result = await recordReadingSessionService(args);
       if (result) {
-        applyRecord(result, args.bookId);
+        applyRecord(result, result.workId);
         if (result.readingStatus === "completed") {
           notifyEngagementRefresh();
         }
@@ -148,9 +198,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<LibraryContextValue>(() => {
-    const recordsByBookId = recordsToMap(records);
+    const recordsByWorkId = buildWorkMap(records);
+    const recordsByBookId = buildBookMap(records, editionToWork);
     return {
       records,
+      recordsByWorkId,
       recordsByBookId,
       loading,
       error,
@@ -161,8 +213,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       refresh,
       toggleSave,
       recordReadingSession,
+      registerEditionMapping,
     };
-  }, [records, loading, error, refresh, toggleSave, recordReadingSession]);
+  }, [records, editionToWork, loading, error, refresh, toggleSave, recordReadingSession, registerEditionMapping]);
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }

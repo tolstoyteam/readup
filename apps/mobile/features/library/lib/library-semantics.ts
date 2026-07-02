@@ -1,6 +1,37 @@
-import type { LibraryProgress, ReadingStatus, UserBookRecord } from "@readup/db";
+import type { LibraryProgress, ReadingStatus, UserBookRecord, WorkLibraryProgress } from "@readup/db";
 
-export function progressPercentage(progress: LibraryProgress | null): number {
+export function dedupeByWorkId(records: UserBookRecord[]): UserBookRecord[] {
+  const byWork = new Map<string, UserBookRecord>();
+  for (const record of records) {
+    const existing = byWork.get(record.workId);
+    if (!existing) {
+      byWork.set(record.workId, record);
+      continue;
+    }
+    const merged: UserBookRecord = {
+      ...existing,
+      isSaved: existing.isSaved || record.isSaved,
+      readingStatus:
+        existing.readingStatus === "completed" || record.readingStatus === "completed"
+          ? "completed"
+          : existing.readingStatus === "in_progress" || record.readingStatus === "in_progress"
+            ? "in_progress"
+            : "not_started",
+      progress:
+        (existing.progress?.page ?? 0) >= (record.progress?.page ?? 0)
+          ? existing.progress
+          : record.progress,
+      updatedAt:
+        (existing.updatedAt ?? "") >= (record.updatedAt ?? "")
+          ? existing.updatedAt
+          : record.updatedAt,
+    };
+    byWork.set(record.workId, merged);
+  }
+  return [...byWork.values()];
+}
+
+export function progressPercentage(progress: LibraryProgress | WorkLibraryProgress | null): number {
   if (!progress || progress.total_pages <= 0) return 0;
   return Math.min(100, Math.round((progress.page / progress.total_pages) * 100));
 }

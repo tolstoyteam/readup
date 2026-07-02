@@ -12,12 +12,29 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
 export const CHAPTER_BLOCK_TYPES = ["paragraph", "quote"] as const;
 export type ChapterBlockType = (typeof CHAPTER_BLOCK_TYPES)[number];
+
+export const BOOK_EDITION_STATUSES = [
+  "draft",
+  "generating",
+  "translating",
+  "generating_tts",
+  "published",
+  "failed",
+] as const;
+export type BookEditionStatus = (typeof BOOK_EDITION_STATUSES)[number];
+
+export const GENERATION_JOB_TYPES = ["translation", "tts"] as const;
+export type GenerationJobType = (typeof GENERATION_JOB_TYPES)[number];
+
+export const GENERATION_JOB_STATUSES = ["queued", "running", "succeeded", "failed"] as const;
+export type GenerationJobStatus = (typeof GENERATION_JOB_STATUSES)[number];
 
 export type ParagraphBlockContent = { text: string };
 export type QuoteBlockContent = { text: string; source?: string };
@@ -45,6 +62,9 @@ export type LegacyBookPageElement =
 
 export type LegacyBookDocument = {
   book_id?: string;
+  work_id?: string;
+  available_languages?: string[];
+  available_editions?: { book_id: string; language: string }[];
   title: string;
   author: string;
   language: string;
@@ -81,17 +101,24 @@ export type LibraryStatus = "saved" | "in_progress" | "completed";
 export type LibraryProgress = {
   page: number;
   total_pages: number;
+  chapter_stable_id?: string;
+  block_stable_id?: string;
   audio_position_ms?: number;
   /** ISO timestamp of the last reader session that touched this row. */
   last_read_at?: string;
 };
 
-/** App-level view of a user's relationship with one book. */
+/** App-level view of a user's relationship with one logical book (work). */
 export type UserBookRecord = {
+  /** Canonical work identity. */
+  workId: string;
+  /** Edition id used for navigation (last read or preferred language). */
   bookId: string;
+  lastEditionId?: number | null;
+  preferredLanguage?: string | null;
   isSaved: boolean;
   readingStatus: ReadingStatus;
-  progress: LibraryProgress | null;
+  progress: WorkLibraryProgress | null;
   updatedAt: string | null;
 };
 
@@ -119,13 +146,36 @@ export const usersTable = pgTable("users", {
   email: varchar({ length: 255 }).notNull().unique(),
 });
 
+export const bookWorksTable = pgTable(
+  "book_works",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: text("slug"),
+    coverImageUrl: text("cover_image_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("book_works_slug_unique").on(table.slug)],
+);
+
 export const booksTable = pgTable(
   "books",
   {
     id: serial("id").primaryKey(),
+    workId: uuid("work_id")
+      .notNull()
+      .references(() => bookWorksTable.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     author: text("author").notNull(),
     language: varchar("language", { length: 32 }).notNull(),
+    status: text("status").$type<BookEditionStatus>().notNull().default("draft"),
+    sourceEditionId: integer("source_edition_id").references((): any => booksTable.id, {
+      onDelete: "set null",
+    }),
+    translationError: text("translation_error"),
+    ttsError: text("tts_error"),
+    generationMetadata: jsonb("generation_metadata").$type<Record<string, unknown> | null>(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
     /** Supabase Storage path for the cover image. Kept in the requested cover_image_url column. */
     coverImageUrl: text("cover_image_url"),
     keywords: jsonb("keywords").$type<string[]>().notNull().default([]),
@@ -133,7 +183,16 @@ export const booksTable = pgTable(
     /** Nullable only for one-time migration/backfill from the previous JSONB architecture. */
     legacyData: jsonb("data").$type<LegacyBookDocument>(),
   },
-  (table) => [index("books_title_idx").on(table.title)],
+  (table) => [
+    index("books_title_idx").on(table.title),
+    index("books_work_id_idx").on(table.workId),
+    index("books_status_idx").on(table.status),
+    uniqueIndex("books_work_language_unique").on(table.workId, table.language),
+    check(
+      "books_status_check",
+      sql`${table.status} in ('draft', 'generating', 'translating', 'generating_tts', 'published', 'failed')`,
+    ),
+  ],
 );
 
 export const genresTable = pgTable("genres", {
@@ -166,12 +225,14 @@ export const chaptersTable = pgTable(
     bookId: integer("book_id")
       .notNull()
       .references(() => booksTable.id, { onDelete: "cascade" }),
+    stableId: uuid("stable_id").notNull().defaultRandom(),
     title: text("title").notNull(),
     orderIndex: integer("order_index").notNull(),
   },
   (table) => [
     index("chapters_book_id_idx").on(table.bookId),
     index("chapters_book_order_idx").on(table.bookId, table.orderIndex),
+    index("chapters_stable_id_idx").on(table.stableId),
   ],
 );
 
@@ -182,6 +243,7 @@ export const chapterBlocksTable = pgTable(
     chapterId: integer("chapter_id")
       .notNull()
       .references(() => chaptersTable.id, { onDelete: "cascade" }),
+    stableId: uuid("stable_id").notNull().defaultRandom(),
     type: varchar("type", { length: 32 }).$type<ChapterBlockType>().notNull(),
     content: jsonb("content").$type<ChapterBlockContent>().notNull(),
     orderIndex: integer("order_index").notNull(),
@@ -189,6 +251,7 @@ export const chapterBlocksTable = pgTable(
   (table) => [
     index("chapter_blocks_chapter_id_idx").on(table.chapterId),
     index("chapter_blocks_chapter_order_idx").on(table.chapterId, table.orderIndex),
+    index("chapter_blocks_stable_id_idx").on(table.stableId),
   ],
 );
 
@@ -288,6 +351,48 @@ export const userLibraryTable = pgTable(
   ],
 );
 
+export type WorkLibraryProgress = LibraryProgress & {
+  edition_book_id?: string;
+  canonical_position?: {
+    chapter_stable_id?: string;
+    block_stable_id?: string;
+    page?: number;
+    total_pages?: number;
+  };
+};
+
+/** @deprecated Alias for work-level progress in the mobile app. */
+export type LibraryProgressCanonical = WorkLibraryProgress;
+
+export const userWorkLibraryTable = pgTable(
+  "user_work_library",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    workId: uuid("work_id")
+      .notNull()
+      .references(() => bookWorksTable.id, { onDelete: "cascade" }),
+    lastEditionId: integer("last_edition_id").references(() => booksTable.id, {
+      onDelete: "set null",
+    }),
+    preferredLanguage: varchar("preferred_language", { length: 32 }),
+    isSaved: boolean("is_saved").notNull().default(false),
+    readingStatus: text("reading_status").$type<ReadingStatus>().notNull().default("not_started"),
+    progress: jsonb("progress").$type<WorkLibraryProgress | null>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.workId] }),
+    index("user_work_library_last_edition_idx").on(table.lastEditionId),
+    check(
+      "user_work_library_reading_status_check",
+      sql`${table.readingStatus} in ('not_started', 'in_progress', 'completed')`,
+    ),
+  ],
+);
+
 export const userSearchHistoryTable = pgTable(
   "user_search_history",
   {
@@ -316,8 +421,9 @@ export const userQuizAttemptsTable = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => authUsersTable.id, { onDelete: "cascade" }),
-    /** Matches `user_library.book_id` (text form of `books.id`). */
+    /** Edition id at attempt time (text form of `books.id`). */
     bookId: text("book_id").notNull(),
+    workId: uuid("work_id").references(() => bookWorksTable.id, { onDelete: "set null" }),
     quizId: integer("quiz_id")
       .notNull()
       .references(() => quizzesTable.id, { onDelete: "cascade" }),
@@ -332,6 +438,7 @@ export const userQuizAttemptsTable = pgTable(
       table.bookId,
       table.completedAt,
     ),
+    index("user_quiz_attempts_work_id_idx").on(table.userId, table.workId),
   ],
 );
 
@@ -394,10 +501,37 @@ export const readingDailyLogTable = pgTable(
     activityDate: date("activity_date").notNull(),
     minutesRead: integer("minutes_read").notNull().default(0),
     booksTouched: integer("books_touched").notNull().default(0),
+    touchedWorkIds: jsonb("touched_work_ids").$type<string[]>().notNull().default([]),
   },
   (table) => [primaryKey({ columns: [table.userId, table.activityDate] })],
 );
 
+export const generationJobsTable = pgTable(
+  "generation_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workId: uuid("work_id")
+      .notNull()
+      .references(() => bookWorksTable.id, { onDelete: "cascade" }),
+    editionId: integer("edition_id").references(() => booksTable.id, { onDelete: "cascade" }),
+    type: text("type").$type<GenerationJobType>().notNull(),
+    status: text("status").$type<GenerationJobStatus>().notNull().default("queued"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    lastError: text("last_error"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("generation_jobs_work_id_idx").on(table.workId),
+    index("generation_jobs_edition_id_idx").on(table.editionId),
+    index("generation_jobs_status_idx").on(table.status),
+    check("generation_jobs_type_check", sql`${table.type} in ('translation', 'tts')`),
+    check("generation_jobs_status_check", sql`${table.status} in ('queued', 'running', 'succeeded', 'failed')`),
+  ],
+);
+
+export type BookWorkRecord = typeof bookWorksTable.$inferSelect;
 export type BookRecord = typeof booksTable.$inferSelect;
 export type NewBookRecord = typeof booksTable.$inferInsert;
 export type GenreRecord = typeof genresTable.$inferSelect;
@@ -407,9 +541,11 @@ export type QuizRecord = typeof quizzesTable.$inferSelect;
 export type QuizQuestionRecord = typeof quizQuestionsTable.$inferSelect;
 export type QuizAnswerRecord = typeof quizAnswersTable.$inferSelect;
 export type ProfileRecord = typeof profilesTable.$inferSelect;
+export type UserWorkLibraryRecord = typeof userWorkLibraryTable.$inferSelect;
 export type UserSearchHistoryRecord = typeof userSearchHistoryTable.$inferSelect;
 export type UserQuizAttemptRecord = typeof userQuizAttemptsTable.$inferSelect;
 export type AchievementRecord = typeof achievementsTable.$inferSelect;
 export type UserAchievementRecord = typeof userAchievementsTable.$inferSelect;
 export type UserNotificationRecord = typeof userNotificationsTable.$inferSelect;
 export type ReadingDailyLogRecord = typeof readingDailyLogTable.$inferSelect;
+export type GenerationJobRecord = typeof generationJobsTable.$inferSelect;

@@ -17,19 +17,23 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  fetchQuizAttemptForWork,
   fetchQuizForBook,
   submitQuiz,
   type Quiz,
   type QuizAttemptResult,
 } from "@/features/quiz/api/quiz";
+import { resolveWorkId } from "@/features/library/lib/resolve-work-id";
 import { notifyEngagementRefresh } from "@/features/engagement/engagement-refresh";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import { useAuth } from "@/shared/context/auth-context";
 
 export default function QuizScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams<{ bookId: string }>();
   const bookId = params.bookId ? decodeURIComponent(params.bookId) : "";
 
@@ -60,12 +64,22 @@ export default function QuizScreen() {
       setAnswers({});
       setResult(null);
       setCurrentIndex(0);
+
+      if (user) {
+        const workId = await resolveWorkId(bookId);
+        if (workId) {
+          const prior = await fetchQuizAttemptForWork(workId, user.id);
+          if (prior) {
+            setResult(prior);
+          }
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить тест");
     } finally {
       setLoading(false);
     }
-  }, [bookId]);
+  }, [bookId, user]);
 
   useEffect(() => {
     load();

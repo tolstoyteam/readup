@@ -10,6 +10,7 @@ export {
 } from "@/features/library/lib/join-library-books";
 export {
   getContinueBookRecord,
+  dedupeByWorkId,
   isCompleted,
   isInProgress,
   isSaved,
@@ -19,4 +20,5 @@ export type {
   LibraryProgress,
   ReadingStatus,
   UserBookRecord,
+  WorkLibraryProgress,
 } from "@/features/library/lib/library-types";

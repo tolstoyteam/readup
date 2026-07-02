@@ -12,4 +12,4 @@ create policy "Allow anon read books"
   on public.books
   for select
   to anon, authenticated
-  using (true);
+  using (status = 'published');

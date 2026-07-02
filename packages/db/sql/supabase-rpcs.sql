@@ -4,7 +4,7 @@
 
 -- ----------------------------------------------------------------------------
 -- record_reading_session
---   Upserts user_library progress + updates streak counters + daily log.
+--   Upserts user_work_library (canonical) + updates streak counters + daily log.
 --   Marks book completed if page >= total_pages.
 -- ----------------------------------------------------------------------------
 
@@ -13,9 +13,11 @@ create or replace function public.record_reading_session(
   p_page integer,
   p_total_pages integer,
   p_minutes_delta integer default 0,
-  p_audio_position_ms integer default null
+  p_audio_position_ms integer default null,
+  p_chapter_stable_id uuid default null,
+  p_block_stable_id uuid default null
 )
-returns public.user_library
+returns public.user_work_library
 language plpgsql
 security definer
 set search_path = public
@@ -25,11 +27,16 @@ declare
   v_reading_status text;
   v_today date := (now() at time zone 'utc')::date;
   v_progress jsonb;
-  v_row public.user_library;
+  v_canonical jsonb;
+  v_work_id uuid;
+  v_edition_id integer;
+  v_edition_language text;
+  v_row public.user_work_library;
   v_profile record;
   v_minutes integer := greatest(coalesce(p_minutes_delta, 0), 0);
   v_was_completed boolean := false;
   v_had_log_today boolean;
+  v_work_touched_today boolean := false;
   v_new_streak integer;
 begin
   if v_user_id is null then
@@ -44,25 +51,72 @@ begin
     else 'in_progress'
   end;
 
+  v_canonical := jsonb_build_object(
+    'page', greatest(p_page, 0),
+    'total_pages', greatest(p_total_pages, 0)
+  );
+  if p_chapter_stable_id is not null then
+    v_canonical := v_canonical || jsonb_build_object('chapter_stable_id', p_chapter_stable_id::text);
+  end if;
+  if p_block_stable_id is not null then
+    v_canonical := v_canonical || jsonb_build_object('block_stable_id', p_block_stable_id::text);
+  end if;
+
   v_progress := jsonb_build_object(
     'page', greatest(p_page, 0),
     'total_pages', greatest(p_total_pages, 0),
-    'last_read_at', to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    'last_read_at', to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+    'edition_book_id', p_book_id,
+    'canonical_position', v_canonical
   );
+  if p_chapter_stable_id is not null then
+    v_progress := v_progress || jsonb_build_object('chapter_stable_id', p_chapter_stable_id::text);
+  end if;
+  if p_block_stable_id is not null then
+    v_progress := v_progress || jsonb_build_object('block_stable_id', p_block_stable_id::text);
+  end if;
   if p_audio_position_ms is not null then
     v_progress := v_progress || jsonb_build_object('audio_position_ms', p_audio_position_ms);
   end if;
 
-  -- Was this book already completed before this call? Avoid double-counting.
-  select reading_status = 'completed' into v_was_completed
-  from public.user_library
-  where user_id = v_user_id and book_id = p_book_id;
+  select id, work_id, language
+    into v_edition_id, v_work_id, v_edition_language
+  from public.books
+  where id::text = p_book_id;
 
-  insert into public.user_library (user_id, book_id, is_saved, reading_status, progress, updated_at)
-  values (v_user_id, p_book_id, false, v_reading_status, v_progress, now())
-  on conflict (user_id, book_id) do update
-    set reading_status = case
-          when public.user_library.reading_status = 'completed' then 'completed'
+  if v_work_id is null then
+    raise exception 'book % not found or missing work_id', p_book_id;
+  end if;
+
+  select reading_status = 'completed' into v_was_completed
+  from public.user_work_library
+  where user_id = v_user_id and work_id = v_work_id;
+
+  insert into public.user_work_library (
+    user_id,
+    work_id,
+    last_edition_id,
+    preferred_language,
+    is_saved,
+    reading_status,
+    progress,
+    updated_at
+  )
+  values (
+    v_user_id,
+    v_work_id,
+    v_edition_id,
+    v_edition_language,
+    false,
+    v_reading_status,
+    v_progress,
+    now()
+  )
+  on conflict (user_id, work_id) do update
+    set last_edition_id = excluded.last_edition_id,
+        preferred_language = excluded.preferred_language,
+        reading_status = case
+          when public.user_work_library.reading_status = 'completed' then 'completed'
           else excluded.reading_status
         end,
         progress = excluded.progress,
@@ -75,9 +129,28 @@ begin
     where user_id = v_user_id and activity_date = v_today
   ) into v_had_log_today;
 
+  select exists(
+    select 1 from public.reading_daily_log
+    where user_id = v_user_id
+      and activity_date = v_today
+      and touched_work_ids ? v_work_id::text
+  ) into v_work_touched_today;
+
   if not v_had_log_today then
-    insert into public.reading_daily_log (user_id, activity_date, minutes_read, books_touched)
-    values (v_user_id, v_today, v_minutes, 1);
+    insert into public.reading_daily_log (
+      user_id,
+      activity_date,
+      minutes_read,
+      books_touched,
+      touched_work_ids
+    )
+    values (
+      v_user_id,
+      v_today,
+      v_minutes,
+      1,
+      jsonb_build_array(v_work_id::text)
+    );
 
     select
       current_streak_days,
@@ -115,18 +188,26 @@ begin
           updated_at = now()
       where id = v_user_id;
     end if;
-  elsif v_minutes > 0 then
-    update public.reading_daily_log
-    set minutes_read = public.reading_daily_log.minutes_read + v_minutes
-    where user_id = v_user_id and activity_date = v_today;
+  else
+    if v_minutes > 0 then
+      update public.reading_daily_log
+      set minutes_read = public.reading_daily_log.minutes_read + v_minutes
+      where user_id = v_user_id and activity_date = v_today;
 
-    update public.profiles
-    set total_reading_minutes = total_reading_minutes + v_minutes,
-        updated_at = now()
-    where id = v_user_id;
+      update public.profiles
+      set total_reading_minutes = total_reading_minutes + v_minutes,
+          updated_at = now()
+      where id = v_user_id;
+    end if;
+
+    if not v_work_touched_today then
+      update public.reading_daily_log
+      set books_touched = public.reading_daily_log.books_touched + 1,
+          touched_work_ids = public.reading_daily_log.touched_work_ids || jsonb_build_array(v_work_id::text)
+      where user_id = v_user_id and activity_date = v_today;
+    end if;
   end if;
 
-  -- Increment total_books_completed once per book.
   if v_reading_status = 'completed' and not v_was_completed then
     update public.profiles
     set total_books_completed = total_books_completed + 1,
@@ -140,7 +221,101 @@ begin
 end;
 $$;
 
-grant execute on function public.record_reading_session(text, integer, integer, integer, integer) to authenticated;
+grant execute on function public.record_reading_session(text, integer, integer, integer, integer, uuid, uuid) to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- toggle_work_save
+--   Resolves edition book_id to work_id and toggles saved state on the work row.
+-- ----------------------------------------------------------------------------
+
+create or replace function public.toggle_work_save(
+  p_book_id text,
+  p_saved boolean
+)
+returns public.user_work_library
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_work_id uuid;
+  v_edition_id integer;
+  v_edition_language text;
+  v_row public.user_work_library;
+  v_existing public.user_work_library;
+begin
+  if v_user_id is null then
+    raise exception 'not authenticated' using errcode = '28000';
+  end if;
+  if p_book_id is null or length(trim(p_book_id)) = 0 then
+    raise exception 'book id required';
+  end if;
+
+  select id, work_id, language
+    into v_edition_id, v_work_id, v_edition_language
+  from public.books
+  where id::text = p_book_id;
+
+  if v_work_id is null then
+    raise exception 'book % not found or missing work_id', p_book_id;
+  end if;
+
+  select * into v_existing
+  from public.user_work_library
+  where user_id = v_user_id and work_id = v_work_id;
+
+  if v_existing.user_id is not null then
+    if p_saved = false
+      and v_existing.reading_status = 'not_started'
+      and v_existing.is_saved = true then
+      delete from public.user_work_library
+      where user_id = v_user_id and work_id = v_work_id;
+      return null;
+    end if;
+
+    update public.user_work_library
+    set is_saved = p_saved,
+        last_edition_id = coalesce(last_edition_id, v_edition_id),
+        preferred_language = coalesce(preferred_language, v_edition_language),
+        updated_at = now()
+    where user_id = v_user_id and work_id = v_work_id
+    returning * into v_row;
+
+    return v_row;
+  end if;
+
+  if p_saved = false then
+    return null;
+  end if;
+
+  insert into public.user_work_library (
+    user_id,
+    work_id,
+    last_edition_id,
+    preferred_language,
+    is_saved,
+    reading_status,
+    progress,
+    updated_at
+  )
+  values (
+    v_user_id,
+    v_work_id,
+    v_edition_id,
+    v_edition_language,
+    true,
+    'not_started',
+    null,
+    now()
+  )
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+grant execute on function public.toggle_work_save(text, boolean) to authenticated;
 
 -- ----------------------------------------------------------------------------
 -- complete_quiz
@@ -168,6 +343,7 @@ declare
   v_question_id integer;
   v_answer_id integer;
   v_is_correct boolean;
+  v_work_id uuid;
 begin
   if v_user_id is null then
     raise exception 'not authenticated' using errcode = '28000';
@@ -175,6 +351,10 @@ begin
   if p_answers is null or jsonb_typeof(p_answers) <> 'array' then
     raise exception 'answers must be a JSON array';
   end if;
+
+  select work_id into v_work_id
+  from public.books
+  where id::text = p_book_id;
 
   select count(*) into v_total
   from public.quiz_questions
@@ -208,8 +388,16 @@ begin
     );
   end loop;
 
-  insert into public.user_quiz_attempts (user_id, book_id, quiz_id, score, total_questions, answers)
-  values (v_user_id, p_book_id, p_quiz_id, v_score, v_total, v_scored)
+  insert into public.user_quiz_attempts (
+    user_id,
+    book_id,
+    work_id,
+    quiz_id,
+    score,
+    total_questions,
+    answers
+  )
+  values (v_user_id, p_book_id, v_work_id, p_quiz_id, v_score, v_total, v_scored)
   returning * into v_attempt;
 
   perform public._maybe_unlock_achievements(v_user_id);
@@ -249,11 +437,12 @@ as $$
   scored as (
     select
       b.id,
+      b.work_id,
       b.id::text as book_id,
       b.title,
       b.author,
       b.language,
-      b.cover_image_url,
+      coalesce(w.cover_image_url, b.cover_image_url) as cover_image_url,
       coalesce(
         array_agg(distinct g.name_ru order by g.name_ru) filter (where g.name_ru is not null),
         array[]::text[]
@@ -284,12 +473,23 @@ as $$
         ), 0)
       ) as match_score
     from public.books b
+    join public.book_works w on w.id = b.work_id
     left join public.book_genres bg on bg.book_id = b.id
     left join public.genres g on g.id = bg.genre_id
-    group by b.id
+    where b.status = 'published'
+    group by b.id, w.cover_image_url
+  ),
+  ranked as (
+    select *,
+      row_number() over (
+        partition by work_id
+        order by match_score desc, case language when 'ru' then 0 when 'en' then 1 else 2 end, id asc
+      ) as rn
+    from scored
   )
   select id, book_id, title, author, language, cover_image_url, genres, match_score
-  from scored
+  from ranked
+  where rn = 1
   order by match_score desc, id asc
   limit greatest(coalesce(p_limit, 12), 1);
 $$;
@@ -322,8 +522,8 @@ begin
   end if;
 
   select count(*)::integer into v_completed_books
-  from public.user_library
-  where user_id = p_user_id and reading_status = 'completed';
+  from public.user_work_library uwl
+  where uwl.user_id = p_user_id and uwl.reading_status = 'completed';
 
   if v_profile.total_books_completed is distinct from v_completed_books then
     update public.profiles
@@ -334,16 +534,20 @@ begin
   end if;
 
   select exists(
-    select 1 from public.user_quiz_attempts
-    where user_id = p_user_id and total_questions > 0 and score = total_questions
+    select 1 from public.user_quiz_attempts uqa
+    where uqa.user_id = p_user_id
+      and uqa.total_questions > 0
+      and uqa.score = uqa.total_questions
+      and (
+        uqa.work_id is not null
+        or uqa.book_id is not null
+      )
   ) into v_perfect_quiz;
 
   select coalesce(max(minutes_read), 0)::integer into v_best_day_minutes
   from public.reading_daily_log
   where user_id = p_user_id;
 
-  -- Data-driven unlock: each achievement's metric + threshold lives in the catalog.
-  -- Adding a new achievement only needs a new seed row, no code change here.
   for v_rec in
     select id, metric, threshold
     from public.achievements

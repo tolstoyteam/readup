@@ -73,10 +73,10 @@ function toEditorValues(book?: BookWithContent): BookEditorValues {
     keywords: book.keywords,
     cover_image_url: book.coverImageUrl,
     chapters: book.chapters.map((chapter) => ({
-      id: String(chapter.id),
+      id: chapter.stableId,
       title: chapter.title,
       blocks: chapter.blocks.map((block) => ({
-        id: String(block.id),
+        id: block.stableId,
         type: block.type,
         content:
           block.type === "quote"
@@ -224,6 +224,11 @@ export function BookUploadForm({
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingTranslation, setIsGeneratingTranslation] = useState(false);
+  const [isRetryingTts, setIsRetryingTts] = useState(false);
+  const [translationLanguage, setTranslationLanguage] = useState(
+    () => LANGUAGE_OPTIONS.find((option) => option.value !== editContext?.initial.language)?.value ?? "en",
+  );
   const [quizEnabled, setQuizEnabled] = useState(() =>
     Boolean(initialDraft?.quiz ?? editContext?.initial.quiz),
   );
@@ -335,6 +340,55 @@ export function BookUploadForm({
     }
   };
 
+  const generateTranslation = async () => {
+    if (!editContext || isGeneratingTranslation) return;
+    setStatus(null);
+    setError(null);
+    setIsGeneratingTranslation(true);
+    try {
+      const response = await fetch(`/api/books/${editContext.recordId}/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_language: translationLanguage, generate_tts: true }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Translation failed");
+      }
+      setStatus(`Translation saved for ${translationLanguage}.`);
+      router.refresh();
+      if (typeof data.id === "number") {
+        router.push(`/books/${data.id}/edit`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Translation failed");
+    } finally {
+      setIsGeneratingTranslation(false);
+    }
+  };
+
+  const retryTts = async () => {
+    if (!editContext || isRetryingTts) return;
+    setStatus(null);
+    setError(null);
+    setIsRetryingTts(true);
+    try {
+      const response = await fetch(`/api/books/${editContext.recordId}/tts/retry`, {
+        method: "POST",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.ok === false) {
+        throw new Error(typeof data?.error === "string" ? data.error : data?.tts_warning ?? "TTS retry failed");
+      }
+      setStatus("TTS regenerated for this edition.");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "TTS retry failed");
+    } finally {
+      setIsRetryingTts(false);
+    }
+  };
+
   return (
     <main className="min-h-full bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
       <form
@@ -351,9 +405,14 @@ export function BookUploadForm({
                 Block-based book composer
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-                Chapters and paragraph/quote blocks save as normalized relational rows. The JSON
-                panel is only a request preview.
+                Chapters and paragraph/quote blocks save as normalized relational rows with stable
+                IDs for multilingual alignment. The JSON panel is only a request preview.
               </p>
+              {editContext ? (
+                <p className="mt-2 text-xs text-text-tertiary">
+                  Work {editContext.initial.workId} · {editContext.initial.status}
+                </p>
+              ) : null}
             </div>
             {onRequestGenerate ? (
               <button
@@ -450,6 +509,56 @@ export function BookUploadForm({
               </button>
             ) : null}
           </section>
+
+          {editContext ? (
+            <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
+              <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
+                Work languages
+              </h2>
+              <p className="mt-1 text-sm text-text-secondary">
+                Generate or retry only this edition without regenerating the whole work.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <select
+                  value={translationLanguage}
+                  onChange={(event) =>
+                    setTranslationLanguage(event.target.value as typeof translationLanguage)
+                  }
+                  className="rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
+                >
+                  {LANGUAGE_OPTIONS.filter((option) => option.value !== editContext.initial.language).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={generateTranslation}
+                  disabled={isGeneratingTranslation}
+                  className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {isGeneratingTranslation ? "Translating..." : "Generate translation"}
+                </button>
+                <button
+                  type="button"
+                  onClick={retryTts}
+                  disabled={isRetryingTts}
+                  className="rounded-button border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {isRetryingTts ? "Regenerating TTS..." : "Retry TTS only"}
+                </button>
+              </div>
+              {editContext.initial.translationError ? (
+                <p className="mt-3 text-xs text-danger">
+                  Translation error: {editContext.initial.translationError}
+                </p>
+              ) : null}
+              {editContext.initial.ttsError ? (
+                <p className="mt-1 text-xs text-danger">TTS error: {editContext.initial.ttsError}</p>
+              ) : null}
+            </section>
+          ) : null}
 
           <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
             <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">

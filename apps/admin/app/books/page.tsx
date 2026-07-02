@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AdminNav } from "@/components/AdminNav";
 import { genreDisplayName, type BookGenre } from "@/lib/book-genres";
 import { languageLabel } from "@/lib/book-language";
-import { listBooks, type BookListItem } from "@/lib/book-relational";
+import { listBookWorks, type BookWorkListItem } from "@/lib/book-relational";
 import { getCoverImageSignedUrl } from "@/lib/cover-signed-url";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function BooksPage() {
-  const rows: BookListItem[] = await listBooks();
+  const rows: BookWorkListItem[] = await listBookWorks();
 
   const coverUrls = await Promise.all(
     rows.map((row) =>
@@ -47,7 +47,7 @@ export default async function BooksPage() {
                 <p className="mt-1 max-w-md text-sm text-text-secondary">
                   {rows.length === 0
                     ? "Nothing here yet — add a book from the composer."
-                    : `${rows.length} book${rows.length === 1 ? "" : "s"} · same-size cards, click to edit.`}
+                    : `${rows.length} work${rows.length === 1 ? "" : "s"} · one card per logical book.`}
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
@@ -83,16 +83,12 @@ export default async function BooksPage() {
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {rows.map((row, i) => {
                 const coverUrl = coverUrls[i];
-                const genrePreview = row.genres.slice(0, 2);
-                const genreExtra = row.genres.length - genrePreview.length;
+                const genres = row.editions[0]?.genres ?? [];
+                const genrePreview = genres.slice(0, 2);
+                const genreExtra = genres.length - genrePreview.length;
                 return (
                   <li key={row.id} className="min-h-0">
-                    <Link
-                      href={"/books/" + row.id + "/edit"}
-                      title={row.title}
-                      className="group block h-22 shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      <article className="flex h-full overflow-hidden rounded-card border border-elevated bg-surface shadow-sm transition-[box-shadow,transform] duration-200 group-hover:border-brand group-hover:shadow-md">
+                    <article className="flex h-full min-h-32 overflow-hidden rounded-card border border-elevated bg-surface shadow-sm">
                         <div className="relative h-full w-17 shrink-0 bg-elevated">
                           {coverUrl ? (
                             <img
@@ -114,10 +110,21 @@ export default async function BooksPage() {
                             {row.author}
                           </p>
                           <p className="truncate text-[11px] text-text-tertiary">
-                            {languageLabel(row.language)} · {row.chapterCount}{" "}
-                            {row.chapterCount === 1 ? "chapter" : "chapters"}
+                            {row.editions.length}{" "}
+                            {row.editions.length === 1 ? "edition" : "editions"} · shared cover
                           </p>
-                          {row.genres.length > 0 ? (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {row.editions.map((edition) => (
+                              <Link
+                                key={edition.id}
+                                href={"/books/" + edition.id + "/edit"}
+                                className="rounded-chip border border-brand/30 bg-brand/10 px-2 py-px text-[10px] font-medium text-brand hover:bg-brand/15"
+                              >
+                                {languageLabel(edition.language)} · {edition.status}
+                              </Link>
+                            ))}
+                          </div>
+                          {row.editions[0]?.genres.length ? (
                             <div className="mt-0.5 flex min-h-4.5 flex-wrap items-center gap-1">
                               {genrePreview.map((g) => (
                                 <span
@@ -138,7 +145,6 @@ export default async function BooksPage() {
                           )}
                         </div>
                       </article>
-                    </Link>
                   </li>
                 );
               })}

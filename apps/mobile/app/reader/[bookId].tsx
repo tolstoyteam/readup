@@ -4,6 +4,7 @@ import {
   type ResolvedBookAudioSource,
 } from "@/features/books/api/book-audio";
 import { fetchBookContent } from "@/features/books/api/book-content";
+import { pickEditionBookId } from "@/features/books/lib/pick-edition";
 import {
   isCompleted,
   useLibraryActions,
@@ -19,7 +20,7 @@ import { ReaderListenLoading } from "@/features/reader/components/reader-listen-
 import { ReaderSettingsSheet } from "@/features/reader/components/reader-settings-sheet";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
-import { pageIndexFromSavedPage } from "@/features/reader/lib/page-index";
+import { resolvePageIndex } from "@/features/reader/lib/resolve-reading-position";
 import { useAuth } from "@/shared/context/auth-context";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
@@ -204,6 +205,7 @@ export default function ReaderScreen() {
     mode?: string;
   }>();
   const bookId = bookIdParam ? decodeURIComponent(bookIdParam) : "";
+  const { settings, loaded: settingsLoaded } = useReaderSettings();
   const { record: libraryRecord, loading: libraryLoading } =
     useLibraryBook(bookId);
   const { recordReadingSession } = useLibraryActions();
@@ -320,30 +322,35 @@ export default function ReaderScreen() {
   const currentPage = pages[pageIndex] ?? null;
   const totalPages = pages.length;
   const pageLabel = currentPage?.page_number ?? pageIndex + 1;
+  const chapterStableId =
+    currentPage && "chapter_stable_id" in currentPage
+      ? (currentPage as { chapter_stable_id?: string }).chapter_stable_id
+      : undefined;
   const sessionTracker = useReadingSessionTracker({
     enabled: !!user && !!document?.book_id && totalPages > 0,
     bookId: document?.book_id,
     pageLabel,
     totalPages,
+    chapterStableId,
     recordReadingSession,
   });
 
   useEffect(() => {
     if (!bookId || !document || libraryLoading) return;
-    if (resumeAppliedRef.current === bookId) return;
+    const workKey = document.work_id ?? bookId;
+    if (resumeAppliedRef.current === workKey) return;
 
     if (pages.length === 0) return;
 
-    resumeAppliedRef.current = bookId;
-    const savedPage = libraryRecord?.progress?.page ?? 0;
-    const targetPage = pageIndexFromSavedPage(savedPage, pages);
+    resumeAppliedRef.current = workKey;
+    const targetPage = resolvePageIndex(libraryRecord?.progress ?? null, pages);
     setPageIndex(targetPage);
     sessionTracker.resetPageTracking(targetPage);
   }, [
     bookId,
     document,
     libraryLoading,
-    libraryRecord?.progress?.page,
+    libraryRecord?.progress,
     pages,
     sessionTracker,
   ]);
@@ -353,6 +360,33 @@ export default function ReaderScreen() {
   const isLastPage = pages.length > 0 && pageIndex === pages.length - 1;
   const showLastPageActions = isLastPage && !!user;
   const showFinishButton = showLastPageActions && !isCompleted(libraryRecord);
+
+  const preferredBookId = useMemo(() => {
+    if (!document) return bookId;
+    return pickEditionBookId(
+      document.available_editions,
+      settings.language,
+      document.book_id,
+    );
+  }, [bookId, document, settings.language]);
+
+  const needsEditionRedirect =
+    settingsLoaded && !!document && preferredBookId !== bookId;
+  const awaitingEditionResolution = !settingsLoaded || needsEditionRedirect;
+
+  useEffect(() => {
+    if (!settingsLoaded || !document) return;
+    if (preferredBookId === bookId) return;
+    const suffix = wantsListenMode ? "?mode=listen" : "";
+    router.replace(`/reader/${encodeURIComponent(preferredBookId)}${suffix}`);
+  }, [
+    bookId,
+    document,
+    preferredBookId,
+    router,
+    settingsLoaded,
+    wantsListenMode,
+  ]);
 
   const handleOpenQuiz = useCallback(() => {
     if (!document?.book_id) return;
@@ -494,12 +528,12 @@ export default function ReaderScreen() {
       />
 
       <View className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]">
-        {loading && (
+        {(loading || awaitingEditionResolution) && (
           <View className="flex-1 items-center justify-center p-6">
             <ActivityIndicator size="large" color="#059669" />
           </View>
         )}
-        {!loading && error && (
+        {!loading && !awaitingEditionResolution && error && (
           <View className="flex-1 items-center justify-center p-6">
             <Text className="mb-4 text-center text-base text-[#4A5550] dark:text-[#B8C1BB]">
               {error}
@@ -512,10 +546,15 @@ export default function ReaderScreen() {
             </Pressable>
           </View>
         )}
-        {!loading && !error && document && audioChecking && (
+        {!loading &&
+          !awaitingEditionResolution &&
+          !error &&
+          document &&
+          audioChecking && (
           <ReaderListenLoading message="Проверяем наличие аудио…" />
         )}
         {!loading &&
+          !awaitingEditionResolution &&
           !error &&
           document &&
           !audioChecking &&

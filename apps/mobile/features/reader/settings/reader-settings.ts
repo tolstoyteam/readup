@@ -7,7 +7,7 @@ export type ReaderSettings = {
   lineSpacing: number;
   /** Horizontal page padding in px. */
   margin: number;
-  /** Selected reading language (content unaffected for now). */
+  /** Preferred edition language when a work has multiple published editions. */
   language: ReaderLanguage;
 };
 

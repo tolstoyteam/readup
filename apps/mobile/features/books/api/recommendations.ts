@@ -38,6 +38,7 @@ export async function fetchRecommendedBooks(limit = 12): Promise<RecommendedBook
 }
 
 export type TrendingBookRow = {
+  work_id: string;
   book_id: string;
   reader_count: number;
   completion_count: number;
@@ -46,7 +47,7 @@ export type TrendingBookRow = {
 export async function fetchTrendingBookIds(limit = 10): Promise<TrendingBookRow[]> {
   const { data, error } = await supabase
     .from("book_trending")
-    .select("book_id, reader_count, completion_count")
+    .select("work_id, book_id, reader_count, completion_count")
     .order("reader_count", { ascending: false })
     .limit(limit);
   if (error) {

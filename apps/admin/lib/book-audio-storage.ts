@@ -24,38 +24,40 @@ export async function getBookAudioSignedUrl(
 export function bookTtsObjectPath(bookId: string, chunkIndex: number, voice: string): string {
   const safeVoice = voice.replace(/[^a-z0-9_-]/gi, "").slice(0, 32) || "voice";
   const part = String(chunkIndex).padStart(3, "0");
-  return `${bookId}/tts/part-${part}-${safeVoice}.mp3`;
+  return `editions/${bookId}/tts/part-${part}-${safeVoice}.mp3`;
 }
 
 export type UploadBookTtsResult = { ok: true; path: string } | { ok: false; message: string };
 
-/** Removes every object under `{bookId}/tts/` in the audio bucket (best-effort). */
+/** Removes every object under the current and legacy TTS prefixes (best-effort). */
 export async function deleteAllBookTtsFromStorage(bookId: string): Promise<void> {
   const bucket = getBookAudioBucket();
   if (!bucket) return;
 
-  const prefix = `${bookId}/tts`;
+  const prefixes = [`editions/${bookId}/tts`, `${bookId}/tts`];
   try {
     const supabase = getSupabaseAdmin();
     const pageSize = 200;
-    for (;;) {
-      const { data: files, error } = await supabase.storage.from(bucket).list(prefix, {
-        limit: pageSize,
-        offset: 0,
-      });
-      if (error) {
-        console.error("TTS storage list for delete:", error);
-        return;
+    for (const prefix of prefixes) {
+      for (;;) {
+        const { data: files, error } = await supabase.storage.from(bucket).list(prefix, {
+          limit: pageSize,
+          offset: 0,
+        });
+        if (error) {
+          console.error("TTS storage list for delete:", error);
+          break;
+        }
+        if (!files?.length) break;
+        const paths = files.filter((f) => f.name).map((f) => `${prefix}/${f.name}`);
+        if (paths.length === 0) break;
+        const { error: rmError } = await supabase.storage.from(bucket).remove(paths);
+        if (rmError) {
+          console.error("TTS storage remove:", rmError);
+          break;
+        }
+        if (files.length < pageSize) break;
       }
-      if (!files?.length) break;
-      const paths = files.filter((f) => f.name).map((f) => `${prefix}/${f.name}`);
-      if (paths.length === 0) break;
-      const { error: rmError } = await supabase.storage.from(bucket).remove(paths);
-      if (rmError) {
-        console.error("TTS storage remove:", rmError);
-        return;
-      }
-      if (files.length < pageSize) break;
     }
   } catch (e) {
     console.error("deleteAllBookTtsFromStorage:", e);

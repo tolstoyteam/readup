@@ -22,6 +22,7 @@ import {
   type LibrarySection,
   useLibrary,
 } from "@/features/library";
+import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 
@@ -50,6 +51,7 @@ const SECTION_OPTIONS: {
 export default function LibraryScreen() {
   const colors = useReadupColors();
   const router = useRouter();
+  const { settings, loaded: settingsLoaded } = useReaderSettings();
   const listRef = useRef<FlatListType<LibraryBookCard>>(null);
   const skipInitialScrollReset = useRef(true);
   const [activeSection, setActiveSection] = useState<LibrarySection>("saved");
@@ -63,20 +65,25 @@ export default function LibraryScreen() {
     loading,
     error,
     refresh,
+    registerEditionMapping,
   } = useLibrary();
 
   const loadCatalog = useCallback(async () => {
     try {
       setCatalogLoading(true);
-      const { books } = await fetchBooks();
+      const preferredLanguage = settingsLoaded ? settings.language : undefined;
+      const { books } = await fetchBooks(preferredLanguage);
       const catalog = buildBookCatalogMap(books);
-      setCatalogBooks(joinLibraryBooks(records, catalog));
+      for (const ref of catalog.editionRefs) {
+        registerEditionMapping(ref.bookId, ref.workId);
+      }
+      setCatalogBooks(joinLibraryBooks(records, catalog, preferredLanguage));
     } catch {
       setCatalogBooks([]);
     } finally {
       setCatalogLoading(false);
     }
-  }, [records]);
+  }, [records, settings.language, settingsLoaded, registerEditionMapping]);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,8 +115,8 @@ export default function LibraryScreen() {
   }, [activeSection, savedBooks, inProgressBooks, completedBooks]);
 
   const visibleBooks = useMemo(() => {
-    const bookIds = new Set(sectionRecords.map((record) => record.bookId));
-    return catalogBooks.filter((book) => bookIds.has(book.bookId));
+    const workIds = new Set(sectionRecords.map((record) => record.workId));
+    return catalogBooks.filter((book) => workIds.has(book.workId));
   }, [catalogBooks, sectionRecords]);
 
   const activeEmpty =
@@ -131,7 +138,7 @@ export default function LibraryScreen() {
         ref={listRef}
         data={visibleBooks}
         extraData={activeSection}
-        keyExtractor={(item) => `${activeSection}-${item.id}-${item.bookId}`}
+        keyExtractor={(item) => `${activeSection}-${item.workId}-${item.bookId}`}
         numColumns={2}
         columnWrapperClassName="gap-5 px-8"
         contentContainerClassName="gap-6 pb-8"

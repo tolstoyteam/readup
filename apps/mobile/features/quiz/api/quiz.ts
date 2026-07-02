@@ -94,6 +94,40 @@ export async function bookHasPlayableQuiz(bookId: string): Promise<boolean> {
   return quiz != null;
 }
 
+export async function fetchQuizAttemptForWork(
+  workId: string,
+  userId: string,
+): Promise<QuizAttemptResult | null> {
+  const { data, error } = await supabase
+    .from("user_quiz_attempts")
+    .select("id, book_id, quiz_id, score, total_questions, answers")
+    .eq("user_id", userId)
+    .eq("work_id", workId)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const record = data as {
+    id: string;
+    book_id: string;
+    quiz_id: number;
+    score: number;
+    total_questions: number;
+    answers: QuizAttemptResult["answers"];
+  };
+
+  return {
+    id: record.id,
+    bookId: record.book_id,
+    quizId: record.quiz_id,
+    score: record.score,
+    totalQuestions: record.total_questions,
+    answers: Array.isArray(record.answers) ? record.answers : [],
+  };
+}
+
 /** @deprecated Use bookHasPlayableQuiz — kept for compatibility. */
 export async function bookHasQuiz(bookId: string): Promise<boolean> {
   return bookHasPlayableQuiz(bookId);

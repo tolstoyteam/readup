@@ -56,6 +56,7 @@ import {
   joinLibraryBooks,
   useLibrary,
 } from "@/features/library";
+import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 
 function readFullNameFromUser(user: {
   user_metadata?: Record<string, unknown>;
@@ -80,6 +81,7 @@ function hasEmailIdentity(
 export default function ProfileScreen() {
   const colors = useReadupColors();
   const { user, updateFullName } = useAuth();
+  const { settings, loaded: settingsLoaded } = useReaderSettings();
   const { savedBooks, loading: libraryLoading } = useLibrary();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -131,16 +133,17 @@ export default function ProfileScreen() {
   const loadSavedPreview = useCallback(async () => {
     if (!user) return;
     try {
-      const { books } = await fetchBooks();
+      const preferredLanguage = settingsLoaded ? settings.language : undefined;
+      const { books } = await fetchBooks(preferredLanguage);
       const catalog = buildBookCatalogMap(books);
-      const items = joinLibraryBooks(savedBooks, catalog)
+      const items = joinLibraryBooks(savedBooks, catalog, preferredLanguage)
         .slice(0, 8)
         .map(({ id, bookId, title, cover }) => ({ id, bookId, title, cover }));
       setLibraryItems(items);
     } catch {
       setLibraryItems([]);
     }
-  }, [savedBooks, user]);
+  }, [savedBooks, settings.language, settingsLoaded, user]);
 
   useEffect(() => {
     void loadSavedPreview();
