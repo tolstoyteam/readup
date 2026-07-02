@@ -18,6 +18,11 @@ import {
   type BookCardItem,
 } from "@/features/books/components/book-card";
 import {
+  bookGridColumnWrapperStyle,
+  bookGridContentContainerStyle,
+  useBookGridLayout,
+} from "@/features/books/hooks/use-book-grid-layout";
+import {
   bookMatchesGenres,
   genresBySlugs,
   genresFromBooks,
@@ -42,6 +47,7 @@ type SearchBook = BookCardItem & {
 
 export default function SearchScreen() {
   const colors = useReadupColors();
+  const { cardWidth } = useBookGridLayout();
   const { user } = useAuth();
   const { settings, loaded: settingsLoaded } = useReaderSettings();
   const router = useRouter();
@@ -193,10 +199,11 @@ export default function SearchScreen() {
     >
       <FlatList
         data={filtered}
+        extraData={cardWidth}
         keyExtractor={(item) => `${item.id}-${item.bookId}`}
         numColumns={2}
-        columnWrapperClassName="gap-5 px-8"
-        contentContainerClassName="gap-6 pb-8"
+        columnWrapperStyle={bookGridColumnWrapperStyle}
+        contentContainerStyle={bookGridContentContainerStyle}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View className="gap-5 pt-8">
@@ -292,8 +299,13 @@ export default function SearchScreen() {
         renderItem={({ item }) => {
           const isSaved = savedIds.has(item.bookId);
           return (
-            <View className="w-[136px] gap-2">
-              <BookCard item={item} onPress={openBook} />
+            <View style={{ width: cardWidth }} className="gap-2">
+              <BookCard
+                item={item}
+                onPress={openBook}
+                width={cardWidth}
+                layout="grid"
+              />
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSaved }}

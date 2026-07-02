@@ -17,6 +17,11 @@ import {
   type BookCardItem,
 } from "@/features/books/components/book-card";
 import {
+  bookGridColumnWrapperStyle,
+  bookGridContentContainerStyle,
+  useBookGridLayout,
+} from "@/features/books/hooks/use-book-grid-layout";
+import {
   buildBookCatalogMap,
   joinLibraryBooks,
   type LibraryBookCard,
@@ -58,6 +63,7 @@ const SECTION_OPTIONS: {
 
 export default function LibraryScreen() {
   const colors = useReadupColors();
+  const { cardWidth } = useBookGridLayout();
   const router = useRouter();
   const { settings, loaded: settingsLoaded } = useReaderSettings();
   const listRef = useRef<FlatListType<LibraryBookCard>>(null);
@@ -252,11 +258,11 @@ export default function LibraryScreen() {
           key="library-books-list"
           ref={listRef}
           data={visibleBooks}
-          extraData={activeSection}
+          extraData={{ activeSection, cardWidth }}
           keyExtractor={(item) => `${activeSection}-${item.workId}-${item.bookId}`}
           numColumns={2}
-          columnWrapperClassName="gap-5 px-8"
-          contentContainerClassName="gap-6 pb-8"
+          columnWrapperStyle={bookGridColumnWrapperStyle}
+          contentContainerStyle={bookGridContentContainerStyle}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={header}
           ListEmptyComponent={
@@ -275,9 +281,12 @@ export default function LibraryScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <View className="w-[136px]">
-              <BookCard item={item} onPress={openBook} />
-            </View>
+            <BookCard
+              item={item}
+              onPress={openBook}
+              width={cardWidth}
+              layout="grid"
+            />
           )}
         />
       )}

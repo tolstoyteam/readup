@@ -1,6 +1,12 @@
 import { Image } from "expo-image";
 import { Pressable, Text, View } from "react-native";
 
+import {
+  BOOK_TITLE_LINE_HEIGHT,
+  BOOK_TITLE_MARGIN_TOP,
+  BOOK_TITLE_MAX_LINES,
+  getBookCardCoverHeight,
+} from "@/features/books/lib/book-grid-layout";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 
 export type BookCardItem = {
@@ -16,11 +22,19 @@ type BookCardProps = {
   item: BookCardItem;
   onPress: (item: BookCardItem) => void;
   width?: number;
+  layout?: "default" | "grid";
 };
 
-export function BookCard({ item, onPress, width = 136 }: BookCardProps) {
+export function BookCard({
+  item,
+  onPress,
+  width = 136,
+  layout = "default",
+}: BookCardProps) {
   const colors = useReadupColors();
-  const coverHeight = Math.round(width * 1.44);
+  const coverHeight = getBookCardCoverHeight(width);
+  const titleClassName =
+    "text-[14px] font-medium leading-[18px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]";
 
   return (
     <Pressable
@@ -50,12 +64,22 @@ export function BookCard({ item, onPress, width = 136 }: BookCardProps) {
           </View>
         )}
       </View>
-      <Text
-        className="mt-2 text-[14px] font-medium leading-[18px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
-        numberOfLines={2}
-      >
-        {item.title}
-      </Text>
+      {layout === "grid" ? (
+        <View
+          style={{
+            marginTop: BOOK_TITLE_MARGIN_TOP,
+            height: BOOK_TITLE_LINE_HEIGHT * BOOK_TITLE_MAX_LINES,
+          }}
+        >
+          <Text className={titleClassName} numberOfLines={BOOK_TITLE_MAX_LINES}>
+            {item.title}
+          </Text>
+        </View>
+      ) : (
+        <Text className={`mt-2 ${titleClassName}`} numberOfLines={2}>
+          {item.title}
+        </Text>
+      )}
     </Pressable>
   );
 }
