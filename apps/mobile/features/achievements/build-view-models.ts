@@ -10,12 +10,19 @@ import type {
   AchievementStats,
   AchievementViewModel,
 } from "@/features/achievements/types";
-import type { AchievementCatalogItem, AchievementUnlock } from "@/features/achievements/api/achievements";
+import {
+  achievementCatalogDescription,
+  achievementCatalogTitle,
+  type AchievementCatalogItem,
+  type AchievementUnlock,
+} from "@/features/achievements/api/achievements";
+import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
 export function buildAchievementViewModels(
   catalog: AchievementCatalogItem[],
   unlocks: AchievementUnlock[],
   stats: AchievementStats,
+  language: InterfaceLanguage,
 ): AchievementViewModel[] {
   const unlockBySlug = new Map(
     unlocks.map((row) => [row.slug, row.unlockedAt] as const),
@@ -31,13 +38,17 @@ export function buildAchievementViewModels(
 
       const progress = calculateProgress(definition, stats);
       const unlockedAt = unlockBySlug.get(item.slug) ?? null;
-      const isUnlocked = isAchievementUnlocked(definition, stats, unlockedSlugs);
+      const isUnlocked = isAchievementUnlocked(
+        definition,
+        stats,
+        unlockedSlugs,
+      );
 
       return {
         id: item.id,
         slug: item.slug,
-        title: item.title,
-        description: item.description,
+        title: achievementCatalogTitle(item, language),
+        description: achievementCatalogDescription(item, language),
         icon: item.icon,
         sortOrder: item.sortOrder,
         category: definition.category,
@@ -55,7 +66,9 @@ function fallbackCatalogFromDefinitions(): AchievementCatalogItem[] {
     id: index + 1,
     slug: def.slug,
     title: def.title,
+    titleEn: def.titleEn,
     description: def.description,
+    descriptionEn: def.descriptionEn,
     icon: def.icon,
     sortOrder: def.sortOrder,
   }));

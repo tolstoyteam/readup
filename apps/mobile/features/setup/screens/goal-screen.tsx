@@ -12,13 +12,20 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { fetchProfile, saveGoal } from "@/features/profile/api/profile";
-import { GOALS } from "@/features/setup/constants";
+import {
+  GOALS,
+  goalLabel,
+  normalizeGoalId,
+  setupLabel,
+} from "@/features/setup/constants";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export default function GoalScreen() {
   const colors = useReadupColors();
+  const { language, t } = useInterfaceLanguage();
   const { user, loading } = useAuth();
   const [goal, setGoal] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -35,7 +42,7 @@ export default function GoalScreen() {
     setLoadingProfile(true);
     void fetchProfile(user.id)
       .then((profile) => {
-        if (mounted) setGoal(profile?.reading_goal ?? null);
+        if (mounted) setGoal(normalizeGoalId(profile?.reading_goal ?? null));
       })
       .catch(() => {
         if (mounted) setGoal(null);
@@ -57,8 +64,8 @@ export default function GoalScreen() {
       router.replace("/(tabs)");
     } catch (error) {
       Alert.alert(
-        "Не удалось сохранить цель",
-        error instanceof Error ? error.message : "Попробуйте еще раз.",
+        t("setup.goalSaveFailed"),
+        error instanceof Error ? error.message : t("common.tryAgain"),
       );
     } finally {
       setSaving(false);
@@ -87,7 +94,7 @@ export default function GoalScreen() {
         contentContainerClassName="flex-grow px-[37px] pt-[154px]"
       >
         <Text className="mx-auto w-[319px] text-center text-[34px] font-extrabold leading-[36px] tracking-[-1.36px] text-[#059669] dark:text-[#34D399]">
-          Какой цели вы хотите достичь?
+          {t("setup.goalTitle")}
         </Text>
 
         <View className="mt-[84px]">
@@ -103,7 +110,7 @@ export default function GoalScreen() {
               }}
               numberOfLines={1}
             >
-              {goal ?? "Выберите цель"}
+              {goalLabel(goal, language) ?? t("profile.chooseGoal")}
             </Text>
             {expanded ? (
               <ChevronUp
@@ -124,16 +131,16 @@ export default function GoalScreen() {
             <View className="mt-2 overflow-hidden rounded-[24px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D]">
               {GOALS.map((item) => (
                 <Pressable
-                  key={item}
+                  key={item.id}
                   accessibilityRole="button"
                   onPress={() => {
-                    setGoal(item);
+                    setGoal(item.id);
                     setExpanded(false);
                   }}
                   className="border-b border-[#E8E6D8] dark:border-[#2A3630] px-4 py-3 active:opacity-80"
                 >
                   <Text className="text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]">
-                    {item}
+                    {setupLabel(item, language)}
                   </Text>
                 </Pressable>
               ))}
@@ -144,7 +151,7 @@ export default function GoalScreen() {
 
       <View className="px-8 pb-5">
         <PrimaryButton
-          label="Завершить"
+          label={t("common.finish")}
           loading={saving}
           disabled={!goal}
           onPress={() => submit(goal)}
@@ -156,7 +163,7 @@ export default function GoalScreen() {
           className="items-center py-3 active:opacity-70"
         >
           <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
-            Пропустить
+            {t("common.skip")}
           </Text>
         </Pressable>
       </View>

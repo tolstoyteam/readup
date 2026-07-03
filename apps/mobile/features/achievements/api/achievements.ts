@@ -1,10 +1,13 @@
 import { supabase } from "@/shared/lib/supabase";
+import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
 export type AchievementCatalogItem = {
   id: number;
   slug: string;
   title: string;
+  titleEn: string | null;
   description: string;
+  descriptionEn: string | null;
   icon: string;
   sortOrder: number;
 };
@@ -13,15 +16,21 @@ export type AchievementUnlock = {
   id: number;
   slug: string;
   title: string;
+  titleEn: string | null;
   description: string;
+  descriptionEn: string | null;
   icon: string;
   unlockedAt: string | null;
 };
 
-export async function fetchAchievementCatalog(): Promise<AchievementCatalogItem[]> {
+export async function fetchAchievementCatalog(): Promise<
+  AchievementCatalogItem[]
+> {
   const { data, error } = await supabase
     .from("achievements")
-    .select("id, slug, title, description, icon, sort_order")
+    .select(
+      "id, slug, title, title_en, description, description_en, icon, sort_order",
+    )
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -34,7 +43,9 @@ export async function fetchAchievementCatalog(): Promise<AchievementCatalogItem[
       id: number;
       slug: string;
       title: string;
+      title_en?: string | null;
       description: string;
+      description_en?: string | null;
       icon: string;
       sort_order: number;
     };
@@ -42,7 +53,9 @@ export async function fetchAchievementCatalog(): Promise<AchievementCatalogItem[
       id: record.id,
       slug: record.slug,
       title: record.title,
+      titleEn: record.title_en ?? null,
       description: record.description,
+      descriptionEn: record.description_en ?? null,
       icon: record.icon,
       sortOrder: record.sort_order,
     };
@@ -55,7 +68,7 @@ export async function fetchUnlockedAchievements(
   const { data, error } = await supabase
     .from("user_achievements")
     .select(
-      "unlocked_at, achievement:achievements(id, slug, title, description, icon, sort_order)",
+      "unlocked_at, achievement:achievements(id, slug, title, title_en, description, description_en, icon, sort_order)",
     )
     .eq("user_id", userId);
 
@@ -68,7 +81,9 @@ export async function fetchUnlockedAchievements(
     id: number;
     slug: string;
     title: string;
+    title_en?: string | null;
     description: string;
+    description_en?: string | null;
     icon: string;
     sort_order: number;
   };
@@ -87,12 +102,30 @@ export async function fetchUnlockedAchievements(
         id: achievement.id,
         slug: achievement.slug,
         title: achievement.title,
+        titleEn: achievement.title_en ?? null,
         description: achievement.description,
+        descriptionEn: achievement.description_en ?? null,
         icon: achievement.icon,
         unlockedAt: record.unlocked_at,
       };
     })
     .filter((row): row is AchievementUnlock => !!row);
+}
+
+export function achievementCatalogTitle(
+  item: Pick<AchievementCatalogItem, "title" | "titleEn">,
+  language: InterfaceLanguage,
+): string {
+  return language === "en" && item.titleEn ? item.titleEn : item.title;
+}
+
+export function achievementCatalogDescription(
+  item: Pick<AchievementCatalogItem, "description" | "descriptionEn">,
+  language: InterfaceLanguage,
+): string {
+  return language === "en" && item.descriptionEn
+    ? item.descriptionEn
+    : item.description;
 }
 
 export async function fetchBestReadingDayMinutes(
@@ -129,7 +162,6 @@ export async function fetchHasPerfectQuiz(userId: string): Promise<boolean> {
 
   return (data ?? []).some(
     (row) =>
-      row.score === row.total_questions &&
-      (row.total_questions as number) > 0,
+      row.score === row.total_questions && (row.total_questions as number) > 0,
   );
 }

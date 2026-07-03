@@ -434,6 +434,41 @@ as $$
     from public.profiles
     where id = auth.uid()
   ),
+  interest_labels(id, ru, en) as (
+    values
+      ('entrepreneurship', 'предпринимательство', 'entrepreneurship'),
+      ('startups', 'стартапы', 'startups'),
+      ('leadership', 'лидерство', 'leadership'),
+      ('career_growth', 'карьерный рост', 'career growth'),
+      ('investing', 'инвестиции', 'investing'),
+      ('personal_finance', 'личные финансы', 'personal finance'),
+      ('economics', 'экономика', 'economics'),
+      ('financial_literacy', 'финансовая грамотность', 'financial literacy'),
+      ('productivity', 'продуктивность', 'productivity'),
+      ('psychology', 'психология', 'psychology'),
+      ('mindset', 'мышление', 'mindset'),
+      ('habits', 'привычки', 'habits'),
+      ('artificial_intelligence', 'искусственный интеллект', 'artificial intelligence'),
+      ('innovation', 'инновации', 'innovation'),
+      ('history_of_science', 'история науки', 'history of science'),
+      ('future', 'будущее', 'future'),
+      ('biographies', 'биографии', 'biographies'),
+      ('literature', 'литература', 'literature'),
+      ('society', 'общество', 'society'),
+      ('history', 'история', 'history')
+  ),
+  expanded_interests as (
+    select distinct lower(value) as interest
+    from me
+    cross join lateral unnest(me.interests) raw_interest(raw)
+    cross join lateral (
+      values
+        (raw_interest.raw),
+        ((select ru from interest_labels where id = raw_interest.raw limit 1)),
+        ((select en from interest_labels where id = raw_interest.raw limit 1))
+    ) expanded(value)
+    where value is not null and length(trim(value)) > 0
+  ),
   scored as (
     select
       b.id,
@@ -450,25 +485,25 @@ as $$
       (
         coalesce((
           select count(*)::integer
-          from unnest((select interests from me)) i
+          from expanded_interests i
           where exists (
             select 1
             from public.book_genres bg2
             join public.genres g2 on g2.id = bg2.genre_id
             where bg2.book_id = b.id and (
-              lower(g2.name_ru) = lower(i)
-              or lower(g2.name) = lower(i)
+              lower(g2.name_ru) = i.interest
+              or lower(g2.name) = i.interest
             )
           )
         ), 0)
         +
         coalesce((
           select count(*)::integer
-          from unnest((select interests from me)) i
+          from expanded_interests i
           where exists (
             select 1
             from jsonb_array_elements_text(coalesce(b.keywords, '[]'::jsonb)) kw
-            where lower(kw) = lower(i)
+            where lower(kw) = i.interest
           )
         ), 0)
       ) as match_score

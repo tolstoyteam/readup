@@ -3,18 +3,23 @@ import { Text, View } from "react-native";
 import { AchievementIcon } from "@/features/achievements/components/achievement-icon";
 import type { AchievementViewModel } from "@/features/achievements/types";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
 type AchievementRowProps = {
   achievement: AchievementViewModel;
 };
 
-function formatUnlockDate(iso: string): string {
+function formatUnlockDate(iso: string, language: InterfaceLanguage): string {
   try {
-    return new Date(iso).toLocaleDateString("ru-RU", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(iso).toLocaleDateString(
+      language === "en" ? "en-US" : "ru-RU",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      },
+    );
   } catch {
     return iso;
   }
@@ -22,6 +27,7 @@ function formatUnlockDate(iso: string): string {
 
 export function AchievementRow({ achievement }: AchievementRowProps) {
   const colors = useReadupColors();
+  const { language, t } = useInterfaceLanguage();
   const { isUnlocked, progress } = achievement;
   const barWidth = isUnlocked
     ? 100
@@ -51,7 +57,7 @@ export function AchievementRow({ achievement }: AchievementRowProps) {
             {isUnlocked ? (
               <View className="rounded-full border border-[#059669] dark:border-[#34D399] bg-[#ECFDF5] dark:bg-[#123D2C] px-2.5 py-0.5">
                 <Text className="text-[11px] font-medium tracking-[-0.44px] text-[#059669] dark:text-[#34D399]">
-                  Получено
+                  {t("achievements.unlocked")}
                 </Text>
               </View>
             ) : null}
@@ -61,13 +67,16 @@ export function AchievementRow({ achievement }: AchievementRowProps) {
           </Text>
           {isUnlocked && achievement.unlockedAt ? (
             <Text className="mt-2 text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
-              {formatUnlockDate(achievement.unlockedAt)}
+              {formatUnlockDate(achievement.unlockedAt, language)}
             </Text>
           ) : null}
           {!isUnlocked ? (
             <View className="mt-3">
               <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
-                Прогресс: {progress.current} / {progress.target}
+                {t("achievements.progress", {
+                  current: progress.current,
+                  target: progress.target,
+                })}
               </Text>
               <View className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#E8E6D8] dark:bg-[#26302B]">
                 <View

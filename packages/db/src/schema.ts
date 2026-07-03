@@ -541,7 +541,9 @@ export const achievementsTable = pgTable("achievements", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   title: text("title").notNull(),
+  titleEn: text("title_en"),
   description: text("description").notNull(),
+  descriptionEn: text("description_en"),
   /** lucide-react-native icon name or asset key. */
   icon: text("icon").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),

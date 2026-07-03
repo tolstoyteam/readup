@@ -15,9 +15,11 @@ import {
   todayActivityDateKey,
 } from "@/features/reading-stats";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export function useAchievements() {
   const { user } = useAuth();
+  const { language } = useInterfaceLanguage();
   const [viewModels, setViewModels] = useState<AchievementViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,14 +53,18 @@ export function useAchievements() {
         bestDayMinutes,
       };
 
-      setViewModels(buildAchievementViewModels(catalog, unlocks, stats));
+      setViewModels(
+        buildAchievementViewModels(catalog, unlocks, stats, language),
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load achievements");
+      setError(
+        err instanceof Error ? err.message : "Could not load achievements",
+      );
       setViewModels([]);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [language, user]);
 
   useEffect(() => {
     void reload();

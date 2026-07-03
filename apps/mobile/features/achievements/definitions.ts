@@ -11,7 +11,9 @@ export type AchievementDefinition = {
   category: AchievementCategory;
   icon: string;
   title: string;
+  titleEn: string;
   description: string;
+  descriptionEn: string;
 };
 
 /**
@@ -29,7 +31,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "streak",
     icon: "Flame",
     title: "Три дня подряд",
+    titleEn: "Three days in a row",
     description: "Читайте три дня без перерыва",
+    descriptionEn: "Read for three days without a break",
   },
   {
     slug: "streak_7",
@@ -39,7 +43,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "streak",
     icon: "Trophy",
     title: "Неделя дисциплины",
+    titleEn: "A week of discipline",
     description: "Читайте семь дней без перерыва",
+    descriptionEn: "Read for seven days without a break",
   },
   {
     slug: "streak_14",
@@ -49,7 +55,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "streak",
     icon: "Award",
     title: "Две недели подряд",
+    titleEn: "Two weeks in a row",
     description: "Читайте 14 дней без перерыва",
+    descriptionEn: "Read for 14 days without a break",
   },
   {
     slug: "streak_30",
@@ -59,7 +67,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "streak",
     icon: "Medal",
     title: "Месяц дисциплины",
+    titleEn: "A month of discipline",
     description: "Читайте 30 дней без перерыва",
+    descriptionEn: "Read for 30 days without a break",
   },
   {
     slug: "streak_100",
@@ -69,7 +79,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "streak",
     icon: "Crown",
     title: "Сто дней подряд",
+    titleEn: "One hundred days in a row",
     description: "Читайте 100 дней без перерыва",
+    descriptionEn: "Read for 100 days without a break",
   },
 
   // Books completed (completed only)
@@ -81,7 +93,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "books",
     icon: "BookOpen",
     title: "Первая книга",
+    titleEn: "First book",
     description: "Завершите свою первую книгу",
+    descriptionEn: "Finish your first book",
   },
   {
     slug: "three_books_completed",
@@ -91,7 +105,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "books",
     icon: "BookMarked",
     title: "Три книги",
+    titleEn: "Three books",
     description: "Завершите три книги",
+    descriptionEn: "Finish three books",
   },
   {
     slug: "five_books_completed",
@@ -101,7 +117,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "books",
     icon: "BookCopy",
     title: "Пять книг",
+    titleEn: "Five books",
     description: "Завершите пять книг",
+    descriptionEn: "Finish five books",
   },
   {
     slug: "ten_books_completed",
@@ -111,7 +129,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "books",
     icon: "Library",
     title: "Десять книг",
+    titleEn: "Ten books",
     description: "Завершите десять книг",
+    descriptionEn: "Finish ten books",
   },
   {
     slug: "twenty_five_books_completed",
@@ -121,7 +141,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "books",
     icon: "Award",
     title: "Двадцать пять книг",
+    titleEn: "Twenty-five books",
     description: "Завершите 25 книг",
+    descriptionEn: "Finish 25 books",
   },
   {
     slug: "fifty_books_completed",
@@ -131,7 +153,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "books",
     icon: "Crown",
     title: "Пятьдесят книг",
+    titleEn: "Fifty books",
     description: "Завершите 50 книг",
+    descriptionEn: "Finish 50 books",
   },
 
   // Total reading time (cumulative minutes)
@@ -143,7 +167,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "reading_time",
     icon: "Clock",
     title: "Час за чтением",
+    titleEn: "One hour reading",
     description: "Прочитайте 60 минут суммарно",
+    descriptionEn: "Read for 60 minutes total",
   },
   {
     slug: "reading_time_300",
@@ -153,7 +179,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "reading_time",
     icon: "Clock",
     title: "Пять часов",
+    titleEn: "Five hours",
     description: "Прочитайте 300 минут суммарно",
+    descriptionEn: "Read for 300 minutes total",
   },
   {
     slug: "reading_time_1000",
@@ -163,7 +191,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "reading_time",
     icon: "Hourglass",
     title: "Тысяча минут",
+    titleEn: "One thousand minutes",
     description: "Прочитайте 1000 минут суммарно",
+    descriptionEn: "Read for 1000 minutes total",
   },
   {
     slug: "reading_time_5000",
@@ -173,7 +203,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "reading_time",
     icon: "Trophy",
     title: "Книжный марафон",
+    titleEn: "Book marathon",
     description: "Прочитайте 5000 минут суммарно",
+    descriptionEn: "Read for 5000 minutes total",
   },
 
   // Daily reading (best single day)
@@ -185,7 +217,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "daily",
     icon: "Timer",
     title: "Разминка",
+    titleEn: "Warm-up",
     description: "Прочитайте 10 минут за один день",
+    descriptionEn: "Read for 10 minutes in one day",
   },
   {
     slug: "daily_minutes_30",
@@ -195,7 +229,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "daily",
     icon: "Timer",
     title: "Полчаса в день",
+    titleEn: "Half an hour in a day",
     description: "Прочитайте 30 минут за один день",
+    descriptionEn: "Read for 30 minutes in one day",
   },
   {
     slug: "daily_minutes_60",
@@ -205,7 +241,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "daily",
     icon: "Zap",
     title: "Час за день",
+    titleEn: "One hour in a day",
     description: "Прочитайте 60 минут за один день",
+    descriptionEn: "Read for 60 minutes in one day",
   },
   {
     slug: "daily_minutes_120",
@@ -215,7 +253,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "daily",
     icon: "Zap",
     title: "Глубокое погружение",
+    titleEn: "Deep dive",
     description: "Прочитайте 120 минут за один день",
+    descriptionEn: "Read for 120 minutes in one day",
   },
 
   // Activity
@@ -227,7 +267,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "activity",
     icon: "Sparkles",
     title: "Идеальный тест",
+    titleEn: "Perfect quiz",
     description: "Ответьте на все вопросы теста верно",
+    descriptionEn: "Answer every quiz question correctly",
   },
   {
     slug: "reading_days_10",
@@ -237,7 +279,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "activity",
     icon: "CalendarCheck",
     title: "Десять дней чтения",
+    titleEn: "Ten reading days",
     description: "Читайте в течение 10 дней",
+    descriptionEn: "Read on 10 days",
   },
   {
     slug: "reading_days_50",
@@ -247,7 +291,9 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
     category: "activity",
     icon: "CalendarDays",
     title: "Пятьдесят дней чтения",
+    titleEn: "Fifty reading days",
     description: "Читайте в течение 50 дней",
+    descriptionEn: "Read on 50 days",
   },
 ];
 

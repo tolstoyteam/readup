@@ -46,7 +46,16 @@ import {
   buildReadingStatsSnapshot,
   todayActivityDateKey,
 } from "@/features/reading-stats";
-import { GOALS, INTEREST_GROUPS } from "@/features/setup/constants";
+import {
+  GOALS,
+  INTEREST_GROUPS,
+  goalLabel,
+  interestLabel,
+  normalizeGoalId,
+  normalizeInterestId,
+  normalizeInterestIds,
+  setupLabel,
+} from "@/features/setup/constants";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
@@ -113,8 +122,8 @@ export default function ProfileScreen() {
         p = await ensureProfile(user.id);
       }
       setProfile(p);
-      setSelectedInterests(p.selected_interests);
-      setGoal(p.reading_goal);
+      setSelectedInterests(normalizeInterestIds(p.selected_interests));
+      setGoal(normalizeGoalId(p.reading_goal));
     } catch {
       setProfile(null);
       setSelectedInterests([]);
@@ -174,10 +183,11 @@ export default function ProfileScreen() {
   );
 
   function toggleInterest(interest: string) {
+    const interestId = normalizeInterestId(interest);
     setSelectedInterests((current) =>
-      current.includes(interest)
-        ? current.filter((item) => item !== interest)
-        : [...current, interest],
+      current.includes(interestId)
+        ? current.filter((item) => item !== interestId)
+        : [...current, interestId],
     );
   }
 
@@ -239,12 +249,14 @@ export default function ProfileScreen() {
   }
 
   function cancelInterestsEdit() {
-    setSelectedInterests(profile?.selected_interests ?? []);
+    setSelectedInterests(
+      normalizeInterestIds(profile?.selected_interests ?? []),
+    );
     setInterestsEditing(false);
   }
 
   function cancelGoalEdit() {
-    setGoal(profile?.reading_goal ?? null);
+    setGoal(normalizeGoalId(profile?.reading_goal ?? null));
     setGoalEditing(false);
     setGoalPickerOpen(false);
   }
@@ -254,8 +266,12 @@ export default function ProfileScreen() {
   const nameDirty = fullName.trim() !== initialFullName.trim();
   const interestsDirty =
     profile != null &&
-    !interestsEqual(selectedInterests, profile.selected_interests);
-  const goalDirty = profile != null && goal !== profile.reading_goal;
+    !interestsEqual(
+      selectedInterests,
+      normalizeInterestIds(profile.selected_interests),
+    );
+  const goalDirty =
+    profile != null && goal !== normalizeGoalId(profile.reading_goal);
 
   if (!fontsLoaded) {
     return null;
@@ -545,22 +561,22 @@ export default function ProfileScreen() {
           {interestsEditing ? (
             <View className="mt-3 gap-4">
               {INTEREST_GROUPS.map((group) => (
-                <View key={group.title} className="gap-2">
+                <View key={group.id} className="gap-2">
                   <Text
                     className="text-[18px] font-medium tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]"
                     style={{ fontFamily: "Inter_500Medium" }}
                   >
-                    {group.title}
+                    {setupLabel(group, language)}
                   </Text>
                   <View className="flex-row flex-wrap gap-1">
                     {group.items.map((interest) => {
-                      const active = selectedSet.has(interest);
+                      const active = selectedSet.has(interest.id);
                       return (
                         <Pressable
-                          key={interest}
+                          key={interest.id}
                           accessibilityRole="button"
                           accessibilityState={{ selected: active }}
-                          onPress={() => toggleInterest(interest)}
+                          onPress={() => toggleInterest(interest.id)}
                           className="rounded-full border px-3 py-1 active:opacity-80"
                           style={{
                             borderColor: colors.brand,
@@ -576,7 +592,7 @@ export default function ProfileScreen() {
                               color: active ? colors.textInverse : colors.text,
                             }}
                           >
-                            {interest}
+                            {setupLabel(interest, language)}
                           </Text>
                         </Pressable>
                       );
@@ -608,26 +624,28 @@ export default function ProfileScreen() {
             <View className="mt-2 gap-3">
               {profile.selected_interests.length > 0 ? (
                 <View className="flex-row flex-wrap gap-1">
-                  {profile.selected_interests.map((interest) => (
-                    <View
-                      key={interest}
-                      className="rounded-full border px-3 py-1"
-                      style={{
-                        borderColor: colors.brand,
-                        backgroundColor: colors.brand,
-                      }}
-                    >
-                      <Text
-                        className="text-center text-[14px] tracking-[-0.56px]"
+                  {normalizeInterestIds(profile.selected_interests).map(
+                    (interest) => (
+                      <View
+                        key={interest}
+                        className="rounded-full border px-3 py-1"
                         style={{
-                          fontFamily: "Inter_400Regular",
-                          color: colors.textInverse,
+                          borderColor: colors.brand,
+                          backgroundColor: colors.brand,
                         }}
                       >
-                        {interest}
-                      </Text>
-                    </View>
-                  ))}
+                        <Text
+                          className="text-center text-[14px] tracking-[-0.56px]"
+                          style={{
+                            fontFamily: "Inter_400Regular",
+                            color: colors.textInverse,
+                          }}
+                        >
+                          {interestLabel(interest, language)}
+                        </Text>
+                      </View>
+                    ),
+                  )}
                 </View>
               ) : (
                 <Text
@@ -675,7 +693,7 @@ export default function ProfileScreen() {
                   }}
                   numberOfLines={1}
                 >
-                  {goal ?? t("profile.chooseGoal")}
+                  {goalLabel(goal, language) ?? t("profile.chooseGoal")}
                 </Text>
                 {goalPickerOpen ? (
                   <ChevronUp
@@ -695,10 +713,10 @@ export default function ProfileScreen() {
                 <View className="overflow-hidden rounded-[24px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512]">
                   {GOALS.map((item, index) => (
                     <Pressable
-                      key={item}
+                      key={item.id}
                       accessibilityRole="button"
                       onPress={() => {
-                        setGoal(item);
+                        setGoal(item.id);
                         setGoalPickerOpen(false);
                       }}
                       className={`px-4 py-3 active:opacity-80 ${
@@ -711,7 +729,7 @@ export default function ProfileScreen() {
                         className="text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]"
                         style={{ fontFamily: "Inter_400Regular" }}
                       >
-                        {item}
+                        {setupLabel(item, language)}
                       </Text>
                     </Pressable>
                   ))}
@@ -748,13 +766,14 @@ export default function ProfileScreen() {
                     : colors.textTertiary,
                 }}
               >
-                {profile.reading_goal ?? t("common.notSelected")}
+                {goalLabel(profile.reading_goal, language) ??
+                  t("common.notSelected")}
               </Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
                   setGoalEditing(true);
-                  setGoal(profile.reading_goal);
+                  setGoal(normalizeGoalId(profile.reading_goal));
                   setGoalPickerOpen(false);
                 }}
                 className="self-start active:opacity-70"
