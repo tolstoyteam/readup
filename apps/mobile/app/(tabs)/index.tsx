@@ -4,7 +4,7 @@ import {
 } from "@/features/books/components/book-card";
 import { useHomeFeed } from "@/features/home/hooks/use-home-feed";
 import { Image } from "expo-image";
-import { ChevronRight, Zap } from "lucide-react-native";
+import { ChevronRight, Flame, Zap } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupLogo } from "@/shared/components/readup-logo";
+import { useReadingStats } from "@/features/reading-stats";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
@@ -25,6 +26,7 @@ export default function HomeScreen() {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
+  const { stats } = useReadingStats(1);
   const {
     items,
     loading,
@@ -43,6 +45,8 @@ export default function HomeScreen() {
   function openContinue(item: BookCardItem) {
     router.push(`/reader/${encodeURIComponent(item.bookId)}`);
   }
+
+  const hasStreak = stats.currentStreakDays > 0;
 
   return (
     <SafeAreaView
@@ -65,14 +69,43 @@ export default function HomeScreen() {
       >
         <View className="flex-row items-center justify-between px-8 pb-7 pt-8">
           <ReadupLogo />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Premium"
-            onPress={() => router.push("/subscription")}
-            className="h-8 w-8 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
-          >
-            <Zap size={20} color={colors.brand} strokeWidth={2} />
-          </Pressable>
+          <View className="flex-row items-center gap-3">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.streak")}
+              onPress={() => router.push("/streak")}
+              hitSlop={10}
+              className="h-8 flex-row items-center gap-1.5 rounded-full border px-2.5 active:opacity-80"
+              style={{
+                borderColor: hasStreak ? colors.brand : colors.border,
+                backgroundColor: hasStreak ? colors.elevated : "transparent",
+              }}
+            >
+              <Flame
+                size={16}
+                color={hasStreak ? "#F97316" : colors.textTertiary}
+                fill={hasStreak ? "#F97316" : "transparent"}
+                strokeWidth={2.2}
+              />
+              <Text
+                className="text-[13px] font-semibold tracking-[-0.52px]"
+                style={{
+                  color: hasStreak ? colors.text : colors.textTertiary,
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {stats.currentStreakDays}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Premium"
+              onPress={() => router.push("/subscription")}
+              className="h-8 w-8 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
+            >
+              <Zap size={20} color={colors.brand} strokeWidth={2} />
+            </Pressable>
+          </View>
         </View>
 
         {loading ? (

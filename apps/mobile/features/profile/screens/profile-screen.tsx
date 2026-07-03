@@ -273,6 +273,7 @@ export default function ProfileScreen() {
     );
   const goalDirty =
     profile != null && goal !== normalizeGoalId(profile.reading_goal);
+  const hasStreak = readingStats.currentStreakDays > 0;
 
   if (!fontsLoaded) {
     return null;
@@ -334,6 +335,34 @@ export default function ProfileScreen() {
             {t("profile.title")}
           </Text>
           <View className="flex-row items-center gap-3">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.streak")}
+              onPress={() => router.push("/streak")}
+              hitSlop={10}
+              className="h-9 flex-row items-center gap-1.5 rounded-full border px-2.5 active:opacity-70"
+              style={{
+                borderColor: hasStreak ? colors.brand : colors.border,
+                backgroundColor: hasStreak ? colors.elevated : "transparent",
+              }}
+            >
+              <Flame
+                size={17}
+                color={hasStreak ? "#F97316" : colors.textTertiary}
+                fill={hasStreak ? "#F97316" : "transparent"}
+                strokeWidth={2.2}
+              />
+              <Text
+                className="text-[13px] tracking-[-0.52px]"
+                style={{
+                  fontFamily: "Inter_600SemiBold",
+                  color: hasStreak ? colors.text : colors.textTertiary,
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {readingStats.currentStreakDays}
+              </Text>
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("profile.notifications")}

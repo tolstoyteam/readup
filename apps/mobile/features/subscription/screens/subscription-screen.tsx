@@ -100,14 +100,18 @@ export default function SubscriptionScreen() {
 
   return (
     <SafeAreaView
-      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
       edges={["top"]}
     >
       <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
       <View className="flex-row items-center justify-between px-5 py-3">
         <View className="h-10 w-10" />
-        <Text className="text-[18px] font-semibold tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]">
+        <Text
+          className="text-[18px] font-semibold tracking-[-0.72px]"
+          style={{ color: colors.text }}
+        >
           Readup Premium
         </Text>
         <Pressable
@@ -115,7 +119,8 @@ export default function SubscriptionScreen() {
           accessibilityRole="button"
           accessibilityLabel={t("common.close")}
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full active:opacity-80"
+          style={{ backgroundColor: colors.surface }}
         >
           <X size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
@@ -132,15 +137,24 @@ export default function SubscriptionScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View className="items-center pt-4">
-            <View className="h-14 w-14 items-center justify-center rounded-full bg-[#ECFDF5] dark:bg-[#123D2C]">
+            <View
+              className="h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.elevated }}
+            >
               <Crown size={28} color={colors.brand} strokeWidth={2} />
             </View>
-            <Text className="mt-4 text-center text-[28px] font-extrabold leading-[34px] tracking-[-1.12px] text-[#1A2420] dark:text-[#F3F4EE]">
+            <Text
+              className="mt-4 text-center text-[28px] font-extrabold leading-[34px] tracking-[-1.12px]"
+              style={{ color: colors.text }}
+            >
               {isPremium
                 ? t("premium.premiumActiveTitle")
                 : t("premium.unlockTitle")}
             </Text>
-            <Text className="mt-2 max-w-[280px] text-center text-[14px] leading-[20px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]">
+            <Text
+              className="mt-2 max-w-[280px] text-center text-[14px] leading-[20px] tracking-[-0.56px]"
+              style={{ color: colors.textSecondary }}
+            >
               {isPremium
                 ? t("premium.premiumActiveBody")
                 : t("premium.unlockBody")}
@@ -151,16 +165,29 @@ export default function SubscriptionScreen() {
             {BENEFITS.map(({ icon: Icon, titleKey, descriptionKey }) => (
               <View
                 key={titleKey}
-                className="flex-row items-start gap-3 rounded-[16px] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-3.5"
+                className="flex-row items-start gap-3 rounded-[16px] border px-4 py-3.5"
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                }}
               >
-                <View className="mt-0.5 h-8 w-8 items-center justify-center rounded-full bg-[#ECFDF5] dark:bg-[#123D2C]">
+                <View
+                  className="mt-0.5 h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.elevated }}
+                >
                   <Icon size={18} color={colors.brand} strokeWidth={2.2} />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]">
+                  <Text
+                    className="text-[15px] font-semibold tracking-[-0.6px]"
+                    style={{ color: colors.text }}
+                  >
                     {t(titleKey)}
                   </Text>
-                  <Text className="text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
+                  <Text
+                    className="text-[13px] tracking-[-0.52px]"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {t(descriptionKey)}
                   </Text>
                 </View>
@@ -191,14 +218,24 @@ export default function SubscriptionScreen() {
           <Pressable
             accessibilityRole="button"
             disabled
-            className="mt-7 min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border-2 border-[#9CCFB9] bg-[#9CCFB9]"
+            className="mt-7 min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border-2 opacity-75"
+            style={{
+              backgroundColor: colors.elevated,
+              borderColor: colors.border,
+            }}
           >
-            <Zap size={18} color={colors.textInverse} strokeWidth={2.4} />
-            <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
+            <Zap size={18} color={colors.textTertiary} strokeWidth={2.4} />
+            <Text
+              className="text-[18px] font-medium tracking-[-0.36px]"
+              style={{ color: colors.textTertiary }}
+            >
               {isPremium ? t("premium.active") : t("premium.comingSoon")}
             </Text>
           </Pressable>
-          <Text className="mt-3 text-center text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
+          <Text
+            className="mt-3 text-center text-[12px] tracking-[-0.48px]"
+            style={{ color: colors.textTertiary }}
+          >
             {t("premium.subscriptionUnavailable")}
           </Text>
         </ScrollView>
@@ -226,12 +263,15 @@ function PlanCard({
       className="rounded-[20px] border px-5 py-4 active:opacity-90"
       style={{
         borderColor: selected ? colors.brand : colors.elevated,
-        backgroundColor: highlighted && selected ? "#ECFDF5" : colors.surface,
+        backgroundColor: highlighted && selected ? colors.elevated : colors.surface,
       }}
     >
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
-          <Text className="text-[16px] font-semibold tracking-[-0.64px] text-[#1A2420] dark:text-[#F3F4EE]">
+          <Text
+            className="text-[16px] font-semibold tracking-[-0.64px]"
+            style={{ color: colors.text }}
+          >
             {title}
           </Text>
           {badge ? (
@@ -255,10 +295,16 @@ function PlanCard({
         </View>
       </View>
       <View className="mt-2 flex-row items-baseline gap-2">
-        <Text className="text-[24px] font-extrabold tracking-[-0.96px] text-[#1A2420] dark:text-[#F3F4EE]">
+        <Text
+          className="text-[24px] font-extrabold tracking-[-0.96px]"
+          style={{ color: colors.text }}
+        >
           {price}
         </Text>
-        <Text className="text-[13px] tracking-[-0.52px] text-[#7A7868] dark:text-[#8F9A93]">
+        <Text
+          className="text-[13px] tracking-[-0.52px]"
+          style={{ color: colors.textTertiary }}
+        >
           {pricePeriod}
         </Text>
       </View>

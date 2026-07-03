@@ -133,6 +133,7 @@ export default function StreakScreen() {
       : null;
 
   const hasAnyMinutes = activeDayCount > 0;
+  const hasCurrentStreak = stats.currentStreakDays > 0;
   const avgLineHeight = (avgMinutes / maxLogMinutes) * CHART_PLOT_HEIGHT;
 
   if (!fontsLoaded) {
@@ -176,23 +177,46 @@ export default function StreakScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Streak hero */}
-          <View className="overflow-hidden rounded-[24px] border border-[#059669] dark:border-[#34D399] bg-[#ECFDF5] dark:bg-[#123D2C] p-5">
+          <View
+            className="overflow-hidden rounded-[24px] border p-5"
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: hasCurrentStreak ? "#F97316" : colors.border,
+            }}
+          >
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
-                <View className="h-9 w-9 items-center justify-center rounded-full bg-[#D1FAE5] dark:bg-[#164E3A]">
-                  <Flame size={20} color={colors.brand} strokeWidth={2.4} />
+                <View
+                  className="h-9 w-9 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.elevated }}
+                >
+                  <Flame
+                    size={20}
+                    color={hasCurrentStreak ? "#F97316" : colors.textTertiary}
+                    fill={hasCurrentStreak ? "#F97316" : "transparent"}
+                    strokeWidth={2.4}
+                  />
                 </View>
                 <Text
-                  className="text-[14px] tracking-[-0.56px] text-[#047857] dark:text-[#34D399]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  className="text-[14px] tracking-[-0.56px]"
+                  style={{
+                    fontFamily: "Inter_500Medium",
+                    color: hasCurrentStreak ? "#F97316" : colors.textTertiary,
+                  }}
                 >
                   {t("streak.currentStreak")}
                 </Text>
               </View>
-              <View className="rounded-full bg-[#D1FAE5] dark:bg-[#164E3A] px-3 py-1.5">
+              <View
+                className="rounded-full px-3 py-1.5"
+                style={{ backgroundColor: colors.elevated }}
+              >
                 <Text
-                  className="text-[12px] tracking-[-0.48px] text-[#047857] dark:text-[#34D399]"
-                  style={{ fontFamily: "Inter_500Medium" }}
+                  className="text-[12px] tracking-[-0.48px]"
+                  style={{
+                    fontFamily: "Inter_500Medium",
+                    color: colors.textTertiary,
+                  }}
                 >
                   {t("streak.record", { days: stats.longestStreakDays })}
                 </Text>
@@ -201,14 +225,21 @@ export default function StreakScreen() {
 
             <View className="mt-3 flex-row items-baseline gap-2">
               <Text
-                className="text-[52px] leading-[56px] tracking-[-2px] text-[#1A2420] dark:text-[#F3F4EE]"
-                style={{ fontFamily: "Inter_700Bold" }}
+                className="text-[52px] leading-[56px] tracking-[-2px]"
+                style={{
+                  fontFamily: "Inter_700Bold",
+                  color: colors.text,
+                  fontVariant: ["tabular-nums"],
+                }}
               >
                 {stats.currentStreakDays}
               </Text>
               <Text
-                className="text-[18px] tracking-[-0.72px] text-[#4A5550] dark:text-[#B8C1BB]"
-                style={{ fontFamily: "Inter_500Medium" }}
+                className="text-[18px] tracking-[-0.72px]"
+                style={{
+                  fontFamily: "Inter_500Medium",
+                  color: colors.textSecondary,
+                }}
               >
                 {dayLabel(stats.currentStreakDays, language, t)}
               </Text>
@@ -223,15 +254,16 @@ export default function StreakScreen() {
                     <View
                       className="h-7 w-7 items-center justify-center rounded-full"
                       style={{
-                        backgroundColor: active ? colors.brand : "#D1FAE5",
+                        backgroundColor: active ? "#F97316" : colors.elevated,
                         borderWidth: isToday ? 2 : 0,
-                        borderColor: colors.brandDark,
+                        borderColor: active ? "#FDBA74" : colors.border,
                       }}
                     >
                       {active ? (
                         <Flame
                           size={13}
                           color={colors.white}
+                          fill={colors.white}
                           strokeWidth={2.4}
                         />
                       ) : null}
@@ -240,7 +272,7 @@ export default function StreakScreen() {
                       className="text-[10px] tracking-[-0.4px]"
                       style={{
                         fontFamily: "Inter_500Medium",
-                        color: isToday ? colors.brand : "#7A7868",
+                        color: isToday ? "#F97316" : colors.textTertiary,
                       }}
                     >
                       {weekdayLabel(day, t)}

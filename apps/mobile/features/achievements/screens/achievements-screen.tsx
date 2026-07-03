@@ -75,7 +75,8 @@ export default function AchievementsScreen() {
 
   return (
     <SafeAreaView
-      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
       edges={["top"]}
     >
       <StatusBar style={statusBarStyleForScheme(colorScheme)} />
@@ -86,11 +87,15 @@ export default function AchievementsScreen() {
           accessibilityRole="button"
           accessibilityLabel={t("common.back")}
           hitSlop={12}
-          className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full active:opacity-80"
+          style={{ backgroundColor: colors.surface }}
         >
           <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
-        <Text className="text-[18px] font-semibold tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]">
+        <Text
+          className="text-[18px] font-semibold tracking-[-0.72px]"
+          style={{ color: colors.text }}
+        >
           {t("achievements.allTitle")}
         </Text>
         <View className="h-10 w-10" />
@@ -106,7 +111,10 @@ export default function AchievementsScreen() {
           contentContainerClassName="px-6 pb-10"
           showsVerticalScrollIndicator={false}
         >
-          <Text className="mt-1 text-[13px] tracking-[-0.52px] text-[#7A7868] dark:text-[#8F9A93]">
+          <Text
+            className="mt-1 text-[13px] tracking-[-0.52px]"
+            style={{ color: colors.textTertiary }}
+          >
             {t("profile.unlockedCount", {
               unlocked: unlockedCount,
               total: totalCount,
@@ -116,10 +124,16 @@ export default function AchievementsScreen() {
             {sections.map((section) => (
               <View key={section.category} className="gap-3">
                 <View className="flex-row items-baseline justify-between">
-                  <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]">
+                  <Text
+                    className="text-[15px] font-semibold tracking-[-0.6px]"
+                    style={{ color: colors.text }}
+                  >
                     {t(section.labelKey)}
                   </Text>
-                  <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
+                  <Text
+                    className="text-[12px] tracking-[-0.48px]"
+                    style={{ color: colors.textTertiary }}
+                  >
                     {t("achievements.sectionCount", {
                       unlocked: section.unlockedCount,
                       total: section.items.length,
