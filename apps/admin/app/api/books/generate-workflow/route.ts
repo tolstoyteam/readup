@@ -32,8 +32,6 @@ export async function POST(request: Request) {
 
     settingsInput = {
       topic: form.get("topic"),
-      audience: form.get("audience"),
-      genre: form.get("genre"),
       reading_level: form.get("reading_level"),
       length: form.get("length") || "medium",
       include_quiz: form.get("include_quiz") !== "false",

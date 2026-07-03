@@ -37,16 +37,13 @@ export function buildTranslatedMetadata(
 
 export function settingsFromWorkflow(args: {
   topic: string;
-  audience: string;
-  genre: string;
   reading_level: BookGenerationSettings["reading_level"];
   length: BookGenerationSettings["length"];
   include_quiz: boolean;
 }): BookGenerationSettings {
   return {
     topic: args.topic,
-    audience: args.audience,
-    genres: [args.genre],
+    genres: [],
     reading_level: args.reading_level,
     length: args.length,
     quiz_enabled: args.include_quiz,

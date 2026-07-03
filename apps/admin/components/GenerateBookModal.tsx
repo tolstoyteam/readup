@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BOOK_GENRES, genreDisplayName } from "@/lib/book-genres";
 import { BOOK_LENGTHS, READING_LEVELS } from "@readup/db";
 import type { ProgressEvent } from "@/lib/book-generation/types";
 import { validateCoverFile } from "@/app/upload/BookUploadForm";
@@ -32,14 +31,10 @@ export function GenerateBookModal({ open, onClose }: Props) {
   const router = useRouter();
   const headingId = useId();
   const topicId = useId();
-  const audienceId = useId();
-  const genreId = useId();
   const coverId = useId();
   const sourceId = useId();
 
   const [topic, setTopic] = useState("");
-  const [audience, setAudience] = useState("general readers");
-  const [genre, setGenre] = useState<(typeof BOOK_GENRES)[number]>("other");
   const [readingLevel, setReadingLevel] =
     useState<(typeof READING_LEVELS)[number]>("intermediate");
   const [length, setLength] = useState<(typeof BOOK_LENGTHS)[number]>("medium");
@@ -81,8 +76,6 @@ export function GenerateBookModal({ open, onClose }: Props) {
 
   const resetState = () => {
     setTopic("");
-    setAudience("general readers");
-    setGenre("other");
     setReadingLevel("intermediate");
     setLength("medium");
     setLanguages([SOURCE_LANGUAGE]);
@@ -162,8 +155,6 @@ export function GenerateBookModal({ open, onClose }: Props) {
     try {
       const formData = new FormData();
       formData.append("topic", trimmedTopic);
-      formData.append("audience", audience.trim());
-      formData.append("genre", genre);
       formData.append("reading_level", readingLevel);
       formData.append("length", length);
       formData.append("include_quiz", includeQuiz ? "true" : "false");
@@ -250,43 +241,6 @@ export function GenerateBookModal({ open, onClose }: Props) {
               maxLength={200}
               className="w-full rounded-input border border-elevated bg-surface px-4 py-3 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 disabled:opacity-60"
             />
-          </label>
-
-          <label htmlFor={audienceId} className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Audience
-            </span>
-            <input
-              id={audienceId}
-              type="text"
-              value={audience}
-              onChange={(event) => setAudience(event.target.value)}
-              disabled={isSubmitting}
-              placeholder="e.g. busy professionals"
-              maxLength={120}
-              className="w-full rounded-input border border-elevated bg-surface px-4 py-3 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 disabled:opacity-60"
-            />
-          </label>
-
-          <label htmlFor={genreId} className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Genre
-            </span>
-            <select
-              id={genreId}
-              value={genre}
-              onChange={(event) =>
-                setGenre(event.target.value as (typeof BOOK_GENRES)[number])
-              }
-              disabled={isSubmitting}
-              className="w-full rounded-input border border-elevated bg-surface px-4 py-3 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 disabled:opacity-60"
-            >
-              {BOOK_GENRES.map((value) => (
-                <option key={value} value={value}>
-                  {genreDisplayName(value)}
-                </option>
-              ))}
-            </select>
           </label>
 
           <fieldset>

@@ -52,7 +52,7 @@ function buildGenerationBookSchema(settings: BookGenerationSettings, includeQuiz
     description: z.string().min(1),
     author: z.string().min(1),
     language: z.literal(SOURCE_LANGUAGE),
-    genres: z.array(z.enum(BOOK_GENRES)).min(1).max(5),
+    genres: z.array(z.enum(BOOK_GENRES)).length(1),
     keywords: z.array(z.string().min(1)).max(8),
     chapters: z
       .array(
@@ -83,11 +83,12 @@ function toBookContentInput(
   draft: z.infer<ReturnType<typeof buildGenerationBookSchema>>,
   includeQuiz: boolean,
 ): GeneratedEnglishDraft {
+  const genres = draft.genres.length === 1 ? draft.genres : ["other" as const];
   const content: BookContentInput = {
     title: draft.title,
     author: draft.author,
     language: SOURCE_LANGUAGE,
-    genres: draft.genres,
+    genres,
     keywords: draft.keywords ?? [],
     cover_image_url: undefined,
     chapters: draft.chapters.map((chapter) => ({
@@ -172,8 +173,7 @@ export async function generateBookContentFromTitle(args: {
   const result = await generateEnglishBook({
     settings: {
       topic: args.title,
-      audience: "general readers",
-      genres: ["other"],
+      genres: [],
       reading_level: "intermediate",
       length: "medium",
       quiz_enabled: true,

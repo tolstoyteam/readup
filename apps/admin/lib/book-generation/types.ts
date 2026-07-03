@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  BOOK_GENRES,
   BOOK_LENGTHS,
   READING_LEVELS,
   type BookGenerationMetadata,
@@ -19,8 +18,6 @@ export { SOURCE_LANGUAGE };
 
 export const workflowSettingsSchema = z.object({
   topic: z.string().trim().min(1).max(200),
-  audience: z.string().trim().min(1).max(120),
-  genre: z.enum(BOOK_GENRES),
   reading_level: z.enum(READING_LEVELS),
   length: z.enum(BOOK_LENGTHS).default("medium"),
   languages: z.array(z.string().min(2).max(32)).default([]),
