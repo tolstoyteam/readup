@@ -54,8 +54,6 @@ export async function runBookGenerationWorkflow(args: {
   const { settings, source, cover, onProgress } = args;
   const generationSettings = settingsFromWorkflow({
     topic: settings.topic,
-    audience: settings.audience,
-    genre: settings.genre,
     reading_level: settings.reading_level,
     length: settings.length,
     include_quiz: settings.include_quiz,
@@ -80,6 +78,11 @@ export async function runBookGenerationWorkflow(args: {
 
   onProgress({ step: "saving_english", message: "Saving..." });
 
+  const settingsWithInferredGenre = {
+    ...generationSettings,
+    genres: englishDraft.content.genres,
+  };
+
   const work = await createBookWork();
   const job = await createGenerationJob({
     workId: work.id,
@@ -102,7 +105,7 @@ export async function runBookGenerationWorkflow(args: {
     }
 
     const englishMetadata = buildGenerationMetadata({
-      settings: generationSettings,
+      settings: settingsWithInferredGenre,
       generatedLanguages: allLanguages,
       subtitle: englishDraft.subtitle,
       description: englishDraft.description,

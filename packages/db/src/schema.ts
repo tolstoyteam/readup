@@ -46,7 +46,6 @@ export type ReadingLevel = (typeof READING_LEVELS)[number];
 
 export type BookGenerationSettings = {
   topic: string;
-  audience: string;
   genres: string[];
   reading_level: ReadingLevel;
   length: BookLength;

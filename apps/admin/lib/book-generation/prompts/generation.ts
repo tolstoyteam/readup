@@ -1,8 +1,9 @@
-import type { BookGenerationSettings } from "@readup/db";
+import { BOOK_GENRES, type BookGenerationSettings } from "@readup/db";
 import { getLengthPreset } from "../length-presets";
 
 export function buildGenerationSystemPrompt(settings: BookGenerationSettings, includeQuiz: boolean): string {
   const preset = getLengthPreset(settings.length);
+  const supportedGenres = BOOK_GENRES.join(", ");
   const quizRules = includeQuiz
     ? `Include a "quiz" with 3 to 5 multiple-choice questions. Each question must have 3 or 4 answers with exactly one marked correct (is_correct=true).`
     : `Set "quiz" to null. Do not include any quiz questions.`;
@@ -13,10 +14,9 @@ Always write in English (language code "en"). English is the canonical source ed
 
 Book parameters:
 - Topic: ${settings.topic}
-- Target audience: ${settings.audience}
-- Genre: ${settings.genres.join(", ")}
 - Reading level: ${settings.reading_level}
 - Length: ${settings.length} (${preset.readTimeLabel}, ${preset.depthLabel})
+- Quiz: ${includeQuiz ? "enabled" : "disabled"}
 
 Structure:
 - ${preset.minChapters} to ${preset.maxChapters} chapters
@@ -29,7 +29,7 @@ Always provide:
 - "description": 2–3 sentence catalog description
 - "author": real author when summarizing a known work, otherwise "Unknown"
 - "language": always "en"
-- "genres": include the requested genre
+- "genres": return an array with exactly one genre slug from this supported list: ${supportedGenres}. Infer the closest match from the topic, reading level, length, quiz setting, and source material when provided. Do not invent arbitrary genre names; if uncertain, choose the closest supported genre, using "other" only when no better match fits.
 - "keywords": 3 to 8 short lowercase keywords
 - ${quizRules}
 
