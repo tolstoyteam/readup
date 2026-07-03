@@ -21,9 +21,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { fetchProfile, type Profile } from "@/features/profile/api/profile";
-import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
-import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import {
+  useReadupColors,
+  statusBarStyleForScheme,
+} from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import type { TranslationKey } from "@/shared/i18n/translations";
 
 type PlanCardProps = {
   title: string;
@@ -38,28 +43,33 @@ type PlanCardProps = {
 const BENEFITS = [
   {
     icon: Library,
-    title: "Полная библиотека",
-    description: "Все книги без ограничений",
+    titleKey: "premium.fullLibraryTitle",
+    descriptionKey: "premium.fullLibraryDescription",
   },
   {
     icon: Headphones,
-    title: "Аудио-версии",
-    description: "Слушайте книги в любое время",
+    titleKey: "premium.audioTitle",
+    descriptionKey: "premium.audioDescription",
   },
   {
     icon: Sparkles,
-    title: "Тесты и достижения",
-    description: "Углубляйте понимание материала",
+    titleKey: "premium.testsTitle",
+    descriptionKey: "premium.testsDescription",
   },
   {
     icon: Star,
-    title: "Без рекламы",
-    description: "Чистый и быстрый интерфейс",
+    titleKey: "premium.noAdsTitle",
+    descriptionKey: "premium.noAdsDescription",
   },
-];
+] satisfies {
+  icon: typeof Library;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
+}[];
 
 export default function SubscriptionScreen() {
   const colors = useReadupColors();
+  const { t } = useInterfaceLanguage();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
@@ -103,7 +113,7 @@ export default function SubscriptionScreen() {
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть"
+          accessibilityLabel={t("common.close")}
           hitSlop={12}
           className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
@@ -126,34 +136,32 @@ export default function SubscriptionScreen() {
               <Crown size={28} color={colors.brand} strokeWidth={2} />
             </View>
             <Text className="mt-4 text-center text-[28px] font-extrabold leading-[34px] tracking-[-1.12px] text-[#1A2420] dark:text-[#F3F4EE]">
-              {isPremium ? "У вас Premium" : "Читайте без ограничений"}
+              {isPremium
+                ? t("premium.premiumActiveTitle")
+                : t("premium.unlockTitle")}
             </Text>
             <Text className="mt-2 max-w-[280px] text-center text-[14px] leading-[20px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]">
               {isPremium
-                ? "Спасибо, что поддерживаете Readup. Все функции доступны."
-                : "Premium открывает всю библиотеку, аудио-версии и расширенные возможности."}
+                ? t("premium.premiumActiveBody")
+                : t("premium.unlockBody")}
             </Text>
           </View>
 
           <View className="mt-7 gap-3">
-            {BENEFITS.map(({ icon: Icon, title, description }) => (
+            {BENEFITS.map(({ icon: Icon, titleKey, descriptionKey }) => (
               <View
-                key={title}
+                key={titleKey}
                 className="flex-row items-start gap-3 rounded-[16px] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-3.5"
               >
                 <View className="mt-0.5 h-8 w-8 items-center justify-center rounded-full bg-[#ECFDF5] dark:bg-[#123D2C]">
-                  <Icon
-                    size={18}
-                    color={colors.brand}
-                    strokeWidth={2.2}
-                  />
+                  <Icon size={18} color={colors.brand} strokeWidth={2.2} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]">
-                    {title}
+                    {t(titleKey)}
                   </Text>
                   <Text className="text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
-                    {description}
+                    {t(descriptionKey)}
                   </Text>
                 </View>
                 <Check size={18} color={colors.brand} strokeWidth={2.4} />
@@ -163,17 +171,17 @@ export default function SubscriptionScreen() {
 
           <View className="mt-7 gap-3">
             <PlanCard
-              title="Ежемесячно"
+              title={t("premium.monthly")}
               price="990 ₸"
-              pricePeriod="в месяц"
+              pricePeriod={t("premium.monthlyPeriod")}
               selected={selectedPlan === "monthly"}
               onSelect={() => setSelectedPlan("monthly")}
             />
             <PlanCard
-              title="Год"
+              title={t("premium.yearly")}
               price="7 990 ₸"
-              pricePeriod="33% выгоднее"
-              badge="Лучший выбор"
+              pricePeriod={t("premium.yearlyPeriod")}
+              badge={t("premium.bestChoice")}
               highlighted
               selected={selectedPlan === "yearly"}
               onSelect={() => setSelectedPlan("yearly")}
@@ -187,11 +195,11 @@ export default function SubscriptionScreen() {
           >
             <Zap size={18} color={colors.textInverse} strokeWidth={2.4} />
             <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
-              {isPremium ? "Активно" : "Оплата скоро"}
+              {isPremium ? t("premium.active") : t("premium.comingSoon")}
             </Text>
           </Pressable>
           <Text className="mt-3 text-center text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
-            Подписки пока недоступны — функция активируется позже.
+            {t("premium.subscriptionUnavailable")}
           </Text>
         </ScrollView>
       )}
@@ -218,8 +226,7 @@ function PlanCard({
       className="rounded-[20px] border px-5 py-4 active:opacity-90"
       style={{
         borderColor: selected ? colors.brand : colors.elevated,
-        backgroundColor:
-          highlighted && selected ? "#ECFDF5" : colors.surface,
+        backgroundColor: highlighted && selected ? "#ECFDF5" : colors.surface,
       }}
     >
       <View className="flex-row items-center justify-between">
@@ -238,9 +245,7 @@ function PlanCard({
         <View
           className="h-5 w-5 items-center justify-center rounded-full border-2"
           style={{
-            borderColor: selected
-              ? colors.brand
-              : colors.textTertiary,
+            borderColor: selected ? colors.brand : colors.textTertiary,
             backgroundColor: selected ? colors.brand : "transparent",
           }}
         >

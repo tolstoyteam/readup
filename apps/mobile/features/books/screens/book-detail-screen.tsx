@@ -31,25 +31,31 @@ import {
   useLibraryActions,
   useLibraryBook,
 } from "@/features/library";
-import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
-import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import {
+  useReadupColors,
+  statusBarStyleForScheme,
+} from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 
 function formatReadingTime(
   minutes: number | null,
   totalPages: number | null,
+  minuteLabel: string,
 ): string {
   if (minutes && minutes > 0) {
-    return `~${minutes} мин`;
+    return `~${minutes} ${minuteLabel}`;
   }
   if (totalPages && totalPages > 0) {
-    return `~${Math.max(Math.round(totalPages * 0.8), 5)} мин`;
+    return `~${Math.max(Math.round(totalPages * 0.8), 5)} ${minuteLabel}`;
   }
-  return "~10–15 мин";
+  return `~10-15 ${minuteLabel}`;
 }
 
 export default function BookDetailScreen() {
   const colors = useReadupColors();
+  const { t } = useInterfaceLanguage();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
@@ -67,7 +73,7 @@ export default function BookDetailScreen() {
 
   const load = useCallback(async () => {
     if (!bookId) {
-      setError("Книга не найдена");
+      setError(t("bookDetail.bookNotFound"));
       setLoading(false);
       return;
     }
@@ -76,7 +82,7 @@ export default function BookDetailScreen() {
       setError(null);
       const detail = await fetchBookDetail(bookId);
       if (!detail) {
-        setError("Книга не найдена");
+        setError(t("bookDetail.bookNotFound"));
         setBook(null);
         return;
       }
@@ -92,13 +98,13 @@ export default function BookDetailScreen() {
         setAudioCheckDone(true);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось загрузить книгу");
+      setError(e instanceof Error ? e.message : t("bookDetail.couldNotLoad"));
       setHasAudio(false);
       setAudioCheckDone(true);
     } finally {
       setLoading(false);
     }
-  }, [bookId]);
+  }, [bookId, t]);
 
   useEffect(() => {
     load();
@@ -153,7 +159,7 @@ export default function BookDetailScreen() {
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Назад"
+          accessibilityLabel={t("common.back")}
           hitSlop={12}
           className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
@@ -165,7 +171,9 @@ export default function BookDetailScreen() {
             disabled={!user || savingAction}
             accessibilityRole="button"
             accessibilityState={{ selected: isSaved }}
-            accessibilityLabel={isSaved ? "Убрать из библиотеки" : "Сохранить"}
+            accessibilityLabel={
+              isSaved ? t("bookDetail.removeFromLibrary") : t("common.save")
+            }
             hitSlop={12}
             className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
           >
@@ -186,14 +194,14 @@ export default function BookDetailScreen() {
       ) : error || !book ? (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="mb-4 text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
-            {error ?? "Книга не найдена"}
+            {error ?? t("bookDetail.bookNotFound")}
           </Text>
           <Pressable
             onPress={load}
             className="rounded-full bg-[#059669] px-6 py-3 active:opacity-90"
           >
             <Text className="text-[15px] font-semibold text-[#FBFAF2]">
-              Повторить
+              {t("common.retry")}
             </Text>
           </Pressable>
         </View>
@@ -291,31 +299,24 @@ export default function BookDetailScreen() {
 
             <View className="mt-6 flex-row justify-between rounded-[20px] bg-[#F2F0E6] dark:bg-[#19211D] px-5 py-4">
               <Stat
-                icon={
-                  <Clock size={18} color={colors.text} strokeWidth={2} />
-                }
-                label="Время"
+                icon={<Clock size={18} color={colors.text} strokeWidth={2} />}
+                label={t("bookDetail.readingTime")}
                 value={formatReadingTime(
                   book.readingTimeMinutes,
                   book.totalPages,
+                  t("bookDetail.minutesShort"),
                 )}
               />
               <Stat
-                icon={
-                  <Layers size={18} color={colors.text} strokeWidth={2} />
-                }
-                label="Сложность"
+                icon={<Layers size={18} color={colors.text} strokeWidth={2} />}
+                label={t("bookDetail.difficulty")}
                 value={book.difficulty ?? "—"}
               />
               <Stat
                 icon={
-                  <BookOpen
-                    size={18}
-                    color={colors.text}
-                    strokeWidth={2}
-                  />
+                  <BookOpen size={18} color={colors.text} strokeWidth={2} />
                 }
-                label="Страниц"
+                label={t("bookDetail.pages")}
                 value={book.totalPages ? String(book.totalPages) : "—"}
               />
             </View>
@@ -323,7 +324,10 @@ export default function BookDetailScreen() {
             {bookInProgress && totalPages && totalPages > 0 ? (
               <View className="mt-5 rounded-[16px] bg-[#F2F0E6] dark:bg-[#19211D] px-5 py-4">
                 <Text className="text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
-                  Вы остановились на странице {progressPage} из {totalPages}
+                  {t("bookDetail.stoppedAtPage", {
+                    page: progressPage,
+                    total: totalPages,
+                  })}
                 </Text>
                 <View className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#E8E6D8] dark:bg-[#26302B]">
                   <View
@@ -346,7 +350,9 @@ export default function BookDetailScreen() {
                   strokeWidth={2.2}
                 />
                 <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
-                  {bookInProgress ? "Продолжить чтение" : "Начать чтение"}
+                  {bookInProgress
+                    ? t("bookDetail.continueReading")
+                    : t("bookDetail.startReading")}
                 </Text>
               </Pressable>
 
@@ -362,7 +368,7 @@ export default function BookDetailScreen() {
                     strokeWidth={2.2}
                   />
                   <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
-                    Слушать
+                    {t("bookDetail.listen")}
                   </Text>
                 </Pressable>
               ) : null}
@@ -379,7 +385,7 @@ export default function BookDetailScreen() {
                     strokeWidth={2.2}
                   />
                   <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
-                    Пройти тест
+                    {t("bookDetail.takeQuiz")}
                   </Text>
                 </Pressable>
               ) : null}
