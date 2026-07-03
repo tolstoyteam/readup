@@ -40,6 +40,30 @@ const BOOK_GENRE_ES_LABELS: Record<BookGenre, string> = {
   other: "Otro",
 };
 
+const BOOK_GENRE_EN_LABELS: Record<BookGenre, string> = {
+  fiction: "Fiction",
+  literary_fiction: "Literary fiction",
+  science_fiction: "Science fiction",
+  fantasy: "Fantasy",
+  mystery_thriller: "Mystery and thriller",
+  history: "History",
+  biography_memoir: "Biographies and memoirs",
+  science: "Science",
+  technology: "Technology",
+  business: "Business",
+  finance: "Finance",
+  economics: "Economics",
+  psychology: "Psychology",
+  philosophy: "Philosophy",
+  self_improvement: "Self-improvement",
+  health_wellness: "Health and wellness",
+  arts_culture: "Arts and culture",
+  education: "Education",
+  religion_spirituality: "Religion and spirituality",
+  politics_current_affairs: "Politics and current affairs",
+  other: "Other",
+};
+
 export function normalizeGenreKey(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -113,7 +137,8 @@ export function genreDisplayLabel(
     const bookGenre = bookGenreFromOption(genre);
     return bookGenre ? BOOK_GENRE_ES_LABELS[bookGenre] : genre.slug;
   }
-  return genre.slug;
+  const bookGenre = bookGenreFromOption(genre);
+  return bookGenre ? BOOK_GENRE_EN_LABELS[bookGenre] : genre.slug;
 }
 
 export function sortGenresForLanguage(
