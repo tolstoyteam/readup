@@ -1,4 +1,5 @@
 import { genreRuLabel, isBookGenre } from "@readup/db";
+import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
 export type GenreOption = {
   slug: string;
@@ -39,7 +40,10 @@ function genreOptionKeys(genre: GenreOption): Set<string> {
   return keys;
 }
 
-export function bookMatchesGenre(book: BookWithGenres, genre: GenreOption): boolean {
+export function bookMatchesGenre(
+  book: BookWithGenres,
+  genre: GenreOption,
+): boolean {
   const bookKeys = bookGenreKeys(book);
   for (const key of genreOptionKeys(genre)) {
     if (bookKeys.has(key)) return true;
@@ -63,6 +67,25 @@ export function sortGenresByLabel(genres: GenreOption[]): GenreOption[] {
   return [...genres].sort((a, b) => a.labelRu.localeCompare(b.labelRu, "ru"));
 }
 
+export function genreDisplayLabel(
+  genre: GenreOption,
+  language: InterfaceLanguage,
+): string {
+  return language === "en" ? genre.slug : genre.labelRu;
+}
+
+export function sortGenresForLanguage(
+  genres: GenreOption[],
+  language: InterfaceLanguage,
+): GenreOption[] {
+  return [...genres].sort((a, b) =>
+    genreDisplayLabel(a, language).localeCompare(
+      genreDisplayLabel(b, language),
+      language,
+    ),
+  );
+}
+
 export type GenreFeedSection<T extends BookWithGenres> = {
   title: string;
   genre: GenreOption;
@@ -72,8 +95,9 @@ export type GenreFeedSection<T extends BookWithGenres> = {
 export function buildGenreFeedSections<T extends BookWithGenres>(
   books: T[],
   genres: GenreOption[],
+  language: InterfaceLanguage = "ru",
 ): GenreFeedSection<T>[] {
-  const sorted = sortGenresByLabel(genres);
+  const sorted = sortGenresForLanguage(genres, language);
   const sections: GenreFeedSection<T>[] = [];
 
   for (const genre of sorted) {
@@ -86,7 +110,7 @@ export function buildGenreFeedSections<T extends BookWithGenres>(
       data.push(book);
     }
     if (data.length > 0) {
-      sections.push({ title: genre.labelRu, genre, data });
+      sections.push({ title: genreDisplayLabel(genre, language), genre, data });
     }
   }
 

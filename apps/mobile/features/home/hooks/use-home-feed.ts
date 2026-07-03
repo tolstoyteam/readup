@@ -14,8 +14,8 @@ import {
   type RecommendedBook,
 } from "@/features/books/api/recommendations";
 import { useLibrary } from "@/features/library";
-import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export type HomeBook = BookCardItem & {
   genres: string[];
@@ -29,7 +29,7 @@ export type HomeSection = {
 
 export function useHomeFeed() {
   const { user } = useAuth();
-  const { settings, loaded: settingsLoaded } = useReaderSettings();
+  const { language, t } = useInterfaceLanguage();
   const { continueBook: continueRecord, registerEditionMapping } = useLibrary();
   const [items, setItems] = useState<HomeBook[]>([]);
   const [genres, setGenres] = useState<GenreOption[]>([]);
@@ -42,7 +42,7 @@ export function useHomeFeed() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const preferredLanguage = settingsLoaded ? settings.language : undefined;
+      const preferredLanguage = language;
       const [{ books }, recs, trending, catalogGenres] = await Promise.all([
         fetchBooks(preferredLanguage),
         user ? fetchRecommendedBooks(12).catch(() => []) : Promise.resolve([]),
@@ -85,7 +85,7 @@ export function useHomeFeed() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [settings.language, settingsLoaded, user, registerEditionMapping]);
+  }, [language, user, registerEditionMapping]);
 
   useEffect(() => {
     load();
@@ -120,7 +120,7 @@ export function useHomeFeed() {
     const trendingFallback =
       trendingSection.length > 0 ? trendingSection : items.slice(0, 10);
 
-    const genreSections = buildGenreFeedSections(items, genres).map(
+    const genreSections = buildGenreFeedSections(items, genres, language).map(
       (section) => ({
         title: section.title,
         data: section.data,
@@ -128,11 +128,11 @@ export function useHomeFeed() {
     );
 
     return [
-      { title: "Рекомендации", data: recommendedSection },
-      { title: "В тренде", data: trendingFallback },
+      { title: t("home.recommendations"), data: recommendedSection },
+      { title: t("home.trending"), data: trendingFallback },
       ...genreSections,
     ].filter((section) => section.data.length > 0);
-  }, [items, recommended, trendingIds, genres]);
+  }, [items, recommended, trendingIds, genres, language, t]);
 
   return {
     items,

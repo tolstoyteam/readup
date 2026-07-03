@@ -19,9 +19,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export default function HomeScreen() {
   const colors = useReadupColors();
+  const { t } = useInterfaceLanguage();
   const router = useRouter();
   const {
     items,
@@ -87,14 +89,14 @@ export default function HomeScreen() {
               className="rounded-full bg-[#059669] px-6 py-3 active:opacity-90"
             >
               <Text className="text-[15px] font-semibold text-[#FBFAF2]">
-                Retry
+                {t("common.retry")}
               </Text>
             </Pressable>
           </View>
         ) : items.length === 0 ? (
           <View className="min-h-[420px] items-center justify-center px-6">
             <Text className="text-center text-[15px] leading-[22px] text-[#4A5550] dark:text-[#B8C1BB]">
-              No books in the catalog yet. Add a book in the admin panel.
+              {t("home.catalogEmpty")}
             </Text>
           </View>
         ) : (
@@ -114,7 +116,7 @@ export default function HomeScreen() {
                       {continueBook.title}
                     </Text>
                     <Text className="text-[14px] tracking-[-0.56px] text-[#059669] dark:text-[#34D399]">
-                      продолжить читать
+                      {t("home.continueReading")}
                     </Text>
                   </View>
                   <View className="flex-row items-center">

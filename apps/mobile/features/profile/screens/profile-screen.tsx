@@ -51,12 +51,12 @@ import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import {
   buildBookCatalogMap,
   joinLibraryBooks,
   useLibrary,
 } from "@/features/library";
-import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 
 function readFullNameFromUser(user: {
   user_metadata?: Record<string, unknown>;
@@ -72,16 +72,10 @@ function interestsEqual(a: string[], b: string[]) {
   return sa.every((v, i) => v === sb[i]);
 }
 
-function hasEmailIdentity(
-  user: { identities?: { provider: string }[] | null } | null,
-): boolean {
-  return user?.identities?.some((i) => i.provider === "email") ?? false;
-}
-
 export default function ProfileScreen() {
   const colors = useReadupColors();
+  const { language, t } = useInterfaceLanguage();
   const { user, updateFullName } = useAuth();
-  const { settings, loaded: settingsLoaded } = useReaderSettings();
   const { savedBooks, loading: libraryLoading } = useLibrary();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -133,7 +127,7 @@ export default function ProfileScreen() {
   const loadSavedPreview = useCallback(async () => {
     if (!user) return;
     try {
-      const preferredLanguage = settingsLoaded ? settings.language : undefined;
+      const preferredLanguage = language;
       const { books } = await fetchBooks(preferredLanguage);
       const catalog = buildBookCatalogMap(books);
       const items = joinLibraryBooks(savedBooks, catalog, preferredLanguage)
@@ -143,7 +137,7 @@ export default function ProfileScreen() {
     } catch {
       setLibraryItems([]);
     }
-  }, [savedBooks, settings.language, settingsLoaded, user]);
+  }, [language, savedBooks, user]);
 
   useEffect(() => {
     void loadSavedPreview();
@@ -194,7 +188,7 @@ export default function ProfileScreen() {
     try {
       const { error } = await updateFullName(trimmed);
       if (error) {
-        Alert.alert("Не удалось сохранить имя", error.message);
+        Alert.alert(t("common.error"), error.message);
         return;
       }
       setInitialFullName(trimmed);
@@ -213,8 +207,8 @@ export default function ProfileScreen() {
       setInterestsEditing(false);
     } catch (error) {
       Alert.alert(
-        "Ошибка",
-        error instanceof Error ? error.message : "Попробуйте еще раз.",
+        t("common.error"),
+        error instanceof Error ? error.message : t("common.tryAgain"),
       );
     } finally {
       setSavingSection(null);
@@ -231,8 +225,8 @@ export default function ProfileScreen() {
       setGoalPickerOpen(false);
     } catch (error) {
       Alert.alert(
-        "Ошибка",
-        error instanceof Error ? error.message : "Попробуйте еще раз.",
+        t("common.error"),
+        error instanceof Error ? error.message : t("common.tryAgain"),
       );
     } finally {
       setSavingSection(null);
@@ -292,7 +286,7 @@ export default function ProfileScreen() {
           className="text-center text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
           style={{ fontFamily: "Inter_400Regular" }}
         >
-          Не удалось загрузить профиль. Закройте экран и откройте снова.
+          {t("profile.profileLoadFailed")}
         </Text>
       </SafeAreaView>
     );
@@ -320,25 +314,21 @@ export default function ProfileScreen() {
             className="text-[22px] leading-7 tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]"
             style={{ fontFamily: "Inter_600SemiBold" }}
           >
-            Профиль
+            {t("profile.title")}
           </Text>
           <View className="flex-row items-center gap-3">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Уведомления"
+              accessibilityLabel={t("profile.notifications")}
               onPress={() => router.push("/notifications")}
               hitSlop={10}
               className="active:opacity-70"
             >
-              <Bell
-                size={22}
-                color={colors.textSecondary}
-                strokeWidth={2}
-              />
+              <Bell size={22} color={colors.textSecondary} strokeWidth={2} />
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Настройки"
+              accessibilityLabel={t("profile.settings")}
               onPress={() => router.push("/settings")}
               hitSlop={10}
               className="active:opacity-70"
@@ -366,23 +356,21 @@ export default function ProfileScreen() {
                 className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
                 style={{ fontFamily: "Inter_600SemiBold" }}
               >
-                {profile.is_premium ? "Readup Premium" : "Откройте Premium"}
+                {profile.is_premium
+                  ? "Readup Premium"
+                  : t("profile.premiumCta")}
               </Text>
               <Text
                 className="text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
                 {profile.is_premium
-                  ? "Все функции активны"
-                  : "Все книги, аудио, тесты без рекламы"}
+                  ? t("profile.allFeaturesActive")
+                  : t("profile.premiumSubtitle")}
               </Text>
             </View>
           </View>
-          <ChevronRight
-            size={20}
-            color={colors.textTertiary}
-            strokeWidth={2}
-          />
+          <ChevronRight size={20} color={colors.textTertiary} strokeWidth={2} />
         </Pressable>
 
         <Pressable
@@ -397,7 +385,7 @@ export default function ProfileScreen() {
                 className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
                 style={{ fontFamily: "Inter_600SemiBold" }}
               >
-                Серия и прогресс
+                {t("profile.streakAndProgress")}
               </Text>
             </View>
             <ChevronRight
@@ -408,17 +396,17 @@ export default function ProfileScreen() {
           </View>
           <View className="mt-4 flex-row gap-3">
             <StatPill
-              label="Серия"
+              label={t("profile.streak")}
               value={`${readingStats.currentStreakDays}`}
-              unit="дн"
+              unit={t("profile.daysUnit")}
             />
             <StatPill
-              label="Прочитано"
+              label={t("profile.read")}
               value={`${readingStats.totalBooksCompleted}`}
               unit=""
             />
             <StatPill
-              label="Минут"
+              label={t("profile.minutes")}
               value={`${readingStats.totalReadingMinutes}`}
               unit=""
             />
@@ -438,14 +426,16 @@ export default function ProfileScreen() {
                   className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
                   style={{ fontFamily: "Inter_600SemiBold" }}
                 >
-                  Достижения
+                  {t("profile.achievements")}
                 </Text>
                 <Text
                   className="text-[13px] tracking-[-0.52px] text-[#7A7868] dark:text-[#8F9A93]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  {achievementsUnlockedCount} из {achievementsTotalCount}{" "}
-                  получено
+                  {t("profile.unlockedCount", {
+                    unlocked: achievementsUnlockedCount,
+                    total: achievementsTotalCount,
+                  })}
                 </Text>
               </View>
             </View>
@@ -485,21 +475,21 @@ export default function ProfileScreen() {
             className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Имя
+            {t("profile.name")}
           </Text>
           {nameEditing ? (
             <View className="mt-3 gap-3">
               <ReadupTextField
-                label="Как вас называть"
+                label={t("profile.editNameLabel")}
                 labelFontFamily="Inter_500Medium"
                 value={fullName}
                 onChangeText={setFullName}
-                placeholder="Имя"
+                placeholder={t("profile.name")}
                 autoComplete="name"
                 style={{ fontFamily: "Inter_400Regular" }}
               />
               <PrimaryButton
-                label="Сохранить"
+                label={t("common.save")}
                 loading={savingSection === "name"}
                 disabled={!nameDirty}
                 onPress={() => void saveNameSection()}
@@ -514,7 +504,7 @@ export default function ProfileScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </Text>
               </Pressable>
             </View>
@@ -524,12 +514,10 @@ export default function ProfileScreen() {
                 className="text-[18px] font-medium tracking-[-0.72px]"
                 style={{
                   fontFamily: "Inter_500Medium",
-                  color: displayNameSummary
-                    ? colors.text
-                    : colors.textTertiary,
+                  color: displayNameSummary ? colors.text : colors.textTertiary,
                 }}
               >
-                {displayNameSummary || "Не указано"}
+                {displayNameSummary || t("common.notSpecified")}
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -540,7 +528,7 @@ export default function ProfileScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Изменить
+                  {t("common.change")}
                 </Text>
               </Pressable>
             </View>
@@ -552,7 +540,7 @@ export default function ProfileScreen() {
             className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Интересы
+            {t("profile.interests")}
           </Text>
           {interestsEditing ? (
             <View className="mt-3 gap-4">
@@ -585,9 +573,7 @@ export default function ProfileScreen() {
                             className="text-center text-[14px] tracking-[-0.56px]"
                             style={{
                               fontFamily: "Inter_400Regular",
-                              color: active
-                                ? colors.textInverse
-                                : colors.text,
+                              color: active ? colors.textInverse : colors.text,
                             }}
                           >
                             {interest}
@@ -599,7 +585,7 @@ export default function ProfileScreen() {
                 </View>
               ))}
               <PrimaryButton
-                label="Сохранить"
+                label={t("common.save")}
                 loading={savingSection === "interests"}
                 disabled={!interestsDirty}
                 onPress={() => void saveInterestsSection()}
@@ -614,7 +600,7 @@ export default function ProfileScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </Text>
               </Pressable>
             </View>
@@ -648,7 +634,7 @@ export default function ProfileScreen() {
                   className="text-[14px] tracking-[-0.56px] text-[#7A7868] dark:text-[#8F9A93]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Не выбрано
+                  {t("common.notSelected")}
                 </Text>
               )}
               <Pressable
@@ -660,7 +646,7 @@ export default function ProfileScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Изменить
+                  {t("common.change")}
                 </Text>
               </Pressable>
             </View>
@@ -672,7 +658,7 @@ export default function ProfileScreen() {
             className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Цель чтения
+            {t("profile.goal")}
           </Text>
           {goalEditing ? (
             <View className="mt-3 gap-3">
@@ -689,7 +675,7 @@ export default function ProfileScreen() {
                   }}
                   numberOfLines={1}
                 >
-                  {goal ?? "Выберите цель"}
+                  {goal ?? t("profile.chooseGoal")}
                 </Text>
                 {goalPickerOpen ? (
                   <ChevronUp
@@ -732,7 +718,7 @@ export default function ProfileScreen() {
                 </View>
               ) : null}
               <PrimaryButton
-                label="Сохранить"
+                label={t("common.save")}
                 loading={savingSection === "goal"}
                 disabled={!goalDirty}
                 onPress={() => void saveGoalSection()}
@@ -747,7 +733,7 @@ export default function ProfileScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </Text>
               </Pressable>
             </View>
@@ -762,7 +748,7 @@ export default function ProfileScreen() {
                     : colors.textTertiary,
                 }}
               >
-                {profile.reading_goal ?? "Не выбрана"}
+                {profile.reading_goal ?? t("common.notSelected")}
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -777,7 +763,7 @@ export default function ProfileScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Изменить
+                  {t("common.change")}
                 </Text>
               </Pressable>
             </View>
@@ -789,7 +775,7 @@ export default function ProfileScreen() {
             className="text-[22px] leading-7 tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]"
             style={{ fontFamily: "Inter_600SemiBold" }}
           >
-            Библиотека
+            {t("profile.library")}
           </Text>
 
           {libraryLoading ? (
@@ -802,8 +788,7 @@ export default function ProfileScreen() {
                 className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
-                Пока здесь пусто. Добавляйте книги из поиска — и они появятся в
-                библиотеке.
+                {t("profile.libraryEmpty")}
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -814,7 +799,7 @@ export default function ProfileScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Открыть библиотеку
+                  {t("profile.openLibrary")}
                 </Text>
               </Pressable>
             </View>
@@ -844,7 +829,7 @@ export default function ProfileScreen() {
                         className="text-center text-[14px] font-medium tracking-[-0.56px] text-[#059669] dark:text-[#34D399]"
                         style={{ fontFamily: "Inter_500Medium" }}
                       >
-                        Смотреть всё
+                        {t("profile.allLibrary")}
                       </Text>
                     </Pressable>
                   );

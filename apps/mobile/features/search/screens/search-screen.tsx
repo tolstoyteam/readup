@@ -26,10 +26,10 @@ import {
   bookMatchesGenres,
   genresBySlugs,
   genresFromBooks,
+  sortGenresForLanguage,
   type GenreOption,
 } from "@/features/books/lib/genre-filters";
 import { useLibrary, useLibraryActions } from "@/features/library";
-import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { GenreChipRow } from "@/features/search/components/genre-chip-row";
 import {
   fetchSearchHistory,
@@ -40,21 +40,27 @@ import {
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 type SearchBook = BookCardItem & {
   genres: string[];
+  workId: string;
 };
 
 export default function SearchScreen() {
   const colors = useReadupColors();
   const { cardWidth } = useBookGridLayout();
   const { user } = useAuth();
-  const { settings, loaded: settingsLoaded } = useReaderSettings();
+  const { language, t } = useInterfaceLanguage();
   const router = useRouter();
   const { savedBooks } = useLibrary();
   const { toggleSave } = useLibraryActions();
-  const savedIds = useMemo(
+  const savedBookIds = useMemo(
     () => new Set(savedBooks.map((record) => record.bookId)),
+    [savedBooks],
+  );
+  const savedWorkIds = useMemo(
+    () => new Set(savedBooks.map((record) => record.workId)),
     [savedBooks],
   );
   const [books, setBooks] = useState<SearchBook[]>([]);
@@ -70,7 +76,7 @@ export default function SearchScreen() {
     try {
       setLoading(true);
       setError(null);
-      const preferredLanguage = settingsLoaded ? settings.language : undefined;
+      const preferredLanguage = language;
       const [{ books: rows }, catalogGenres] = await Promise.all([
         fetchBooks(preferredLanguage),
         fetchGenres().catch(() => null),
@@ -79,6 +85,7 @@ export default function SearchScreen() {
       const mapped: SearchBook[] = rows.map((row) => ({
         id: row.id,
         bookId: row.document.book_id,
+        workId: row.document.work_id ?? row.document.book_id,
         title: row.document.title,
         author: row.document.author,
         cover: coverUrl(row.document.cover_image_path),
@@ -86,7 +93,12 @@ export default function SearchScreen() {
       }));
 
       setBooks(mapped);
-      setGenres(catalogGenres ?? genresFromBooks(mapped));
+      setGenres(
+        sortGenresForLanguage(
+          catalogGenres ?? genresFromBooks(mapped),
+          language,
+        ),
+      );
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "Could not load books",
@@ -94,7 +106,7 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
-  }, [settings.language, settingsLoaded]);
+  }, [language]);
 
   useEffect(() => {
     load();
@@ -210,32 +222,33 @@ export default function SearchScreen() {
             <View className="flex-row items-center justify-between px-8">
               <ReadupLogo />
               <Text className="text-[22px] font-semibold tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]">
-                Search
+                {t("search.title")}
               </Text>
             </View>
 
             <View className="px-8">
               <View className="h-12 flex-row items-center gap-2 rounded-[30px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4">
-              <SearchIcon
-                size={18}
-                color={colors.textTertiary}
-                strokeWidth={2}
-              />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search by title or author"
-                placeholderTextColor={colors.textTertiary}
-                className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]"
-                autoCapitalize="none"
-              />
+                <SearchIcon
+                  size={18}
+                  color={colors.textTertiary}
+                  strokeWidth={2}
+                />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder={t("search.placeholder")}
+                  placeholderTextColor={colors.textTertiary}
+                  className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]"
+                  autoCapitalize="none"
+                />
               </View>
             </View>
 
             {genres.length > 0 ? (
               <GenreChipRow
-                label="Жанр"
+                label={t("search.genre")}
                 genres={genres}
+                language={language}
                 selectedSlugs={selectedSlugsSet}
                 onToggle={toggleGenre}
               />
@@ -244,7 +257,7 @@ export default function SearchScreen() {
             {query.trim().length === 0 && history.length > 0 ? (
               <View className="gap-2 px-8">
                 <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]">
-                  Недавние запросы
+                  {t("search.recent")}
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
                   {history.map((entry) => (
@@ -254,7 +267,9 @@ export default function SearchScreen() {
                     >
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`Search ${entry.query}`}
+                        accessibilityLabel={t("search.searchQuery", {
+                          query: entry.query,
+                        })}
                         onPress={() => setQuery(entry.query)}
                       >
                         <Text className="text-[13px] tracking-[-0.52px] text-[#1A2420] dark:text-[#F3F4EE]">
@@ -263,7 +278,9 @@ export default function SearchScreen() {
                       </Pressable>
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`Remove ${entry.query}`}
+                        accessibilityLabel={t("search.removeQuery", {
+                          query: entry.query,
+                        })}
                         hitSlop={8}
                         onPress={() => clearHistoryEntry(entry)}
                       >
@@ -290,14 +307,14 @@ export default function SearchScreen() {
               </Text>
             ) : (
               <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
-                Nothing matched that search. Try a broader category or shorter
-                query.
+                {t("search.empty")}
               </Text>
             )}
           </View>
         }
         renderItem={({ item }) => {
-          const isSaved = savedIds.has(item.bookId);
+          const isSaved =
+            savedBookIds.has(item.bookId) || savedWorkIds.has(item.workId);
           return (
             <View style={{ width: cardWidth }} className="gap-2">
               <BookCard
@@ -319,12 +336,10 @@ export default function SearchScreen() {
                 <Text
                   className="text-[12px] font-medium"
                   style={{
-                    color: isSaved
-                      ? colors.textInverse
-                      : colors.brand,
+                    color: isSaved ? colors.textInverse : colors.brand,
                   }}
                 >
-                  {isSaved ? "Unsave" : "Save"}
+                  {isSaved ? t("common.unsave") : t("common.save")}
                 </Text>
               </Pressable>
             </View>

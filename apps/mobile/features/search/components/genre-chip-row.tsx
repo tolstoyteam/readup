@@ -1,11 +1,16 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
-import type { GenreOption } from "@/features/books/lib/genre-filters";
+import {
+  genreDisplayLabel,
+  type GenreOption,
+} from "@/features/books/lib/genre-filters";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
 type GenreChipRowProps = {
   label: string;
   genres: GenreOption[];
+  language: InterfaceLanguage;
   selectedSlugs: Set<string>;
   onToggle: (slug: string) => void;
 };
@@ -13,6 +18,7 @@ type GenreChipRowProps = {
 export function GenreChipRow({
   label,
   genres,
+  language,
   selectedSlugs,
   onToggle,
 }: GenreChipRowProps) {
@@ -47,12 +53,10 @@ export function GenreChipRow({
               <Text
                 className="text-[13px] tracking-[-0.52px]"
                 style={{
-                  color: active
-                    ? colors.textInverse
-                    : colors.text,
+                  color: active ? colors.textInverse : colors.text,
                 }}
               >
-                {genre.labelRu}
+                {genreDisplayLabel(genre, language)}
               </Text>
             </Pressable>
           );

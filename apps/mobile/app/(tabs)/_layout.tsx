@@ -7,9 +7,11 @@ import { fetchProfile, type Profile } from "@/features/profile/api/profile";
 import { HapticTab } from "@/shared/components/haptic-tab";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export default function TabLayout() {
   const colors = useReadupColors();
+  const { t } = useInterfaceLanguage();
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t("tabs.home"),
           tabBarIcon: ({ color, focused }) => (
             <House
               pointerEvents="none"
@@ -114,7 +116,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="library"
         options={{
-          title: "Library",
+          title: t("tabs.library"),
           tabBarIcon: ({ color, focused }) => (
             <BookMarked
               pointerEvents="none"
@@ -128,7 +130,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: "Search",
+          title: t("tabs.search"),
           tabBarIcon: ({ color, focused }) => (
             <Search
               pointerEvents="none"
@@ -142,7 +144,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="account"
         options={{
-          title: "Profile",
+          title: t("tabs.profile"),
           tabBarIcon: ({ color, focused }) => (
             <UserRound
               pointerEvents="none"

@@ -28,36 +28,40 @@ import {
   type LibrarySection,
   useLibrary,
 } from "@/features/library";
-import { QuoteCard, type QuoteCardItem } from "@/features/quotes/components/quote-card";
+import {
+  QuoteCard,
+  type QuoteCardItem,
+} from "@/features/quotes/components/quote-card";
 import { useQuotes } from "@/features/quotes";
-import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import type { TranslationKey } from "@/shared/i18n/translations";
 
 const SECTION_OPTIONS: {
   value: LibrarySection;
-  label: string;
-  empty: string;
+  labelKey: TranslationKey;
+  emptyKey: TranslationKey;
 }[] = [
   {
     value: "saved",
-    label: "Saved",
-    empty: "Save books from Search and they will collect here.",
+    labelKey: "library.saved",
+    emptyKey: "library.savedEmpty",
   },
   {
     value: "in_progress",
-    label: "In progress",
-    empty: "Open a book to start tracking it here.",
+    labelKey: "library.inProgress",
+    emptyKey: "library.inProgressEmpty",
   },
   {
     value: "completed",
-    label: "Completed",
-    empty: "Books move here after you tap Finish on the last page.",
+    labelKey: "library.completed",
+    emptyKey: "library.completedEmpty",
   },
   {
     value: "quotes",
-    label: "Quotes",
-    empty: "Select text in the reader and tap Save Quote.",
+    labelKey: "library.quotes",
+    emptyKey: "library.quotesEmpty",
   },
 ];
 
@@ -65,7 +69,7 @@ export default function LibraryScreen() {
   const colors = useReadupColors();
   const { cardWidth } = useBookGridLayout();
   const router = useRouter();
-  const { settings, loaded: settingsLoaded } = useReaderSettings();
+  const { language, t } = useInterfaceLanguage();
   const listRef = useRef<FlatListType<LibraryBookCard>>(null);
   const quotesListRef = useRef<FlatListType<QuoteCardItem>>(null);
   const skipInitialScrollReset = useRef(true);
@@ -92,7 +96,7 @@ export default function LibraryScreen() {
   const loadCatalog = useCallback(async () => {
     try {
       setCatalogLoading(true);
-      const preferredLanguage = settingsLoaded ? settings.language : undefined;
+      const preferredLanguage = language;
       const { books } = await fetchBooks(preferredLanguage);
       const catalog = buildBookCatalogMap(books);
       for (const ref of catalog.editionRefs) {
@@ -104,7 +108,7 @@ export default function LibraryScreen() {
     } finally {
       setCatalogLoading(false);
     }
-  }, [records, settings.language, settingsLoaded, registerEditionMapping]);
+  }, [language, records, registerEditionMapping]);
 
   useFocusEffect(
     useCallback(() => {
@@ -165,8 +169,8 @@ export default function LibraryScreen() {
   );
 
   const activeEmpty =
-    SECTION_OPTIONS.find((option) => option.value === activeSection)?.empty ??
-    "No books in this shelf yet.";
+    SECTION_OPTIONS.find((option) => option.value === activeSection)
+      ?.emptyKey ?? "library.savedEmpty";
 
   const isLoading =
     activeSection === "quotes" ? quotesLoading : loading || catalogLoading;
@@ -181,7 +185,7 @@ export default function LibraryScreen() {
       <View className="flex-row items-center justify-between">
         <ReadupLogo />
         <Text className="text-[22px] font-semibold tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]">
-          Library
+          {t("library.title")}
         </Text>
       </View>
 
@@ -209,7 +213,7 @@ export default function LibraryScreen() {
                   color: active ? colors.textInverse : colors.textSecondary,
                 }}
               >
-                {option.label}
+                {t(option.labelKey)}
               </Text>
             </Pressable>
           );
@@ -242,7 +246,7 @@ export default function LibraryScreen() {
                 </Text>
               ) : (
                 <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
-                  {activeEmpty}
+                  {t(activeEmpty)}
                 </Text>
               )}
             </View>
@@ -259,7 +263,9 @@ export default function LibraryScreen() {
           ref={listRef}
           data={visibleBooks}
           extraData={{ activeSection, cardWidth }}
-          keyExtractor={(item) => `${activeSection}-${item.workId}-${item.bookId}`}
+          keyExtractor={(item) =>
+            `${activeSection}-${item.workId}-${item.bookId}`
+          }
           numColumns={2}
           columnWrapperStyle={bookGridColumnWrapperStyle}
           contentContainerStyle={bookGridContentContainerStyle}
@@ -275,7 +281,7 @@ export default function LibraryScreen() {
                 </Text>
               ) : (
                 <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
-                  {activeEmpty}
+                  {t(activeEmpty)}
                 </Text>
               )}
             </View>

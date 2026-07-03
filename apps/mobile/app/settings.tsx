@@ -14,13 +14,24 @@ import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useThemePreference } from "@/shared/context/theme-preference-context";
+import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
+import type { TranslationKey } from "@/shared/i18n/translations";
 import type { ThemePreference } from "@/shared/theme/theme-preference";
 
-const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
-  { label: "Светлая", value: "light" },
-  { label: "Тёмная", value: "dark" },
-  { label: "Системная", value: "system" },
+const THEME_OPTIONS: { labelKey: TranslationKey; value: ThemePreference }[] = [
+  { labelKey: "settings.themeLight", value: "light" },
+  { labelKey: "settings.themeDark", value: "dark" },
+  { labelKey: "settings.themeSystem", value: "system" },
+];
+
+const LANGUAGE_OPTIONS: {
+  labelKey: TranslationKey;
+  value: InterfaceLanguage;
+}[] = [
+  { labelKey: "settings.languageRussian", value: "ru" },
+  { labelKey: "settings.languageEnglish", value: "en" },
 ];
 
 function hasEmailIdentity(
@@ -36,6 +47,7 @@ function looksLikeEmail(value: string): boolean {
 export default function SettingsScreen() {
   const colors = useReadupColors();
   const { preference, setPreference } = useThemePreference();
+  const { language, setLanguage, t } = useInterfaceLanguage();
   const { user, updateEmail, updatePassword, signOut } = useAuth();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -64,8 +76,8 @@ export default function SettingsScreen() {
     const trimmed = nextEmail.trim();
     if (!looksLikeEmail(trimmed)) {
       Alert.alert(
-        "Некорректный email",
-        "Пожалуйста, введите корректный адрес.",
+        t("settings.emailInvalidTitle"),
+        t("settings.emailInvalidBody"),
       );
       return;
     }
@@ -74,13 +86,13 @@ export default function SettingsScreen() {
     try {
       const { error } = await updateEmail(trimmed);
       if (error) {
-        Alert.alert("Не удалось изменить email", error.message);
+        Alert.alert(t("settings.emailSaveFailed"), error.message);
         return;
       }
       setEmailEditing(false);
       Alert.alert(
-        "Email обновлён",
-        "Проверьте почту, чтобы подтвердить новый email (если требуется).",
+        t("settings.emailUpdatedTitle"),
+        t("settings.emailUpdatedBody"),
       );
     } finally {
       setSavingEmail(false);
@@ -90,15 +102,15 @@ export default function SettingsScreen() {
   async function onSavePassword() {
     if (newPassword.length < 6) {
       Alert.alert(
-        "Слишком короткий пароль",
-        "Минимальная длина пароля — 6 символов.",
+        t("settings.passwordTooShortTitle"),
+        t("settings.passwordTooShortBody"),
       );
       return;
     }
     if (newPassword !== confirmPassword) {
       Alert.alert(
-        "Пароли не совпадают",
-        "Проверьте поля и попробуйте ещё раз.",
+        t("settings.passwordMismatchTitle"),
+        t("settings.passwordMismatchBody"),
       );
       return;
     }
@@ -107,13 +119,16 @@ export default function SettingsScreen() {
     try {
       const { error } = await updatePassword(newPassword);
       if (error) {
-        Alert.alert("Не удалось изменить пароль", error.message);
+        Alert.alert(t("settings.passwordSaveFailed"), error.message);
         return;
       }
       setNewPassword("");
       setConfirmPassword("");
       setPasswordEditing(false);
-      Alert.alert("Пароль обновлён", "Теперь вы можете войти с новым паролем.");
+      Alert.alert(
+        t("settings.passwordUpdatedTitle"),
+        t("settings.passwordUpdatedBody"),
+      );
     } finally {
       setSavingPassword(false);
     }
@@ -122,7 +137,7 @@ export default function SettingsScreen() {
   async function onSignOut() {
     const { error } = await signOut();
     if (error) {
-      Alert.alert("Не удалось выйти", error.message);
+      Alert.alert(t("settings.signOutFailed"), error.message);
       return;
     }
     router.replace("/login");
@@ -130,17 +145,17 @@ export default function SettingsScreen() {
 
   function onDeleteAccount() {
     Alert.alert(
-      "Удалить аккаунт?",
-      "Это действие необратимо. Профиль и данные будут удалены.",
+      t("settings.deleteAccountAlertTitle"),
+      t("settings.deleteAccountAlertBody"),
       [
-        { text: "Отмена", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Удалить",
+          text: t("settings.deleteAccount"),
           style: "destructive",
           onPress: () => {
             Alert.alert(
-              "Функция пока не подключена",
-              "Чтобы удалить аккаунт безопасно, нужна серверная функция Supabase (Edge Function) с правами администратора. Мы можем подключить её следующим шагом.",
+              t("settings.deleteUnavailableTitle"),
+              t("settings.deleteUnavailableBody"),
             );
           },
         },
@@ -162,22 +177,18 @@ export default function SettingsScreen() {
         <View className="flex-row items-center justify-between">
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Назад"
+            accessibilityLabel={t("common.back")}
             onPress={() => router.back()}
             hitSlop={10}
             className="active:opacity-70"
           >
-            <ArrowLeft
-              size={22}
-              color={colors.textSecondary}
-              strokeWidth={2}
-            />
+            <ArrowLeft size={22} color={colors.textSecondary} strokeWidth={2} />
           </Pressable>
           <Text
             className="text-[22px] leading-7 tracking-[-0.88px] text-[#1A2420] dark:text-[#F3F4EE]"
             style={{ fontFamily: "Inter_600SemiBold" }}
           >
-            Настройки
+            {t("settings.title")}
           </Text>
           <View style={{ width: 22 }} />
         </View>
@@ -187,7 +198,7 @@ export default function SettingsScreen() {
             className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Оформление
+            {t("settings.appearance")}
           </Text>
 
           <View className="mt-3 flex-row gap-1 rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-1">
@@ -200,7 +211,9 @@ export default function SettingsScreen() {
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                   className={`flex-1 items-center justify-center rounded-lg py-2.5 ${
-                    active ? "bg-[#FBFAF2] dark:bg-[#101512]" : "active:opacity-70"
+                    active
+                      ? "bg-[#FBFAF2] dark:bg-[#101512]"
+                      : "active:opacity-70"
                   }`}
                 >
                   <Text
@@ -211,7 +224,46 @@ export default function SettingsScreen() {
                     }`}
                     style={{ fontFamily: "Inter_600SemiBold" }}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View className={cardClass}>
+          <Text
+            className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
+            style={{ fontFamily: "Inter_400Regular" }}
+          >
+            {t("settings.interfaceLanguage")}
+          </Text>
+
+          <View className="mt-3 flex-row gap-1 rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-1">
+            {LANGUAGE_OPTIONS.map((option) => {
+              const active = language === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setLanguage(option.value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  className={`flex-1 items-center justify-center rounded-lg py-2.5 ${
+                    active
+                      ? "bg-[#FBFAF2] dark:bg-[#101512]"
+                      : "active:opacity-70"
+                  }`}
+                >
+                  <Text
+                    className={`text-[13px] font-semibold ${
+                      active
+                        ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                        : "text-[#7A7868] dark:text-[#8F9A93]"
+                    }`}
+                    style={{ fontFamily: "Inter_600SemiBold" }}
+                  >
+                    {t(option.labelKey)}
                   </Text>
                 </Pressable>
               );
@@ -232,12 +284,10 @@ export default function SettingsScreen() {
               className="text-[18px] font-medium tracking-[-0.72px]"
               style={{
                 fontFamily: "Inter_500Medium",
-                color: user.email
-                  ? colors.text
-                  : colors.textTertiary,
+                color: user.email ? colors.text : colors.textTertiary,
               }}
             >
-              {user.email ?? "Не указан"}
+              {user.email ?? t("common.notSpecified")}
             </Text>
 
             {!emailEnabled ? (
@@ -245,14 +295,14 @@ export default function SettingsScreen() {
                 className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
-                Изменение email недоступно для входа через OAuth.
+                {t("settings.emailOauthUnavailable")}
               </Text>
             ) : null}
 
             {emailEditing ? (
               <View className="gap-3">
                 <ReadupTextField
-                  label="Новый email"
+                  label={t("settings.newEmail")}
                   labelFontFamily="Inter_500Medium"
                   value={nextEmail}
                   onChangeText={setNextEmail}
@@ -263,7 +313,7 @@ export default function SettingsScreen() {
                   style={{ fontFamily: "Inter_400Regular" }}
                 />
                 <PrimaryButton
-                  label="Сохранить"
+                  label={t("common.save")}
                   loading={savingEmail}
                   disabled={!emailEnabled || savingEmail}
                   onPress={() => void onSaveEmail()}
@@ -281,7 +331,7 @@ export default function SettingsScreen() {
                     className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
                     style={{ fontFamily: "Inter_400Regular" }}
                   >
-                    Отмена
+                    {t("common.cancel")}
                   </Text>
                 </Pressable>
               </View>
@@ -297,7 +347,7 @@ export default function SettingsScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Изменить
+                  {t("common.change")}
                 </Text>
               </Pressable>
             )}
@@ -309,33 +359,33 @@ export default function SettingsScreen() {
             className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Пароль
+            {t("settings.password")}
           </Text>
 
           {passwordEditing ? (
             <View className="mt-3 gap-3">
               <ReadupTextField
-                label="Новый пароль"
+                label={t("settings.newPassword")}
                 labelFontFamily="Inter_500Medium"
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="Введите новый пароль"
+                placeholder={t("settings.passwordPlaceholder")}
                 secureTextEntry
                 autoComplete="new-password"
                 style={{ fontFamily: "Inter_400Regular" }}
               />
               <ReadupTextField
-                label="Повторите пароль"
+                label={t("settings.repeatPassword")}
                 labelFontFamily="Inter_500Medium"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Повторите пароль"
+                placeholder={t("settings.repeatPassword")}
                 secureTextEntry
                 autoComplete="new-password"
                 style={{ fontFamily: "Inter_400Regular" }}
               />
               <PrimaryButton
-                label="Сохранить"
+                label={t("common.save")}
                 loading={savingPassword}
                 disabled={savingPassword}
                 onPress={() => void onSavePassword()}
@@ -354,7 +404,7 @@ export default function SettingsScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </Text>
               </Pressable>
             </View>
@@ -364,7 +414,7 @@ export default function SettingsScreen() {
                 className="text-[14px] tracking-[-0.56px] text-[#7A7868] dark:text-[#8F9A93]"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
-                Обновите пароль для входа по email.
+                {t("settings.updatePasswordHint")}
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -375,7 +425,7 @@ export default function SettingsScreen() {
                   className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]"
                   style={{ fontFamily: "Inter_400Regular" }}
                 >
-                  Изменить
+                  {t("common.change")}
                 </Text>
               </Pressable>
             </View>
@@ -387,10 +437,13 @@ export default function SettingsScreen() {
             className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Сессия
+            {t("settings.session")}
           </Text>
           <View className="mt-3">
-            <PrimaryButton label="Выйти" onPress={() => void onSignOut()} />
+            <PrimaryButton
+              label={t("settings.signOut")}
+              onPress={() => void onSignOut()}
+            />
           </View>
         </View>
 
@@ -399,13 +452,13 @@ export default function SettingsScreen() {
             className="text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Опасная зона
+            {t("settings.dangerZone")}
           </Text>
           <Text
             className="mt-2 text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]"
             style={{ fontFamily: "Inter_400Regular" }}
           >
-            Удаление аккаунта необратимо. Это действие удалит ваши данные.
+            {t("settings.deleteAccountBody")}
           </Text>
 
           <Pressable
@@ -421,7 +474,7 @@ export default function SettingsScreen() {
               className="text-[18px] font-medium tracking-[-0.72px]"
               style={{ fontFamily: "Inter_500Medium", color: "#DC2626" }}
             >
-              Удалить аккаунт
+              {t("settings.deleteAccount")}
             </Text>
           </Pressable>
         </View>
