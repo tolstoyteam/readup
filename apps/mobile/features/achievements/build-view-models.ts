@@ -67,8 +67,10 @@ function fallbackCatalogFromDefinitions(): AchievementCatalogItem[] {
     slug: def.slug,
     title: def.title,
     titleEn: def.titleEn,
+    titleEs: def.titleEs,
     description: def.description,
     descriptionEn: def.descriptionEn,
+    descriptionEs: def.descriptionEs,
     icon: def.icon,
     sortOrder: def.sortOrder,
   }));

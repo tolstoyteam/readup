@@ -1,3 +1,4 @@
+import { ACHIEVEMENT_DEFINITION_BY_SLUG } from "@/features/achievements/definitions";
 import { supabase } from "@/shared/lib/supabase";
 import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
@@ -6,8 +7,10 @@ export type AchievementCatalogItem = {
   slug: string;
   title: string;
   titleEn: string | null;
+  titleEs?: string;
   description: string;
   descriptionEn: string | null;
+  descriptionEs?: string;
   icon: string;
   sortOrder: number;
 };
@@ -113,17 +116,27 @@ export async function fetchUnlockedAchievements(
 }
 
 export function achievementCatalogTitle(
-  item: Pick<AchievementCatalogItem, "title" | "titleEn">,
+  item: Pick<AchievementCatalogItem, "slug" | "title" | "titleEn">,
   language: InterfaceLanguage,
 ): string {
-  return language === "en" && item.titleEn ? item.titleEn : item.title;
+  if (language === "es") {
+    return ACHIEVEMENT_DEFINITION_BY_SLUG.get(item.slug)?.titleEs ??
+      item.titleEn ??
+      item.title;
+  }
+  return language !== "ru" && item.titleEn ? item.titleEn : item.title;
 }
 
 export function achievementCatalogDescription(
-  item: Pick<AchievementCatalogItem, "description" | "descriptionEn">,
+  item: Pick<AchievementCatalogItem, "slug" | "description" | "descriptionEn">,
   language: InterfaceLanguage,
 ): string {
-  return language === "en" && item.descriptionEn
+  if (language === "es") {
+    return ACHIEVEMENT_DEFINITION_BY_SLUG.get(item.slug)?.descriptionEs ??
+      item.descriptionEn ??
+      item.description;
+  }
+  return language !== "ru" && item.descriptionEn
     ? item.descriptionEn
     : item.description;
 }

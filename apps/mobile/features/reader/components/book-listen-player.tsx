@@ -3,6 +3,7 @@ import { coverUrl } from "@/features/books/api/books";
 import { audioProgressFraction } from "@/features/reader/audio/audio-progress";
 import { useReaderBookAudio } from "@/features/reader/audio/reader-book-audio-context";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import {
   ReaderListenError,
   ReaderListenLoading,
@@ -43,6 +44,7 @@ export function BookListenPlayer({
   onRetryAudio?: () => void;
 }) {
   const colors = useReadupColors();
+  const { t } = useInterfaceLanguage();
   const {
     voice,
     setVoice,
@@ -88,14 +90,14 @@ export function BookListenPlayer({
   const showSpinner = isAudioLoading || Boolean(audioUrl && !status.isLoaded);
 
   if (isAudioLoading && !audioUrl && !loadError) {
-    return <ReaderListenLoading message="Загрузка аудио…" />;
+    return <ReaderListenLoading message={t("reader.audioLoading")} />;
   }
 
   if (loadError || (!isAudioLoading && !audioUrl)) {
     return (
       <ReaderListenError
         message={
-          loadError ?? "Аудио недоступно для этой книги. Попробуйте ещё раз."
+          loadError ?? t("reader.audioUnavailable")
         }
         onRetry={handleRetry}
       />
@@ -110,7 +112,7 @@ export function BookListenPlayer({
             <Image
               source={{ uri: thumbUri }}
               className="h-[220px] w-[220px]"
-              accessibilityLabel="Book cover"
+              accessibilityLabel={t("reader.bookCover")}
             />
           ) : (
             <View className="h-[220px] w-[220px] items-center justify-center bg-[#F2F0E6] dark:bg-[#19211D]">
@@ -135,12 +137,12 @@ export function BookListenPlayer({
 
         <View className="mt-8 w-full max-w-sm">
           <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#7A7868] dark:text-[#8F9A93]">
-            Voice
+            {t("reader.narrationVoice")}
           </Text>
           <Pressable
             onPress={() => setVoiceMenuOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="Choose narration voice"
+            accessibilityLabel={t("reader.chooseNarrationVoice")}
             className="flex-row items-center justify-between rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-3.5 active:opacity-90"
           >
             <Text className="text-base font-medium text-[#1A2420] dark:text-[#F3F4EE]">
@@ -157,7 +159,7 @@ export function BookListenPlayer({
             onPress={(e) => onSeekPress(e.nativeEvent.locationX)}
             onLayout={onBarLayout}
             accessibilityRole="adjustable"
-            accessibilityLabel="Playback position"
+            accessibilityLabel={t("reader.playbackPosition")}
             className="h-10 w-full justify-center rounded-lg bg-transparent"
           >
             <View className="h-1.5 w-full overflow-hidden rounded-full bg-[#C8C6B2] dark:bg-[#344039]">
@@ -182,7 +184,7 @@ export function BookListenPlayer({
             onPress={() => seekToFraction(Math.max(0, progress - 0.1))}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Rewind ten percent"
+            accessibilityLabel={t("reader.rewind")}
             className="h-12 w-12 items-center justify-center rounded-full border border-[#C8C6B2] dark:border-[#3A4740] bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
           >
             <RotateCcw size={22} color={colors.text} strokeWidth={2} />
@@ -192,7 +194,7 @@ export function BookListenPlayer({
             onPress={togglePlayback}
             disabled={!audioUrl || isAudioLoading}
             accessibilityRole="button"
-            accessibilityLabel={status.playing ? "Pause" : "Play"}
+            accessibilityLabel={status.playing ? t("reader.pause") : t("reader.play")}
             className="h-[72px] w-[72px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] active:opacity-90"
           >
             {showSpinner ? (
@@ -213,7 +215,7 @@ export function BookListenPlayer({
             onPress={() => seekToFraction(Math.min(1, progress + 0.1))}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Forward ten percent"
+            accessibilityLabel={t("reader.forward")}
             className="h-12 w-12 items-center justify-center rounded-full border border-[#C8C6B2] dark:border-[#3A4740] bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
           >
             <RotateCw size={22} color={colors.text} strokeWidth={2} />
@@ -236,7 +238,7 @@ export function BookListenPlayer({
             onPress={(e) => e.stopPropagation()}
           >
             <Text className="mb-2 px-3 text-sm font-semibold text-[#7A7868] dark:text-[#8F9A93]">
-              Narration voice
+              {t("reader.narrationVoice")}
             </Text>
             {voices.map((v) => (
               <Pressable

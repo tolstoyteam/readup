@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from "react-native";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 type SelectionToolbarProps = {
   visible: boolean;
@@ -13,6 +14,8 @@ export function SelectionToolbar({
   onDismiss,
   saving = false,
 }: SelectionToolbarProps) {
+  const { t } = useInterfaceLanguage();
+
   if (!visible) return null;
 
   return (
@@ -22,21 +25,21 @@ export function SelectionToolbar({
           onPress={onSave}
           disabled={saving}
           accessibilityRole="button"
-          accessibilityLabel="Save quote"
+          accessibilityLabel={t("quotes.saveQuote")}
           className={`rounded-full bg-[#059669] px-4 py-2 active:opacity-90 ${saving ? "opacity-70" : ""}`}
         >
           <Text className="text-[13px] font-medium tracking-[-0.52px] text-[#FBFAF2]">
-            {saving ? "Saving…" : "Save Quote"}
+            {saving ? t("common.saving") : t("quotes.saveQuote")}
           </Text>
         </Pressable>
         <Pressable
           onPress={onDismiss}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss selection"
+          accessibilityLabel={t("quotes.dismissSelection")}
           className="px-2 py-2 active:opacity-70"
         >
           <Text className="text-[12px] font-medium text-[#7A7868] dark:text-[#8F9A93]">
-            Cancel
+            {t("common.cancel")}
           </Text>
         </Pressable>
       </View>

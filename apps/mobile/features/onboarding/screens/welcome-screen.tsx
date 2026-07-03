@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { markOnboardingComplete } from "@/shared/lib/onboarding-storage";
 
@@ -42,6 +43,7 @@ const FIGMA_CTA_BOTTOM_INSET = 52;
 export default function WelcomeScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
+  const { t } = useInterfaceLanguage();
   const router = useRouter();
   const { width, height: windowHeight } = useWindowDimensions();
   const [fontsLoaded] = useFonts({
@@ -139,7 +141,7 @@ export default function WelcomeScreen() {
                 marginTop: 48,
               }}
             >
-              Читай меньше.{"\n"}Знай больше
+              {t("onboarding.welcomeTitle")}
             </Text>
           </View>
 
@@ -168,7 +170,7 @@ export default function WelcomeScreen() {
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Начать"
+              accessibilityLabel={t("onboarding.start")}
               onPress={onStart}
               style={({ pressed }) => [
                 styles.primaryCtaHit,
@@ -192,7 +194,7 @@ export default function WelcomeScreen() {
                     letterSpacing: -0.72,
                   }}
                 >
-                  Начать
+                  {t("onboarding.start")}
                 </Text>
               </View>
             </Pressable>
@@ -206,7 +208,7 @@ export default function WelcomeScreen() {
                   letterSpacing: -0.72,
                 }}
               >
-                Есть аккаунт?{" "}
+                {t("auth.alreadyHaveAccount")}{" "}
               </Text>
               <Pressable
                 onPress={onLogin}
@@ -224,7 +226,7 @@ export default function WelcomeScreen() {
                     letterSpacing: -0.72,
                   }}
                 >
-                  Войти
+                  {t("auth.loginCta")}
                 </Text>
               </Pressable>
             </View>

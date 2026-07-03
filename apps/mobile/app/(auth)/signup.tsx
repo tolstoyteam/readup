@@ -24,6 +24,7 @@ import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 const PRIVACY_POLICY_URL =
   process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://readup.app/privacy";
@@ -31,6 +32,7 @@ const PRIVACY_POLICY_URL =
 export default function SignupScreen() {
   const colors = useReadupColors();
   const { signUp, signInWithOAuth } = useAuth();
+  const { t } = useInterfaceLanguage();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -47,7 +49,7 @@ export default function SignupScreen() {
   async function onSubmit() {
     setErrorMessage(null);
     if (!privacyAccepted) {
-      setErrorMessage("Подтвердите согласие с политикой конфиденциальности.");
+      setErrorMessage(t("auth.privacyRequired"));
       return;
     }
     setSubmitting(true);
@@ -106,16 +108,16 @@ export default function SignupScreen() {
           </View>
 
           <Text style={[styles.headline, { fontFamily: "Inter_800ExtraBold", color: colors.brand }]}>
-            Создайте аккаунт
+            {t("auth.createAccount")}
           </Text>
 
           <View style={styles.form}>
             <ReadupTextField
-              label="Как вас зовут?"
+              label={t("auth.fullNameLabel")}
               labelFontFamily="Inter_500Medium"
               value={fullName}
               onChangeText={setFullName}
-              placeholder="Имя Фамилия"
+              placeholder={t("auth.fullNamePlaceholder")}
               autoCapitalize="words"
               autoComplete="name"
               textContentType="name"
@@ -123,7 +125,7 @@ export default function SignupScreen() {
               style={{ fontFamily: "Inter_400Regular" }}
             />
             <ReadupTextField
-              label="Ваша почта"
+              label={t("auth.emailLabel")}
               labelFontFamily="Inter_500Medium"
               value={email}
               onChangeText={setEmail}
@@ -136,7 +138,7 @@ export default function SignupScreen() {
               style={{ fontFamily: "Inter_400Regular" }}
             />
             <ReadupTextField
-              label="Придумайте пароль"
+              label={t("auth.passwordSignupLabel")}
               labelFontFamily="Inter_500Medium"
               value={password}
               onChangeText={setPassword}
@@ -174,12 +176,12 @@ export default function SignupScreen() {
                 { fontFamily: "Inter_400Regular", color: colors.textSecondary },
               ]}>
               <Text onPress={() => !busy && setPrivacyAccepted((v) => !v)}>
-                Я соглашаюсь с{" "}
+                {t("auth.privacyAgreement")}
               </Text>
               <Text
                 style={[styles.consentLink, { color: colors.info }]}
                 onPress={() => !busy && openPrivacy()}>
-                политикой конфиденциальности
+                {t("auth.privacyPolicy")}
               </Text>
             </Text>
           </View>
@@ -194,20 +196,20 @@ export default function SignupScreen() {
 
           <View style={styles.ctaColumn}>
             <PrimaryButton
-              label="Зарегистрироваться"
+              label={t("auth.signupCta")}
               loading={submitting}
               disabled={oauthBusy != null}
               onPress={onSubmit}
               style={styles.primaryBtn}
             />
             <OutlinePillButton
-              label="Продолжить с Google"
+              label={t("auth.continueWithGoogle")}
               loading={oauthBusy === "google"}
               disabled={submitting || (oauthBusy != null && oauthBusy !== "google")}
               onPress={() => void onOAuth("google")}
             />
             <OutlinePillButton
-              label="Продолжить с Apple"
+              label={t("auth.continueWithApple")}
               loading={oauthBusy === "apple"}
               disabled={submitting || (oauthBusy != null && oauthBusy !== "apple")}
               onPress={() => void onOAuth("apple")}
@@ -216,12 +218,12 @@ export default function SignupScreen() {
 
           <View style={styles.footer}>
             <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular", color: colors.textSecondary }]}>
-              Есть аккаунт?{" "}
+              {t("auth.alreadyHaveAccount")}{" "}
             </Text>
             <Link href="/login" asChild>
               <Pressable accessibilityRole="link" disabled={busy} hitSlop={8}>
                 <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
-                  Войти
+                  {t("auth.loginCta")}
                 </Text>
               </Pressable>
             </Link>

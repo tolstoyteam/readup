@@ -4,6 +4,7 @@ import {
   type ResolvedBookAudioSource,
   resolveBookAudioPlaybackUrl,
 } from "@/features/books/api/book-audio";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import {
   setAudioModeAsync,
   useAudioPlayer,
@@ -57,6 +58,7 @@ export function ReaderBookAudioProvider({
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [voiceReloadKey, setVoiceReloadKey] = useState(0);
+  const { t } = useInterfaceLanguage();
 
   useEffect(() => {
     setVoice(initialSource.voice);
@@ -84,12 +86,12 @@ export function ReaderBookAudioProvider({
         if (url) {
           setPlaybackUrl(url);
         } else {
-          setLoadError("Не удалось загрузить аудио для выбранного голоса.");
+          setLoadError(t("reader.audioUnavailable"));
         }
       } catch {
         if (!cancelled) {
           setPlaybackUrl(null);
-          setLoadError("Не удалось загрузить аудио. Проверьте подключение к сети.");
+          setLoadError(t("reader.audioCheckingFailed"));
         }
       } finally {
         if (!cancelled) setIsAudioLoading(false);
@@ -98,7 +100,7 @@ export function ReaderBookAudioProvider({
     return () => {
       cancelled = true;
     };
-  }, [bookId, initialSource.voice, initialSource.url, voice, voiceReloadKey]);
+  }, [bookId, initialSource.voice, initialSource.url, t, voice, voiceReloadKey]);
 
   const retryVoiceLoad = useCallback(() => {
     setLoadError(null);

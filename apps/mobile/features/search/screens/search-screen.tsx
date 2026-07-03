@@ -41,6 +41,7 @@ import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { contentLanguageForInterface } from "@/shared/i18n/interface-language";
 
 type SearchBook = BookCardItem & {
   genres: string[];
@@ -76,7 +77,7 @@ export default function SearchScreen() {
     try {
       setLoading(true);
       setError(null);
-      const preferredLanguage = language;
+      const preferredLanguage = contentLanguageForInterface(language);
       const [{ books: rows }, catalogGenres] = await Promise.all([
         fetchBooks(preferredLanguage),
         fetchGenres().catch(() => null),

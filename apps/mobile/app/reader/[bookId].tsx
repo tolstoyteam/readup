@@ -35,6 +35,7 @@ import type { TextSelectionState } from "@/features/quotes/lib/quote-types";
 import { resolvePageIndex } from "@/features/reader/lib/resolve-reading-position";
 import type { ReaderLanguage } from "@/features/reader/settings/reader-settings";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { StatusBar } from "expo-status-bar";
@@ -130,6 +131,7 @@ function ReaderChrome({
   const pageProgress =
     totalPages > 0 ? Math.min((pageIndex + 1) / totalPages, 1) : 0;
   const { settings } = useReaderSettings();
+  const { t } = useInterfaceLanguage();
 
   return (
     <>
@@ -180,14 +182,14 @@ function ReaderChrome({
               onPress={onFinishBook}
               disabled={finishing}
               accessibilityRole="button"
-              accessibilityLabel="Закончить книгу"
+              accessibilityLabel={t("reader.finishBook")}
               className={`min-h-[44px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90 ${finishing ? "opacity-70" : ""}`}
             >
               {finishing ? (
                 <ActivityIndicator size="small" color="#FBFAF2" />
               ) : (
                 <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#FBFAF2]">
-                  Закончить книгу
+                  {t("reader.finishBook")}
                 </Text>
               )}
             </Pressable>
@@ -196,11 +198,11 @@ function ReaderChrome({
             <Pressable
               onPress={onOpenQuiz}
               accessibilityRole="button"
-              accessibilityLabel="Пройти тест"
+              accessibilityLabel={t("bookDetail.takeQuiz")}
               className="min-h-[44px] items-center justify-center rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
             >
               <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#059669] dark:text-[#34D399]">
-                Пройти тест
+                {t("bookDetail.takeQuiz")}
               </Text>
             </Pressable>
           ) : null}
@@ -224,7 +226,10 @@ function ReaderChrome({
           />
         </Pressable>
         <Text className="min-w-[72px] text-center text-sm font-medium text-[#4A5550] dark:text-[#B8C1BB]">
-          {pageLabel} of {totalPages || pages.length}
+          {t("reader.pageProgress", {
+            page: pageLabel,
+            total: totalPages || pages.length,
+          })}
         </Text>
         <Pressable
           onPress={goNext}
@@ -260,6 +265,7 @@ export default function ReaderScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useInterfaceLanguage();
   const { bookId: bookIdParam, mode: modeParam, focusQuoteId: focusQuoteIdParam } = useLocalSearchParams<{
     bookId: string;
     mode?: string;
@@ -348,10 +354,10 @@ export default function ReaderScreen() {
         message:
           e instanceof Error
             ? e.message
-            : "Не удалось проверить наличие аудио. Проверьте подключение к сети.",
+            : t("reader.audioCheckingFailed"),
       });
     }
-  }, []);
+  }, [t]);
 
   const reloadAudio = useCallback(() => {
     if (!document?.book_id) return;
@@ -360,7 +366,7 @@ export default function ReaderScreen() {
 
   const load = useCallback(async () => {
     if (!bookId) {
-      setError("Missing book");
+      setError(t("reader.missingBook"));
       setLoading(false);
       return;
     }
@@ -370,18 +376,18 @@ export default function ReaderScreen() {
       setDocument(null);
       const row = await fetchBookContent(bookId);
       if (!row) {
-        setError("Book not found");
+        setError(t("bookDetail.bookNotFound"));
         setDocument(null);
         return;
       }
       setDocument(row.document);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load book");
+      setError(e instanceof Error ? e.message : t("bookDetail.couldNotLoad"));
       setDocument(null);
     } finally {
       setLoading(false);
     }
-  }, [bookId]);
+  }, [bookId, t]);
 
   useEffect(() => {
     load();
@@ -603,13 +609,13 @@ export default function ReaderScreen() {
       router.replace("/(tabs)");
     } catch {
       Alert.alert(
-        "Не удалось завершить книгу",
-        "Проверьте подключение к сети и попробуйте снова.",
+        t("reader.finishBook"),
+        t("common.tryAgain"),
       );
     } finally {
       setFinishing(false);
     }
-  }, [document?.book_id, finishing, router, sessionTracker, user]);
+  }, [document?.book_id, finishing, router, sessionTracker, t, user]);
 
   useEffect(() => {
     if (!user || !document?.book_id || pages.length === 0) return;
@@ -628,13 +634,13 @@ export default function ReaderScreen() {
   const handleBlockLongPress = useCallback(
     (blockStableId: string) => {
       if (!user) {
-        Alert.alert("Sign in required", "Sign in to save quotes from your reading.");
+        Alert.alert(t("quotes.signInRequiredTitle"), t("quotes.signInRequiredBody"));
         return;
       }
       setSelectingBlockId(blockStableId);
       setSelectionState(null);
     },
-    [user],
+    [t, user],
   );
 
   const handleSelectionChange = useCallback(
@@ -660,7 +666,7 @@ export default function ReaderScreen() {
   const handleSaveQuote = useCallback(async () => {
     if (!user || !document || !currentPage || !selectionState) return;
     if (!selectionState.selectedText.trim()) {
-      Alert.alert("Nothing selected", "Select some text before saving a quote.");
+      Alert.alert(t("quotes.nothingSelectedTitle"), t("quotes.nothingSelectedBody"));
       return;
     }
 
@@ -687,8 +693,8 @@ export default function ReaderScreen() {
       dismissSelection();
     } catch (error) {
       Alert.alert(
-        "Could not save quote",
-        error instanceof Error ? error.message : "Check your connection and try again.",
+        t("reader.saveQuoteFailed"),
+        error instanceof Error ? error.message : t("common.tryAgain"),
       );
     } finally {
       setSavingQuote(false);
@@ -699,6 +705,7 @@ export default function ReaderScreen() {
     document,
     persistQuote,
     selectionState,
+    t,
     user,
   ]);
 
@@ -738,7 +745,7 @@ export default function ReaderScreen() {
           onPress={handleCloseReader}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Close reader"
+          accessibilityLabel={t("common.close")}
           className="active:opacity-70"
         >
           <X size={28} color={colors.text} strokeWidth={2} />
@@ -768,7 +775,7 @@ export default function ReaderScreen() {
                     : "text-[#7A7868] dark:text-[#8F9A93]"
                 }`}
               >
-                Read
+                {t("reader.read")}
               </Text>
             </Pressable>
             <Pressable
@@ -789,7 +796,7 @@ export default function ReaderScreen() {
                     : "text-[#7A7868] dark:text-[#8F9A93]"
                 }`}
               >
-                Listen
+                {t("reader.listen")}
               </Text>
             </Pressable>
           </View>
@@ -797,7 +804,7 @@ export default function ReaderScreen() {
           <View className="flex-row items-center gap-1.5 rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-2">
             <FileText size={18} color={colors.textTertiary} strokeWidth={2} />
             <Text className="text-[13px] font-semibold text-[#7A7868] dark:text-[#8F9A93]">
-              Read
+              {t("reader.read")}
             </Text>
           </View>
         ) : (
@@ -809,7 +816,7 @@ export default function ReaderScreen() {
             onPress={() => setSettingsOpen(true)}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Open reader settings"
+            accessibilityLabel={t("settings.title")}
           >
             <Menu size={26} color={colors.text} strokeWidth={2} />
           </Pressable>
@@ -817,7 +824,7 @@ export default function ReaderScreen() {
             onPress={() => setSettingsOpen(true)}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Open reader text settings"
+            accessibilityLabel={t("settings.appearance")}
           >
             <Text className="text-lg font-semibold text-[#1A2420] dark:text-[#F3F4EE]">
               AA
@@ -847,7 +854,9 @@ export default function ReaderScreen() {
               onPress={load}
               className="min-h-[54px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90"
             >
-              <Text className="text-lg font-medium text-[#FBFAF2]">Retry</Text>
+              <Text className="text-lg font-medium text-[#FBFAF2]">
+                {t("common.retry")}
+              </Text>
             </Pressable>
           </View>
         )}
@@ -856,7 +865,7 @@ export default function ReaderScreen() {
           !error &&
           document &&
           audioChecking && (
-          <ReaderListenLoading message="Проверяем наличие аудио…" />
+          <ReaderListenLoading message={t("reader.loadingAudioAvailability")} />
         )}
         {!loading &&
           !awaitingEditionResolution &&

@@ -23,10 +23,12 @@ import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export default function LoginScreen() {
   const colors = useReadupColors();
   const { signIn, signInWithOAuth } = useAuth();
+  const { t } = useInterfaceLanguage();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -92,12 +94,12 @@ export default function LoginScreen() {
               styles.headline,
               { fontFamily: "Inter_800ExtraBold", color: colors.brand },
             ]}>
-            Давно не виделись!
+            {t("auth.loginHeadline")}
           </Text>
 
           <View style={styles.form}>
             <ReadupTextField
-              label="Ваша почта"
+              label={t("auth.emailLabel")}
               labelFontFamily="Inter_500Medium"
               value={email}
               onChangeText={setEmail}
@@ -110,7 +112,7 @@ export default function LoginScreen() {
               style={{ fontFamily: "Inter_400Regular" }}
             />
             <ReadupTextField
-              label="Пароль"
+              label={t("auth.passwordLabel")}
               labelFontFamily="Inter_500Medium"
               value={password}
               onChangeText={setPassword}
@@ -129,7 +131,7 @@ export default function LoginScreen() {
               hitSlop={8}
               disabled={submitting || oauthBusy != null}>
               <Text style={[styles.forgotText, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
-                Забыли пароль?
+                {t("auth.forgotPassword")}
               </Text>
             </Pressable>
           </View>
@@ -144,20 +146,20 @@ export default function LoginScreen() {
 
           <View style={styles.ctaColumn}>
             <PrimaryButton
-              label="Войти"
+              label={t("auth.loginCta")}
               loading={submitting}
               disabled={oauthBusy != null}
               onPress={onSubmit}
               style={styles.primaryBtn}
             />
             <OutlinePillButton
-              label="Продолжить с Google"
+              label={t("auth.continueWithGoogle")}
               loading={oauthBusy === "google"}
               disabled={submitting || (oauthBusy != null && oauthBusy !== "google")}
               onPress={() => void onOAuth("google")}
             />
             <OutlinePillButton
-              label="Продолжить с Apple"
+              label={t("auth.continueWithApple")}
               loading={oauthBusy === "apple"}
               disabled={submitting || (oauthBusy != null && oauthBusy !== "apple")}
               onPress={() => void onOAuth("apple")}
@@ -166,7 +168,7 @@ export default function LoginScreen() {
 
           <View style={styles.footer}>
             <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular", color: colors.textSecondary }]}>
-              Нет аккаунта?{" "}
+              {t("auth.noAccount")}{" "}
             </Text>
             <Link href="/signup" asChild>
               <Pressable
@@ -174,7 +176,7 @@ export default function LoginScreen() {
                 disabled={submitting || oauthBusy != null}
                 hitSlop={8}>
                 <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
-                  Регистрация
+                  {t("auth.signupLink")}
                 </Text>
               </Pressable>
             </Link>

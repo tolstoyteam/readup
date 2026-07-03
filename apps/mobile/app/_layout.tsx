@@ -62,8 +62,8 @@ export default function RootLayout() {
             colorScheme === "dark" ? darkNavigationTheme : lightNavigationTheme
           }
         >
-          <AuthProvider>
-            <InterfaceLanguageProvider>
+          <InterfaceLanguageProvider>
+            <AuthProvider>
               <LibraryProvider>
                 <QuotesProvider>
                   <ReaderSettingsProvider>
@@ -141,9 +141,9 @@ export default function RootLayout() {
                   </ReaderSettingsProvider>
                 </QuotesProvider>
               </LibraryProvider>
-            </InterfaceLanguageProvider>
+            </AuthProvider>
             <StatusBar style="auto" />
-          </AuthProvider>
+          </InterfaceLanguageProvider>
         </ThemeProvider>
       </ThemePreferenceProvider>
     </GestureHandlerRootView>

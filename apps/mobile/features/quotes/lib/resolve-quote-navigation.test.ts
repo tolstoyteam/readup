@@ -5,8 +5,8 @@ import { resolveQuotePageIndex } from "./resolve-quote-navigation";
 
 describe("resolveQuotePageIndex", () => {
   const pages = [
-    { page_number: 1, chapter_stable_id: "chapter-1" },
-    { page_number: 2, chapter_stable_id: "chapter-2" },
+    { page_number: 1, chapter_stable_id: "chapter-1", elements: [] },
+    { page_number: 2, chapter_stable_id: "chapter-2", elements: [] },
   ];
 
   it("prefers chapter_stable_id", () => {

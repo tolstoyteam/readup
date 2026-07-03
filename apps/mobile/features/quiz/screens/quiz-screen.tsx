@@ -28,12 +28,14 @@ import { notifyEngagementRefresh } from "@/features/engagement/engagement-refres
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export default function QuizScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useInterfaceLanguage();
   const params = useLocalSearchParams<{ bookId: string }>();
   const bookId = params.bookId ? decodeURIComponent(params.bookId) : "";
 
@@ -47,7 +49,7 @@ export default function QuizScreen() {
 
   const load = useCallback(async () => {
     if (!bookId) {
-      setError("Тест недоступен");
+      setError(t("quiz.missing"));
       setLoading(false);
       return;
     }
@@ -56,7 +58,7 @@ export default function QuizScreen() {
       setError(null);
       const data = await fetchQuizForBook(bookId);
       if (!data) {
-        setError("Для этой книги нет теста");
+        setError(t("quiz.noQuiz"));
         setQuiz(null);
         return;
       }
@@ -75,11 +77,11 @@ export default function QuizScreen() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось загрузить тест");
+      setError(e instanceof Error ? e.message : t("quiz.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [bookId, user]);
+  }, [bookId, t, user]);
 
   useEffect(() => {
     load();
@@ -110,7 +112,7 @@ export default function QuizScreen() {
       setResult(attempt);
       notifyEngagementRefresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось отправить ответы");
+      setError(e instanceof Error ? e.message : t("quiz.submitFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -127,6 +129,7 @@ export default function QuizScreen() {
       <QuizResult
         result={result}
         quiz={quiz}
+        t={t}
         onRetry={restart}
         onClose={() => router.back()}
       />
@@ -144,7 +147,7 @@ export default function QuizScreen() {
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть тест"
+          accessibilityLabel={t("quiz.close")}
           hitSlop={12}
           className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
@@ -166,14 +169,14 @@ export default function QuizScreen() {
       ) : error || !quiz ? (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="mb-4 text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
-            {error ?? "Тест не найден"}
+            {error ?? t("quiz.notFound")}
           </Text>
           <Pressable
             onPress={load}
             className="rounded-full bg-[#059669] px-6 py-3 active:opacity-90"
           >
             <Text className="text-[15px] font-semibold text-[#FBFAF2]">
-              Повторить
+              {t("common.retry")}
             </Text>
           </Pressable>
         </View>
@@ -193,7 +196,7 @@ export default function QuizScreen() {
           {quiz.questions.map((question, index) => (
             <View key={question.id} className="mt-7">
               <Text className="text-[12px] uppercase tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
-                Вопрос {index + 1}
+                {t("quiz.question", { number: index + 1 })}
               </Text>
               <Text className="mt-1 text-[20px] font-semibold leading-[26px] tracking-[-0.8px] text-[#1A2420] dark:text-[#F3F4EE]">
                 {question.question}
@@ -267,7 +270,7 @@ export default function QuizScreen() {
               <ActivityIndicator color={colors.textInverse} />
             ) : (
               <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
-                Завершить тест
+                {t("quiz.finish")}
               </Text>
             )}
           </Pressable>
@@ -282,11 +285,13 @@ function QuizResult({
   quiz,
   onRetry,
   onClose,
+  t,
 }: {
   result: QuizAttemptResult;
   quiz: Quiz;
   onRetry: () => void;
   onClose: () => void;
+  t: ReturnType<typeof useInterfaceLanguage>["t"];
 }) {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
@@ -295,10 +300,10 @@ function QuizResult({
     : 0;
   const headline =
     correctRatio === 1
-      ? "Отличный результат!"
+      ? t("quiz.greatResult")
       : correctRatio >= 0.6
-        ? "Хороший результат"
-        : "Нужно ещё попрактиковаться";
+        ? t("quiz.goodResult")
+        : t("quiz.practiceMore");
 
   const questionsById = new Map(quiz.questions.map((q) => [q.id, q]));
 
@@ -313,7 +318,7 @@ function QuizResult({
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Закрыть"
+          accessibilityLabel={t("common.close")}
           hitSlop={12}
           className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
@@ -360,7 +365,7 @@ function QuizResult({
                     <XCircle size={18} color="#B85C5C" strokeWidth={2.2} />
                   )}
                   <Text className="text-[12px] uppercase tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
-                    Вопрос {index + 1}
+                    {t("quiz.question", { number: index + 1 })}
                   </Text>
                 </View>
                 <Text className="mt-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]">
@@ -378,7 +383,7 @@ function QuizResult({
         >
           <RotateCcw size={18} color={colors.brand} strokeWidth={2.2} />
           <Text className="text-[16px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
-            Пройти ещё раз
+            {t("quiz.retry")}
           </Text>
         </Pressable>
       </ScrollView>

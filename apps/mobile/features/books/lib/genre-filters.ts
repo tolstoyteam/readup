@@ -1,4 +1,9 @@
-import { genreRuLabel, isBookGenre } from "@readup/db";
+import {
+  BOOK_GENRES,
+  genreRuLabel,
+  isBookGenre,
+  type BookGenre,
+} from "@readup/db";
 import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
 export type GenreOption = {
@@ -9,6 +14,30 @@ export type GenreOption = {
 export type BookWithGenres = {
   bookId: string;
   genres: string[];
+};
+
+const BOOK_GENRE_ES_LABELS: Record<BookGenre, string> = {
+  fiction: "Ficción",
+  literary_fiction: "Ficción literaria",
+  science_fiction: "Ciencia ficción",
+  fantasy: "Fantasía",
+  mystery_thriller: "Misterio y thriller",
+  history: "Historia",
+  biography_memoir: "Biografías y memorias",
+  science: "Ciencia",
+  technology: "Tecnología",
+  business: "Negocios",
+  finance: "Finanzas",
+  economics: "Economía",
+  psychology: "Psicología",
+  philosophy: "Filosofía",
+  self_improvement: "Desarrollo personal",
+  health_wellness: "Salud y bienestar",
+  arts_culture: "Arte y cultura",
+  education: "Educación",
+  religion_spirituality: "Religión y espiritualidad",
+  politics_current_affairs: "Política y actualidad",
+  other: "Otro",
 };
 
 export function normalizeGenreKey(value: string): string {
@@ -67,11 +96,24 @@ export function sortGenresByLabel(genres: GenreOption[]): GenreOption[] {
   return [...genres].sort((a, b) => a.labelRu.localeCompare(b.labelRu, "ru"));
 }
 
+function bookGenreFromOption(genre: GenreOption): BookGenre | null {
+  if (isBookGenre(genre.slug)) return genre.slug;
+  return (
+    BOOK_GENRES.find((bookGenre) => genreRuLabel(bookGenre) === genre.labelRu) ??
+    null
+  );
+}
+
 export function genreDisplayLabel(
   genre: GenreOption,
   language: InterfaceLanguage,
 ): string {
-  return language === "en" ? genre.slug : genre.labelRu;
+  if (language === "ru") return genre.labelRu;
+  if (language === "es") {
+    const bookGenre = bookGenreFromOption(genre);
+    return bookGenre ? BOOK_GENRE_ES_LABELS[bookGenre] : genre.slug;
+  }
+  return genre.slug;
 }
 
 export function sortGenresForLanguage(

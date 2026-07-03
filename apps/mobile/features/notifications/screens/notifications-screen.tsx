@@ -34,13 +34,15 @@ import {
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useAuth } from "@/shared/context/auth-context";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import type { TranslationKey } from "@/shared/i18n/translations";
 
-const PREF_TOGGLES: { key: keyof NotificationPreferences; label: string }[] = [
-  { key: "daily_reminder", label: "Напоминания о чтении" },
-  { key: "streak_alerts", label: "Серия чтения" },
-  { key: "new_content", label: "Новые материалы" },
-  { key: "quiz_reminders", label: "Тесты" },
-  { key: "achievements", label: "Достижения" },
+const PREF_TOGGLES: { key: keyof NotificationPreferences; labelKey: TranslationKey }[] = [
+  { key: "daily_reminder", labelKey: "notifications.dailyReminder" },
+  { key: "streak_alerts", labelKey: "notifications.streakAlerts" },
+  { key: "new_content", labelKey: "notifications.newContent" },
+  { key: "quiz_reminders", labelKey: "notifications.quizReminders" },
+  { key: "achievements", labelKey: "notifications.achievements" },
 ];
 
 function iconForType(type: NotificationType) {
@@ -59,16 +61,19 @@ function iconForType(type: NotificationType) {
   }
 }
 
-function formatRelative(iso: string): string {
+function formatRelative(
+  iso: string,
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
+): string {
   const date = new Date(iso);
   const diffMs = Date.now() - date.getTime();
   const diffMinutes = Math.round(diffMs / 60000);
-  if (diffMinutes < 1) return "только что";
-  if (diffMinutes < 60) return `${diffMinutes} мин назад`;
+  if (diffMinutes < 1) return t("notifications.justNow");
+  if (diffMinutes < 60) return t("notifications.minutesAgo", { count: diffMinutes });
   const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} ч назад`;
+  if (diffHours < 24) return t("notifications.hoursAgo", { count: diffHours });
   const diffDays = Math.round(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} дн назад`;
+  if (diffDays < 7) return t("notifications.daysAgo", { count: diffDays });
   return date.toLocaleDateString();
 }
 
@@ -77,6 +82,7 @@ export default function NotificationsScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useInterfaceLanguage();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -137,14 +143,14 @@ export default function NotificationsScreen() {
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
-          accessibilityLabel="Назад"
+          accessibilityLabel={t("common.back")}
           hitSlop={12}
           className="h-10 w-10 items-center justify-center rounded-full bg-[#F2F0E6] dark:bg-[#19211D] active:opacity-80"
         >
           <ArrowLeft size={22} color={colors.text} strokeWidth={2} />
         </Pressable>
         <Text className="text-[18px] font-semibold tracking-[-0.72px] text-[#1A2420] dark:text-[#F3F4EE]">
-          Уведомления
+          {t("notifications.title")}
         </Text>
         <View className="h-10 w-10" />
       </View>
@@ -163,7 +169,7 @@ export default function NotificationsScreen() {
               {profile ? (
                 <View className="mb-6 gap-2 rounded-[20px] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-4">
                   <Text className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]">
-                    Настройки
+                    {t("notifications.settings")}
                   </Text>
                   {PREF_TOGGLES.map((toggle) => (
                     <View
@@ -171,7 +177,7 @@ export default function NotificationsScreen() {
                       className="flex-row items-center justify-between py-1.5"
                     >
                       <Text className="flex-1 text-[14px] tracking-[-0.56px] text-[#1A2420] dark:text-[#F3F4EE]">
-                        {toggle.label}
+                        {t(toggle.labelKey)}
                       </Text>
                       <Switch
                         value={
@@ -198,7 +204,7 @@ export default function NotificationsScreen() {
                 strokeWidth={2}
               />
               <Text className="mt-3 text-center text-[14px] tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]">
-                Здесь будут появляться напоминания, награды и обновления.
+                {t("notifications.empty")}
               </Text>
             </View>
           }
@@ -223,7 +229,7 @@ export default function NotificationsScreen() {
                     </Text>
                   ) : null}
                   <Text className="mt-1.5 text-[11px] uppercase tracking-[-0.44px] text-[#7A7868] dark:text-[#8F9A93]">
-                    {formatRelative(item.createdAt)}
+                    {formatRelative(item.createdAt, t)}
                   </Text>
                 </View>
               </View>

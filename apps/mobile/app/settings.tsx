@@ -32,6 +32,7 @@ const LANGUAGE_OPTIONS: {
 }[] = [
   { labelKey: "settings.languageRussian", value: "ru" },
   { labelKey: "settings.languageEnglish", value: "en" },
+  { labelKey: "settings.languageSpanish", value: "es" },
 ];
 
 function hasEmailIdentity(

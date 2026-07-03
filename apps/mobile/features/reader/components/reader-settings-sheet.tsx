@@ -7,6 +7,8 @@ import {
 } from "@/features/reader/settings/reader-settings";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import type { TranslationKey } from "@/shared/i18n/translations";
 import { Check, Minus, Plus } from "lucide-react-native";
 import { Modal, Pressable, Text, View } from "react-native";
 
@@ -59,6 +61,18 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
+function lineSpacingLabelKey(value: number): TranslationKey {
+  if (value === 0.9) return "readerSettings.compact";
+  if (value === 1.2) return "readerSettings.relaxed";
+  return "readerSettings.normal";
+}
+
+function marginLabelKey(value: number): TranslationKey {
+  if (value === 16) return "readerSettings.narrow";
+  if (value === 32) return "readerSettings.wide";
+  return "readerSettings.normal";
+}
+
 export function ReaderSettingsSheet({
   visible,
   onClose,
@@ -69,6 +83,7 @@ export function ReaderSettingsSheet({
   onLanguageChange?: (language: ReaderLanguage) => void;
 }) {
   const colors = useReadupColors();
+  const { t } = useInterfaceLanguage();
   const { settings, setFontScale, setLineSpacing, setMargin, setLanguage } =
     useReaderSettings();
 
@@ -103,17 +118,17 @@ export function ReaderSettingsSheet({
           </View>
 
           <Text className="text-lg font-semibold text-[#1A2420] dark:text-[#F3F4EE]">
-            Reader settings
+            {t("readerSettings.title")}
           </Text>
 
           <View>
-            <SectionLabel>Font size</SectionLabel>
+            <SectionLabel>{t("readerSettings.fontSize")}</SectionLabel>
             <View className="flex-row items-center gap-3">
               <Pressable
                 onPress={decreaseFont}
                 disabled={!canDecreaseFont}
                 accessibilityRole="button"
-                accessibilityLabel="Decrease font size"
+                accessibilityLabel={t("readerSettings.decreaseFont")}
                 className={`h-12 flex-1 items-center justify-center rounded-xl border border-[#C8C6B2] dark:border-[#3A4740] bg-[#F2F0E6] dark:bg-[#19211D] ${
                   canDecreaseFont ? "active:opacity-80" : "opacity-40"
                 }`}
@@ -132,7 +147,7 @@ export function ReaderSettingsSheet({
                 onPress={increaseFont}
                 disabled={!canIncreaseFont}
                 accessibilityRole="button"
-                accessibilityLabel="Increase font size"
+                accessibilityLabel={t("readerSettings.increaseFont")}
                 className={`h-12 flex-1 items-center justify-center rounded-xl border border-[#C8C6B2] dark:border-[#3A4740] bg-[#F2F0E6] dark:bg-[#19211D] ${
                   canIncreaseFont ? "active:opacity-80" : "opacity-40"
                 }`}
@@ -143,25 +158,31 @@ export function ReaderSettingsSheet({
           </View>
 
           <View>
-            <SectionLabel>Line spacing</SectionLabel>
+            <SectionLabel>{t("readerSettings.lineSpacing")}</SectionLabel>
             <SegmentedRow
-              options={LINE_SPACING_OPTIONS}
+              options={LINE_SPACING_OPTIONS.map((option) => ({
+                ...option,
+                label: t(lineSpacingLabelKey(option.value)),
+              }))}
               selected={settings.lineSpacing}
               onSelect={setLineSpacing}
             />
           </View>
 
           <View>
-            <SectionLabel>Margins</SectionLabel>
+            <SectionLabel>{t("readerSettings.margins")}</SectionLabel>
             <SegmentedRow
-              options={MARGIN_OPTIONS}
+              options={MARGIN_OPTIONS.map((option) => ({
+                ...option,
+                label: t(marginLabelKey(option.value)),
+              }))}
               selected={settings.margin}
               onSelect={setMargin}
             />
           </View>
 
           <View>
-            <SectionLabel>Language</SectionLabel>
+            <SectionLabel>{t("readerSettings.language")}</SectionLabel>
             <View className="rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-1">
               {LANGUAGE_OPTIONS.map((option) => {
                 const active = option.value === settings.language;

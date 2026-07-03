@@ -36,6 +36,7 @@ import { useQuotes } from "@/features/quotes";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { contentLanguageForInterface } from "@/shared/i18n/interface-language";
 import type { TranslationKey } from "@/shared/i18n/translations";
 
 const SECTION_OPTIONS: {
@@ -96,7 +97,7 @@ export default function LibraryScreen() {
   const loadCatalog = useCallback(async () => {
     try {
       setCatalogLoading(true);
-      const preferredLanguage = language;
+      const preferredLanguage = contentLanguageForInterface(language);
       const { books } = await fetchBooks(preferredLanguage);
       const catalog = buildBookCatalogMap(books);
       for (const ref of catalog.editionRefs) {

@@ -5,9 +5,10 @@ import {
   logQuoteSourceNavigation,
   quoteSourceReaderPath,
 } from "@/features/quotes/lib/quote-source-navigation";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { Trash2 } from "lucide-react-native";
 import { Alert, Pressable, Text, View } from "react-native";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export type QuoteCardItem = UserQuote & {
   bookTitle?: string;
@@ -26,6 +27,7 @@ function formatSavedDate(iso: string): string {
 export function QuoteCard({ item }: { item: QuoteCardItem }) {
   const router = useRouter();
   const { deleteQuote } = useQuotes();
+  const { t } = useInterfaceLanguage();
 
   function openSource() {
     const path = quoteSourceReaderPath(item);
@@ -35,18 +37,18 @@ export function QuoteCard({ item }: { item: QuoteCardItem }) {
       language: item.language,
       path,
     });
-    router.push(path);
+    router.push(path as Href);
   }
 
   function confirmDelete() {
-    Alert.alert("Delete quote?", "This will remove the quote and its highlight.", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("quotes.deleteTitle"), t("quotes.deleteBody"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: t("quotes.delete"),
         style: "destructive",
         onPress: () => {
           void deleteQuote(item.id).catch(() => {
-            Alert.alert("Could not delete quote", "Check your connection and try again.");
+            Alert.alert(t("quotes.couldNotDelete"), t("common.tryAgain"));
           });
         },
       },
@@ -61,11 +63,11 @@ export function QuoteCard({ item }: { item: QuoteCardItem }) {
           <Pressable
             onPress={openSource}
             accessibilityRole="button"
-            accessibilityLabel="Go to source"
+            accessibilityLabel={t("quotes.goToSource")}
             className="active:opacity-80"
           >
             <Text className="text-[12px] font-medium tracking-[-0.48px] text-[#059669] dark:text-[#34D399]">
-              To the source
+              {t("quotes.goToSource")}
             </Text>
           </Pressable>
         }
@@ -73,7 +75,7 @@ export function QuoteCard({ item }: { item: QuoteCardItem }) {
 
       <View className="mt-4 gap-1">
         <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#4A5550] dark:text-[#B8C1BB]">
-          {item.bookTitle ?? "Unknown book"}
+          {item.bookTitle ?? t("quotes.unknownBook")}
         </Text>
         {item.chapterTitle ? (
           <Text className="text-[12px] tracking-[-0.48px] text-[#7A7868] dark:text-[#8F9A93]">
@@ -89,7 +91,7 @@ export function QuoteCard({ item }: { item: QuoteCardItem }) {
         <Pressable
           onPress={confirmDelete}
           accessibilityRole="button"
-          accessibilityLabel="Delete quote"
+          accessibilityLabel={t("quotes.delete")}
           className="h-9 w-9 items-center justify-center rounded-full active:opacity-80"
         >
           <Trash2 size={18} color="#7A7868" strokeWidth={2} />

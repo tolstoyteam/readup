@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { supabase } from "@/shared/lib/supabase";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 type OAuthProvider = "google" | "apple";
 
@@ -37,6 +38,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useInterfaceLanguage();
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const oauthUrl = data.url;
       if (!oauthUrl) {
         return {
-          error: { message: "Не удалось открыть вход через провайдера", status: 0 } as AuthError,
+          error: { message: t("auth.oauthOpenFailed"), status: 0 } as AuthError,
         };
       }
       const result = await WebBrowser.openAuthSessionAsync(oauthUrl, redirectTo);
@@ -124,10 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return { error: null };
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "OAuth failed";
+      const message = e instanceof Error ? e.message : t("auth.oauthFailed");
       return { error: { message, status: 0 } as AuthError };
     }
-  }, []);
+  }, [t]);
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();

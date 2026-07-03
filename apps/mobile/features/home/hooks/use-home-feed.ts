@@ -16,6 +16,7 @@ import {
 import { useLibrary } from "@/features/library";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { contentLanguageForInterface } from "@/shared/i18n/interface-language";
 
 export type HomeBook = BookCardItem & {
   genres: string[];
@@ -42,7 +43,7 @@ export function useHomeFeed() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const preferredLanguage = language;
+      const preferredLanguage = contentLanguageForInterface(language);
       const [{ books }, recs, trending, catalogGenres] = await Promise.all([
         fetchBooks(preferredLanguage),
         user ? fetchRecommendedBooks(12).catch(() => []) : Promise.resolve([]),

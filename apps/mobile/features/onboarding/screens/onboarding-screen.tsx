@@ -21,8 +21,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { markOnboardingComplete } from "@/shared/lib/onboarding-storage";
+import type { TranslationKey } from "@/shared/i18n/translations";
 
 /** Tokens from Figma `readup. design` onboarding-info section (node 55:237). */
 
@@ -45,7 +47,7 @@ const FIGMA_NAV_BOTTOM_INSET = 28;
 
 type OnboardingPage = {
   id: string;
-  title: string;
+  titleKey: TranslationKey;
   illustration: number | ImageSource;
   /** Figma intrinsic size for the illustration crop (used for aspect ratio). */
   imgW: number;
@@ -57,7 +59,7 @@ type OnboardingPage = {
 const PAGES: OnboardingPage[] = [
   {
     id: "page-1",
-    title: "Получай ключевые идеи из книг всего за 10–15 минут",
+    titleKey: "onboarding.page1",
     illustration: require("@/assets/images/onboarding/page-1-clock.png"),
     imgW: 282,
     imgH: 389,
@@ -65,8 +67,7 @@ const PAGES: OnboardingPage[] = [
   },
   {
     id: "page-2",
-    title:
-      "Читай или слушай саммари в любое время — с персональными рекомендациями",
+    titleKey: "onboarding.page2",
     illustration: require("@/assets/images/onboarding/page-2-headphones.png"),
     imgW: 295,
     imgH: 395,
@@ -74,7 +75,7 @@ const PAGES: OnboardingPage[] = [
   },
   {
     id: "page-3",
-    title: "Закрепляй знания с помощью быстрых тестов и развивайся каждый день",
+    titleKey: "onboarding.page3",
     illustration: require("@/assets/images/onboarding/page-3-book-head.png"),
     imgW: 328,
     imgH: 440,
@@ -87,6 +88,7 @@ const watermarkAsset = require("@/assets/images/onboarding/readup-logo.png");
 export default function OnboardingScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
+  const { t } = useInterfaceLanguage();
   const router = useRouter();
   const { width, height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
@@ -255,7 +257,7 @@ export default function OnboardingScreen() {
                         maxWidth: 319,
                       }}
                     >
-                      {page.title}
+                      {t(page.titleKey)}
                     </Text>
                   </View>
 
@@ -289,7 +291,7 @@ export default function OnboardingScreen() {
           <Pressable
             onPress={goToTabs}
             accessibilityRole="button"
-            accessibilityLabel="Пропустить"
+            accessibilityLabel={t("common.skip")}
             style={({ pressed }) => [
               styles.footerAction,
               pressed && styles.footerActionPressed,
@@ -303,7 +305,7 @@ export default function OnboardingScreen() {
                 letterSpacing: -0.48,
               }}
             >
-              Пропустить
+              {t("common.skip")}
             </Text>
           </Pressable>
 
@@ -329,7 +331,7 @@ export default function OnboardingScreen() {
           <Pressable
             onPress={handleNext}
             accessibilityRole="button"
-            accessibilityLabel="Дальше"
+            accessibilityLabel={t("onboarding.next")}
             style={({ pressed }) => [
               styles.footerAction,
               pressed && styles.footerActionPressed,
@@ -343,7 +345,7 @@ export default function OnboardingScreen() {
                 letterSpacing: -0.48,
               }}
             >
-              Дальше
+              {t("onboarding.next")}
             </Text>
           </Pressable>
         </View>

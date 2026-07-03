@@ -61,6 +61,7 @@ import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { contentLanguageForInterface } from "@/shared/i18n/interface-language";
 import {
   buildBookCatalogMap,
   joinLibraryBooks,
@@ -136,7 +137,7 @@ export default function ProfileScreen() {
   const loadSavedPreview = useCallback(async () => {
     if (!user) return;
     try {
-      const preferredLanguage = language;
+      const preferredLanguage = contentLanguageForInterface(language);
       const { books } = await fetchBooks(preferredLanguage);
       const catalog = buildBookCatalogMap(books);
       const items = joinLibraryBooks(savedBooks, catalog, preferredLanguage)

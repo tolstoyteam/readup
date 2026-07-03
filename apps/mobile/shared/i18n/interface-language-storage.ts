@@ -8,7 +8,7 @@ import {
 const KEY = "@readup/interface_language";
 
 function sanitize(raw: unknown): InterfaceLanguage {
-  if (raw === "ru" || raw === "en") return raw;
+  if (raw === "ru" || raw === "en" || raw === "es") return raw;
   return DEFAULT_INTERFACE_LANGUAGE;
 }
 
