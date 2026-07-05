@@ -1,4 +1,4 @@
-import type { CreateUserQuoteInput, UserQuote } from "@readup/db";
+import type { CreateUserQuoteInput, UserQuote } from "@readup/db/shared";
 import { supabase } from "@/shared/lib/supabase";
 
 const QUOTE_COLUMNS =

@@ -1,4 +1,4 @@
-import type { BookDocument } from "@readup/db";
+import type { BookDocument } from "@readup/db/shared";
 import {
   resolveBookAudioSource,
   type ResolvedBookAudioSource,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type { BookPage } from "@readup/db";
+import type { BookPage } from "@readup/db/shared";
 
 import { embedKeywordsInLastChapter } from "./embed-book-keywords";
 

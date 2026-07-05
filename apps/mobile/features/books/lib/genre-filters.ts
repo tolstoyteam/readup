@@ -3,7 +3,7 @@ import {
   genreRuLabel,
   isBookGenre,
   type BookGenre,
-} from "@readup/db";
+} from "@readup/db/shared";
 import type { InterfaceLanguage } from "@/shared/i18n/interface-language";
 
 export type GenreOption = {

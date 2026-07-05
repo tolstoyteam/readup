@@ -1,4 +1,4 @@
-import type { BookPage, LegacyBookPageElement } from "@readup/db";
+import type { BookPage, LegacyBookPageElement } from "@readup/db/shared";
 
 function isKeywordsOnlyPage(page: BookPage): boolean {
   return (

@@ -1,4 +1,4 @@
-import type { UserQuote } from "@readup/db";
+import type { UserQuote } from "@readup/db/shared";
 
 export function parseFocusQuoteIdParam(
   raw: string | string[] | undefined,

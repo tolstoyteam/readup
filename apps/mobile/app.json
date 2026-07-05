@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sanat.readup"
+      "bundleIdentifier": "com.sanat.readup",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -49,6 +52,14 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "supabaseBookCoversBucket": "Storage",
+      "supabaseBookAudioBucket": "book-audio",
+      "router": {},
+      "eas": {
+        "projectId": "a739458e-b313-4a5e-852d-cbab736facc3"
+      }
     }
   }
 }

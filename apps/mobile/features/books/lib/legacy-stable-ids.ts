@@ -1,4 +1,4 @@
-import type { BookPage, LegacyBookPageElement } from "@readup/db";
+import type { BookPage, LegacyBookPageElement } from "@readup/db/shared";
 
 export function legacyChapterStableId(
   bookId: string,

@@ -1,4 +1,4 @@
-import type { UserBookRecord } from "@readup/db";
+import type { UserBookRecord } from "@readup/db/shared";
 import {
   createContext,
   useCallback,

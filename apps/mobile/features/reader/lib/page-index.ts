@@ -1,4 +1,4 @@
-import type { BookPage } from "@readup/db";
+import type { BookPage } from "@readup/db/shared";
 
 /** Map saved progress page label to a sorted-pages array index. */
 export function pageIndexFromSavedPage(

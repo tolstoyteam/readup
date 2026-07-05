@@ -1,4 +1,4 @@
-import type { ReadingStatus, UserBookRecord, WorkLibraryProgress } from "@readup/db";
+import type { ReadingStatus, UserBookRecord, WorkLibraryProgress } from "@readup/db/shared";
 import { supabase } from "@/shared/lib/supabase";
 
 import { resolveWorkId } from "@/features/library/lib/resolve-work-id";

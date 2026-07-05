@@ -1,4 +1,4 @@
-import type { BookDocument } from "@readup/db";
+import type { BookDocument } from "@readup/db/shared";
 import { coverUrl } from "@/features/books/api/books";
 import { audioProgressFraction } from "@/features/reader/audio/audio-progress";
 import { useReaderBookAudio } from "@/features/reader/audio/reader-book-audio-context";

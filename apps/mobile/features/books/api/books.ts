@@ -1,5 +1,5 @@
-import type { BookDataColumn, BookDocument, BookPage } from "@readup/db";
-import { genreRuLabel, isBookGenre } from "@readup/db";
+import type { BookDataColumn, BookDocument, BookPage } from "@readup/db/shared";
+import { genreRuLabel, isBookGenre } from "@readup/db/shared";
 import { embedKeywordsInLastChapter } from "@/features/books/lib/embed-book-keywords";
 import { assignLegacyStableIds } from "@/features/books/lib/legacy-stable-ids";
 import { pickEdition } from "@/features/books/lib/pick-edition";

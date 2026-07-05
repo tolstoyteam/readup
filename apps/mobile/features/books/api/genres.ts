@@ -1,4 +1,4 @@
-import { genreRuLabel, isBookGenre } from "@readup/db";
+import { genreRuLabel, isBookGenre } from "@readup/db/shared";
 
 import type { GenreOption } from "@/features/books/lib/genre-filters";
 import { sortGenresByLabel } from "@/features/books/lib/genre-filters";

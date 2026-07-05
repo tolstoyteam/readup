@@ -2,7 +2,7 @@ import {
   type BookTtsAudio,
   type BookTtsVoicePaths,
   type TtsVoiceId,
-} from "@readup/db";
+} from "@readup/db/shared";
 import {
   getBookAudioStorageBucket,
   supabase,

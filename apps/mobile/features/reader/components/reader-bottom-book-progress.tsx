@@ -1,4 +1,4 @@
-import type { BookDocument } from "@readup/db";
+import type { BookDocument } from "@readup/db/shared";
 import { coverUrl } from "@/features/books/api/books";
 import { clampProgressFraction } from "@/features/reader/audio/audio-progress";
 import { Image } from "expo-image";

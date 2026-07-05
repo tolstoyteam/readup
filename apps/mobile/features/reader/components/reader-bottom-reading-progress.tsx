@@ -1,4 +1,4 @@
-import type { BookDocument } from "@readup/db";
+import type { BookDocument } from "@readup/db/shared";
 import { ReaderBottomBookProgress } from "@/features/reader/components/reader-bottom-book-progress";
 
 export function ReaderBottomReadingProgress({

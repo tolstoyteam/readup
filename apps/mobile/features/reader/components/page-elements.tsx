@@ -1,4 +1,4 @@
-import type { BookPageElement } from "@readup/db";
+import type { BookPageElement } from "@readup/db/shared";
 import { HighlightableTextBlock } from "@/features/quotes/components/highlightable-text-block";
 import type { QuoteRange } from "@/features/quotes/lib/quote-types";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";

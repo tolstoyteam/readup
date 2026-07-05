@@ -1,5 +1,5 @@
-import type { BookPage } from "@readup/db";
-import type { UserQuote } from "@readup/db";
+import type { BookPage } from "@readup/db/shared";
+import type { UserQuote } from "@readup/db/shared";
 
 export function resolveQuotePageIndex(
   quote: Pick<UserQuote, "chapterStableId" | "pageNumber">,

@@ -1,7 +1,7 @@
 import { coverUrl } from "@/features/books/api/books";
 import { pickEdition } from "@/features/books/lib/pick-edition";
 import type { BookCardItem } from "@/features/books/components/book-card";
-import type { UserBookRecord } from "@readup/db";
+import type { UserBookRecord } from "@readup/db/shared";
 
 export type LibraryBookCard = BookCardItem & UserBookRecord;
 

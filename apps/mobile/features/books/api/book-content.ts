@@ -2,7 +2,7 @@ import type {
   BookDocument,
   BookPage,
   LegacyBookPageElement,
-} from "@readup/db";
+} from "@readup/db/shared";
 import { supabase, supabaseCoverPublicUrl } from "@/shared/lib/supabase";
 
 import { embedKeywordsInLastChapter } from "@/features/books/lib/embed-book-keywords";

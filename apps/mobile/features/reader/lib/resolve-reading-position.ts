@@ -1,4 +1,4 @@
-import type { WorkLibraryProgress } from "@readup/db";
+import type { WorkLibraryProgress } from "@readup/db/shared";
 
 export type BookPageWithStableId = {
   page_number: number;

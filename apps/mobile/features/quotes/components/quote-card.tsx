@@ -1,4 +1,4 @@
-import type { UserQuote } from "@readup/db";
+import type { UserQuote } from "@readup/db/shared";
 import { ExpandableQuoteText } from "@/features/quotes/components/expandable-quote-text";
 import { useQuotes } from "@/features/quotes/hooks/use-quotes";
 import {

@@ -1,4 +1,4 @@
-import type { LibraryProgress, ReadingStatus, UserBookRecord, WorkLibraryProgress } from "@readup/db";
+import type { LibraryProgress, ReadingStatus, UserBookRecord, WorkLibraryProgress } from "@readup/db/shared";
 
 export function dedupeByWorkId(records: UserBookRecord[]): UserBookRecord[] {
   const byWork = new Map<string, UserBookRecord>();
