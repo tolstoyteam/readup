@@ -10,6 +10,8 @@ const supabasePublicKey =
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY?.trim() ||
   "";
 
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublicKey);
+
 /** From app.config.ts `extra` (reads SUPABASE_* buckets at config time). */
 const storageBucketFromExtra = (
   Constants.expoConfig?.extra?.supabaseBookCoversBucket as string | undefined
@@ -37,13 +39,13 @@ export function getBookAudioStorageBucket(): string {
   );
 }
 
-if (!supabaseUrl || !supabasePublicKey) {
+if (!isSupabaseConfigured) {
   console.warn(
     "Supabase: set EXPO_PUBLIC_SUPABASE_URL and either EXPO_PUBLIC_SUPABASE_ANON_KEY or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY",
   );
 }
 
-export const supabase = createClient(supabaseUrl ?? "", supabasePublicKey, {
+export const supabase = createClient(supabaseUrl ?? "https://example.invalid", supabasePublicKey || "missing-key", {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
