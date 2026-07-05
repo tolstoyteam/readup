@@ -1,8 +1,8 @@
 import {
   Inter_400Regular,
   Inter_500Medium,
-  useFonts,
 } from "@expo-google-fonts/inter";
+import { useFonts } from "expo-font";
 import { Image, type ImageSource } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";

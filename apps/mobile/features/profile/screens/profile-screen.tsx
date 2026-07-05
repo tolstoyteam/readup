@@ -2,8 +2,8 @@ import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
-  useFonts,
 } from "@expo-google-fonts/inter";
+import { useFonts } from "expo-font";
 import { type Href, router, useFocusEffect } from "expo-router";
 import {
   Bell,

@@ -2,8 +2,8 @@ import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_800ExtraBold,
-  useFonts,
 } from "@expo-google-fonts/inter";
+import { useFonts } from "expo-font";
 import { Link, router } from "expo-router";
 import * as Linking from "expo-linking";
 import { useState } from "react";
