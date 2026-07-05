@@ -11,6 +11,7 @@ config.watchFolders = [monorepoRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(monorepoRoot, "node_modules"),
+  path.resolve(monorepoRoot, "node_modules/.pnpm/node_modules"),
 ];
 
 module.exports = withNativeWind(config, { input: "./global.css" });
