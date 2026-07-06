@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
-import { pageForSessionSave } from "./reading-stats";
-
-const MIN_FLUSH_SECONDS = 30;
-const MAX_MINUTES_PER_FLUSH = 30;
+import {
+  consumePendingReadingTime,
+  computeMinutesDelta,
+  pageForSessionSave,
+} from "./reading-stats";
 
 export type RecordReadingSessionFn = (args: {
   bookId: string;
@@ -25,14 +26,6 @@ export type ReadingSessionTrackerConfig = {
   recordReadingSession: RecordReadingSessionFn;
 };
 
-export function computeMinutesDelta(elapsedMs: number): number {
-  if (elapsedMs < MIN_FLUSH_SECONDS * 1000) return 0;
-  return Math.min(
-    MAX_MINUTES_PER_FLUSH,
-    Math.max(1, Math.round(elapsedMs / 60_000)),
-  );
-}
-
 export function useReadingSessionTracker({
   enabled,
   bookId,
@@ -42,6 +35,7 @@ export function useReadingSessionTracker({
   recordReadingSession,
 }: ReadingSessionTrackerConfig) {
   const lastSaveAtRef = useRef(Date.now());
+  const pendingElapsedMsRef = useRef(0);
   const lastFlushedPageRef = useRef<number | null>(null);
   const bookCompletedRef = useRef(false);
   const configRef = useRef({
@@ -62,8 +56,15 @@ export function useReadingSessionTracker({
       if (!enabled || !id || pages <= 0) return;
 
       const now = Date.now();
-      const minutesDelta = computeMinutesDelta(now - lastSaveAtRef.current);
+      const elapsedMs = now - lastSaveAtRef.current;
       lastSaveAtRef.current = now;
+      const previousPendingElapsedMs = pendingElapsedMsRef.current;
+      const pending = consumePendingReadingTime(
+        previousPendingElapsedMs,
+        elapsedMs,
+      );
+      pendingElapsedMsRef.current = pending.pendingElapsedMs;
+      const minutesDelta = pending.minutesDelta;
 
       const pageToSave = pageForSessionSave(
         pageLabel,
@@ -86,6 +87,7 @@ export function useReadingSessionTracker({
           chapterStableId: stableId,
         });
       } catch (error) {
+        pendingElapsedMsRef.current = previousPendingElapsedMs + elapsedMs;
         if (isCompleting) {
           bookCompletedRef.current = false;
         }
@@ -111,6 +113,7 @@ export function useReadingSessionTracker({
     lastFlushedPageRef.current =
       typeof pageIndex === "number" ? pageIndex : null;
     lastSaveAtRef.current = Date.now();
+    pendingElapsedMsRef.current = 0;
   }, []);
 
   useEffect(() => {

@@ -5,13 +5,14 @@ export {
 } from "./activity-date";
 export {
   buildReadingStatsSnapshot,
+  computeMinutesDelta,
+  consumePendingReadingTime,
   getEffectiveCurrentStreak,
   getTotalReadingDays,
   pageForSessionSave,
   type ReadingStatsSnapshot,
 } from "./reading-stats";
 export {
-  computeMinutesDelta,
   useReadingSessionTracker,
   type RecordReadingSessionFn,
 } from "./use-reading-session-tracker";

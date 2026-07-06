@@ -2,6 +2,9 @@ import type { Profile } from "@/features/profile/api/profile";
 
 import { daysBetweenUtcDates } from "./activity-date";
 
+const MIN_FLUSH_SECONDS = 30;
+const MAX_MINUTES_PER_FLUSH = 30;
+
 export type ReadingStatsSnapshot = {
   currentStreakDays: number;
   longestStreakDays: number;
@@ -55,4 +58,29 @@ export function pageForSessionSave(
     return Math.max(totalPages - 1, 1);
   }
   return Math.max(pageLabel, 1);
+}
+
+export function computeMinutesDelta(elapsedMs: number): number {
+  if (elapsedMs < MIN_FLUSH_SECONDS * 1000) return 0;
+  return Math.min(
+    MAX_MINUTES_PER_FLUSH,
+    Math.max(1, Math.round(elapsedMs / 60_000)),
+  );
+}
+
+export function consumePendingReadingTime(
+  pendingElapsedMs: number,
+  elapsedMs: number,
+): { minutesDelta: number; pendingElapsedMs: number } {
+  const totalElapsedMs = Math.max(0, pendingElapsedMs) + Math.max(0, elapsedMs);
+  const minutesDelta = computeMinutesDelta(totalElapsedMs);
+
+  if (minutesDelta <= 0) {
+    return { minutesDelta: 0, pendingElapsedMs: totalElapsedMs };
+  }
+
+  return {
+    minutesDelta,
+    pendingElapsedMs: Math.max(0, totalElapsedMs - minutesDelta * 60_000),
+  };
 }
