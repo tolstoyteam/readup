@@ -116,7 +116,7 @@ export default function LoginScreen() {
               labelFontFamily="Inter_500Medium"
               value={password}
               onChangeText={setPassword}
-              placeholder="*******"
+              placeholder="••••••••"
               secureTextEntry
               autoComplete="password"
               textContentType="password"
@@ -261,13 +261,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   footerMuted: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#000000",
-    letterSpacing: -0.48,
   },
   footerLink: {
-    fontSize: 12,
+    fontSize: 14,
     color: ReadupColors.brand,
-    letterSpacing: -0.48,
   },
 });

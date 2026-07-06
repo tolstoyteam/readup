@@ -16,6 +16,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Check } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OutlinePillButton } from "@/features/auth/components/outline-pill-button";
@@ -142,7 +143,7 @@ export default function SignupScreen() {
               labelFontFamily="Inter_500Medium"
               value={password}
               onChangeText={setPassword}
-              placeholder="*******"
+              placeholder="••••••••"
               secureTextEntry
               autoComplete="new-password"
               textContentType="newPassword"
@@ -158,17 +159,25 @@ export default function SignupScreen() {
               disabled={busy}
               hitSlop={6}
               onPress={() => setPrivacyAccepted((v) => !v)}
-              style={styles.consentDotHit}>
+              style={styles.consentCheckboxHit}>
               <View
                 style={[
-                  styles.consentDot,
-                  { backgroundColor: colors.elevated },
+                  styles.consentCheckbox,
+                  {
+                    backgroundColor: privacyAccepted
+                      ? colors.brand
+                      : colors.elevated,
+                    borderColor: privacyAccepted ? colors.brand : colors.border,
+                  },
                   privacyAccepted && [
-                    styles.consentDotOn,
                     { backgroundColor: colors.brand },
                   ],
                 ]}
-              />
+              >
+                {privacyAccepted ? (
+                  <Check size={12} color={colors.textInverse} strokeWidth={3} />
+                ) : null}
+              </View>
             </Pressable>
             <Text
               style={[
@@ -270,25 +279,28 @@ const styles = StyleSheet.create({
   },
   consentRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 4,
-    marginTop: 28,
+    alignItems: "center",
+    gap: 8,
+    marginTop: 16,
     alignSelf: "center",
     maxWidth: 338,
     width: "100%",
     paddingRight: 8,
   },
-  consentDotHit: {
-    paddingTop: 2,
-    paddingRight: 4,
-    paddingBottom: 4,
+  consentCheckboxHit: {
+    minWidth: 32,
+    minHeight: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  consentDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 999,
+  consentCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  consentDotOn: {},
   consentText: {
     flex: 1,
     flexWrap: "wrap",
@@ -327,13 +339,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   footerMuted: {
-    fontSize: 12,
+    fontSize: 14,
     color: ReadupColors.text,
-    letterSpacing: -0.48,
   },
   footerLink: {
-    fontSize: 12,
+    fontSize: 14,
     color: ReadupColors.brand,
-    letterSpacing: -0.48,
   },
 });
