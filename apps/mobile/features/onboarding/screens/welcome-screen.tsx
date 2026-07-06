@@ -15,7 +15,10 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
@@ -45,6 +48,7 @@ export default function WelcomeScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
   const [fontsLoaded] = useFonts({
     Inter_500Medium,
@@ -72,7 +76,7 @@ export default function WelcomeScreen() {
   const footerBottomPad = Math.max(
     16,
     Math.min(32, FIGMA_CTA_BOTTOM_INSET * scaleY),
-  );
+  ) + insets.bottom;
 
   const onStart = useCallback(() => {
     router.push("/onboarding");
@@ -98,7 +102,7 @@ export default function WelcomeScreen() {
     <SafeAreaView
       className="flex-1"
       style={{ backgroundColor: colors.background }}
-      edges={["top", "bottom"]}
+      edges={["top"]}
     >
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <View style={styles.layerRoot}>
@@ -199,37 +203,29 @@ export default function WelcomeScreen() {
               </View>
             </Pressable>
 
-            <View className="mt-6 flex-row flex-wrap items-center justify-center">
+            <Pressable
+              onPress={onLogin}
+              accessibilityRole="link"
+              accessibilityLabel={t("auth.loginCta")}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.accountPromptHit,
+                pressed && styles.textActionPressed,
+              ]}
+            >
               <Text
-                className="text-[18px]"
                 style={{
                   color: colors.text,
                   fontFamily: "Inter_500Medium",
-                  letterSpacing: -0.72,
+                  fontSize: 15,
+                  lineHeight: 21,
+                  textAlign: "center",
                 }}
               >
                 {t("auth.alreadyHaveAccount")}{" "}
+                <Text style={{ color: colors.brand }}>{t("auth.loginCta")}</Text>
               </Text>
-              <Pressable
-                onPress={onLogin}
-                accessibilityRole="link"
-                style={({ pressed }) => [
-                  styles.loginLinkHit,
-                  pressed && styles.textActionPressed,
-                ]}
-              >
-                <Text
-                  className="text-[18px]"
-                  style={{
-                    color: colors.brand,
-                    fontFamily: "Inter_500Medium",
-                    letterSpacing: -0.72,
-                  }}
-                >
-                  {t("auth.loginCta")}
-                </Text>
-              </Pressable>
-            </View>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -269,12 +265,13 @@ const styles = StyleSheet.create({
   primaryCtaPressed: {
     opacity: 0.92,
   },
-  loginLinkHit: {
+  accountPromptHit: {
+    marginTop: 28,
     minHeight: 44,
-    minWidth: 72,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
   textActionPressed: {
     opacity: 0.62,

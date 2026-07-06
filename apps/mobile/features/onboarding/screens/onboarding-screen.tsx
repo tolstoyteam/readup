@@ -212,9 +212,10 @@ export default function OnboardingScreen() {
                   className="relative overflow-hidden"
                 >
                   <View
+                    pointerEvents="none"
                     style={[
                       StyleSheet.absoluteFill,
-                      { overflow: "hidden", pointerEvents: "none" },
+                      { overflow: "hidden" },
                     ]}
                   >
                     <Image
@@ -234,8 +235,9 @@ export default function OnboardingScreen() {
                   </View>
 
                   <View
+                    pointerEvents="none"
                     className="absolute left-0 right-0 items-center"
-                    style={{ top: logoTop, pointerEvents: "none" }}
+                    style={{ top: logoTop }}
                     accessibilityRole="header"
                     accessibilityLabel="readup."
                   >
@@ -243,8 +245,9 @@ export default function OnboardingScreen() {
                   </View>
 
                   <View
+                    pointerEvents="none"
                     className="absolute left-0 right-0 items-center px-6"
-                    style={{ top: titleTop, pointerEvents: "none" }}
+                    style={{ top: titleTop }}
                   >
                     <Text
                       className="text-center"
@@ -262,8 +265,9 @@ export default function OnboardingScreen() {
                   </View>
 
                   <View
+                    pointerEvents="none"
                     className="absolute left-0 right-0 items-center"
-                    style={{ top: illustrationTop, pointerEvents: "none" }}
+                    style={{ top: illustrationTop }}
                   >
                     <Image
                       accessibilityIgnoresInvertColors
@@ -309,10 +313,7 @@ export default function OnboardingScreen() {
             </Text>
           </Pressable>
 
-          <View
-            className="flex-row items-center"
-            style={{ pointerEvents: "none" }}
-          >
+          <View pointerEvents="none" className="flex-row items-center">
             {PAGES.map((p, dotIdx) => (
               <View
                 key={p.id}
