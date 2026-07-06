@@ -4,7 +4,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback } from "react";
 import {
@@ -82,9 +82,9 @@ export default function WelcomeScreen() {
     router.push("/onboarding");
   }, [router]);
 
-  const onLogin = useCallback(async () => {
-    await markOnboardingComplete();
-    router.push("/login");
+  const onLogin = useCallback(() => {
+    void markOnboardingComplete();
+    router.replace("/(auth)/login");
   }, [router]);
 
   if (!fontsLoaded) {
@@ -203,29 +203,34 @@ export default function WelcomeScreen() {
               </View>
             </Pressable>
 
-            <Pressable
-              onPress={onLogin}
-              accessibilityRole="link"
-              accessibilityLabel={t("auth.loginCta")}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.accountPromptHit,
-                pressed && styles.textActionPressed,
-              ]}
-            >
-              <Text
-                style={{
-                  color: colors.text,
-                  fontFamily: "Inter_500Medium",
-                  fontSize: 15,
-                  lineHeight: 21,
-                  textAlign: "center",
-                }}
+            <Link href="/(auth)/login" replace asChild>
+              <Pressable
+                onPress={onLogin}
+                accessibilityRole="link"
+                accessibilityLabel={t("auth.loginCta")}
+                hitSlop={12}
+                style={({ pressed }) => [
+                  styles.accountPromptHit,
+                  pressed && styles.textActionPressed,
+                ]}
               >
-                {t("auth.alreadyHaveAccount")}{" "}
-                <Text style={{ color: colors.brand }}>{t("auth.loginCta")}</Text>
-              </Text>
-            </Pressable>
+                <Text
+                  onPress={onLogin}
+                  style={{
+                    color: colors.text,
+                    fontFamily: "Inter_500Medium",
+                    fontSize: 15,
+                    lineHeight: 21,
+                    textAlign: "center",
+                  }}
+                >
+                  {t("auth.alreadyHaveAccount")}{" "}
+                  <Text style={{ color: colors.brand }}>
+                    {t("auth.loginCta")}
+                  </Text>
+                </Text>
+              </Pressable>
+            </Link>
           </View>
         </View>
       </View>
@@ -251,6 +256,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 338,
     alignSelf: "center",
+    marginBottom: 40,
   },
   ctaChrome: {
     minHeight: 54,
@@ -266,12 +272,13 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   accountPromptHit: {
-    marginTop: 28,
     minHeight: 44,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
+    zIndex: 20,
+    elevation: 20,
   },
   textActionPressed: {
     opacity: 0.62,

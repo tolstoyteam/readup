@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 
 import { fetchProfile, type Profile } from "@/features/profile/api/profile";
-import { HapticTab } from "@/shared/components/haptic-tab";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
@@ -96,7 +95,6 @@ export default function TabLayout() {
           fontSize: 12,
           fontWeight: "500",
         },
-        tabBarButton: (props) => <HapticTab {...props} />,
       }}
     >
       <Tabs.Screen
