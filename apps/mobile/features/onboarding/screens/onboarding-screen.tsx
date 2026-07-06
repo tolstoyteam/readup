@@ -18,7 +18,10 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
@@ -90,27 +93,26 @@ export default function OnboardingScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [pageIndex, setPageIndex] = useState(0);
+  const [rootHeight, setRootHeight] = useState(0);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
   });
 
-  /** Full window maps 1:1 to the 874pt-tall Figma artboard (safe zones are informational only). */
-  const scaleY = windowHeight / FIGMA_FRAME_H;
-  /** Carousel uses only the region above the footer so the horizontal ScrollView never sits under the tap targets. */
-  const [scrollAreaHeight, setScrollAreaHeight] = useState(0);
-  const pageHeight =
-    scrollAreaHeight > 0 ? scrollAreaHeight : Math.max(windowHeight - 96, 240);
+  const pageHeight = rootHeight > 0 ? rootHeight : Math.max(windowHeight, 240);
+  /** Full visible area maps to the 874pt-tall Figma artboard. */
+  const scaleY = pageHeight / FIGMA_FRAME_H;
   const titleTop = (166 / FIGMA_FRAME_H) * pageHeight;
   const logoTop = Math.max(
     8,
     ((FIGMA_FRAME_H / 2 - 328) / FIGMA_FRAME_H) * pageHeight,
   );
-  const navBottomPad = FIGMA_NAV_BOTTOM_INSET * scaleY;
+  const navBottomPad = FIGMA_NAV_BOTTOM_INSET * scaleY + insets.bottom;
 
   const scaleX = width / FIGMA_FRAME_W;
   const bgMarkW = BG_MARK_W * scaleX;
@@ -159,35 +161,34 @@ export default function OnboardingScreen() {
     <SafeAreaView
       className="flex-1"
       style={{ backgroundColor: colors.background }}
-      edges={["top", "bottom"]}
+      edges={["top"]}
     >
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
-      <View style={{ flex: 1, flexDirection: "column" }}>
-        <View
-          style={{ flex: 1 }}
-          onLayout={(e) => {
-            const h = e.nativeEvent.layout.height;
-            if (h > 0 && Math.abs(h - scrollAreaHeight) > 0.5) {
-              setScrollAreaHeight(h);
-            }
-          }}
+      <View
+        style={styles.screenRoot}
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          if (h > 0 && Math.abs(h - rootHeight) > 0.5) {
+            setRootHeight(h);
+          }
+        }}
+      >
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          alwaysBounceHorizontal={false}
+          alwaysBounceVertical={false}
+          directionalLockEnabled
+          onMomentumScrollEnd={onScroll}
+          onScrollEndDrag={onScroll}
+          scrollEventThrottle={16}
+          style={StyleSheet.absoluteFill}
         >
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            alwaysBounceHorizontal={false}
-            alwaysBounceVertical={false}
-            directionalLockEnabled
-            onMomentumScrollEnd={onScroll}
-            onScrollEndDrag={onScroll}
-            scrollEventThrottle={16}
-            style={{ flex: 1 }}
-          >
             {PAGES.map((page, idx) => {
               const anchorX = BG_ANCHOR_X_BY_PAGE[idx] * scaleX;
               const bgMarkLeft = anchorX - bgMarkW / 2;
@@ -280,14 +281,13 @@ export default function OnboardingScreen() {
                 </View>
               );
             })}
-          </ScrollView>
-        </View>
+        </ScrollView>
 
         <View
           className="flex-row items-center justify-between px-8 pt-2"
           style={{
+            ...styles.footer,
             paddingBottom: navBottomPad,
-            backgroundColor: colors.background,
             minHeight: 44,
           }}
           collapsable={false}
@@ -305,8 +305,7 @@ export default function OnboardingScreen() {
               style={{
                 color: colors.textTertiary,
                 fontFamily: "Inter_400Regular",
-                fontSize: 12,
-                letterSpacing: -0.48,
+                        fontSize: 14,
               }}
             >
               {t("common.skip")}
@@ -342,8 +341,7 @@ export default function OnboardingScreen() {
               style={{
                 color: colors.textTertiary,
                 fontFamily: "Inter_400Regular",
-                fontSize: 12,
-                letterSpacing: -0.48,
+                    fontSize: 14,
               }}
             >
               {t("onboarding.next")}
@@ -356,6 +354,18 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+    overflow: "hidden",
+  },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    elevation: 10,
+  },
   footerAction: {
     minHeight: 44,
     minWidth: 96,
