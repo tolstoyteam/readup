@@ -1,4 +1,5 @@
 import {
+  Inter_400Regular,
   Inter_500Medium,
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
@@ -40,8 +41,8 @@ const BG_ANCHOR_Y = FIGMA_FRAME_H / 2 + 209.42;
 
 /** Figma node 10:117 — logo block top offset in the 874px-tall frame. */
 const FIGMA_LOGO_TOP = FIGMA_FRAME_H / 2 - 337;
-/** Space from frame bottom to primary CTA baseline (Figma px, approximate). */
-const FIGMA_CTA_BOTTOM_INSET = 52;
+/** Footer spacing requested for the welcome CTA area. */
+const FOOTER_BOTTOM_INSET = 48;
 
 export default function WelcomeScreen() {
   const colors = useReadupColors();
@@ -51,6 +52,7 @@ export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { width, height: windowHeight } = useWindowDimensions();
   const [fontsLoaded] = useFonts({
+    Inter_400Regular,
     Inter_500Medium,
     Inter_800ExtraBold,
   });
@@ -73,10 +75,7 @@ export default function WelcomeScreen() {
   const anchorY = BG_ANCHOR_Y * scaleY;
   const bgMarkLeft = anchorX - bgMarkW / 2;
   const bgMarkTop = anchorY - bgMarkH / 2;
-  const footerBottomPad = Math.max(
-    16,
-    Math.min(32, FIGMA_CTA_BOTTOM_INSET * scaleY),
-  ) + insets.bottom;
+  const footerBottomPad = FOOTER_BOTTOM_INSET + insets.bottom;
 
   const onStart = useCallback(() => {
     router.push("/onboarding");
@@ -203,6 +202,8 @@ export default function WelcomeScreen() {
               </View>
             </Pressable>
 
+            <View pointerEvents="none" style={styles.accountPromptSpacer} />
+
             <Link href="/(auth)/login" replace asChild>
               <Pressable
                 onPress={onLogin}
@@ -218,7 +219,7 @@ export default function WelcomeScreen() {
                   onPress={onLogin}
                   style={{
                     color: colors.text,
-                    fontFamily: "Inter_500Medium",
+                    fontFamily: "Inter_400Regular",
                     fontSize: 15,
                     lineHeight: 21,
                     textAlign: "center",
@@ -256,7 +257,6 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 338,
     alignSelf: "center",
-    marginBottom: 40,
   },
   ctaChrome: {
     minHeight: 54,
@@ -270,6 +270,9 @@ const styles = StyleSheet.create({
   },
   primaryCtaPressed: {
     opacity: 0.92,
+  },
+  accountPromptSpacer: {
+    height: 12,
   },
   accountPromptHit: {
     minHeight: 44,
