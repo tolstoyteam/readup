@@ -296,6 +296,7 @@ export default function OnboardingScreen() {
             onPress={goToTabs}
             accessibilityRole="button"
             accessibilityLabel={t("common.skip")}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={({ pressed }) => [
               styles.footerAction,
               pressed && styles.footerActionPressed,
@@ -332,6 +333,7 @@ export default function OnboardingScreen() {
             onPress={handleNext}
             accessibilityRole="button"
             accessibilityLabel={t("onboarding.next")}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={({ pressed }) => [
               styles.footerAction,
               pressed && styles.footerActionPressed,
@@ -367,8 +369,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   footerAction: {
-    minHeight: 44,
-    minWidth: 96,
+    minHeight: 56,
+    minWidth: 112,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 10,
