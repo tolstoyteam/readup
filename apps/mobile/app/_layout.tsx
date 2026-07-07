@@ -74,7 +74,11 @@ export default function RootLayout() {
                       />
                       <Stack.Screen
                         name="(tabs)"
-                        options={{ headerShown: false }}
+                        options={{
+                          headerShown: false,
+                          animation: "none",
+                          gestureEnabled: false,
+                        }}
                       />
                       <Stack.Screen
                         name="(auth)"
