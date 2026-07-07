@@ -23,20 +23,16 @@ export default function Index() {
     };
   }, []);
 
-  if (!ready) {
-    return (
-      <View
-        className="flex-1 items-center justify-center"
-        style={{ backgroundColor: colors.background }}
-      >
-        <ActivityIndicator color={colors.brand} size="large" />
-      </View>
-    );
+  if (ready) {
+    return <Redirect href={complete ? "/(tabs)" : "/welcome"} />;
   }
 
-  if (complete) {
-    return <Redirect href="/(tabs)" />;
-  }
-
-  return <Redirect href="/welcome" />;
+  return (
+    <View
+      className="flex-1 items-center justify-center"
+      style={{ backgroundColor: colors.background }}
+    >
+      <ActivityIndicator color={colors.brand} size="large" />
+    </View>
+  );
 }
