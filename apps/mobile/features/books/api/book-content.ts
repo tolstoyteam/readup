@@ -27,7 +27,7 @@ export async function fetchBookContent(
   const { data: bookRow, error: bookError } = await supabase
     .from("books")
     .select(
-      "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))",
+      "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name)), book_works(cover_image_url)",
     )
     .eq("id", numericId)
     .maybeSingle();
@@ -118,7 +118,17 @@ export async function fetchBookContent(
     book_genres:
       | Array<{ genre: { name?: string | null; name_ru?: string | null } | { name?: string | null; name_ru?: string | null }[] | null }>
       | null;
+    book_works:
+      | { cover_image_url: string | null }
+      | { cover_image_url: string | null }[]
+      | null;
   };
+
+  const workCover = Array.isArray(record.book_works)
+    ? record.book_works[0]?.cover_image_url
+    : record.book_works?.cover_image_url;
+  const coverImagePath =
+    workCover?.trim() || record.cover_image_url?.trim() || undefined;
 
   const genres = (record.book_genres ?? [])
     .flatMap((row) => {
@@ -162,7 +172,7 @@ export async function fetchBookContent(
     author: record.author ?? "",
     language: record.language ?? "",
     genres,
-    cover_image_path: record.cover_image_url ?? undefined,
+    cover_image_path: coverImagePath,
     difficulty: record.data?.difficulty,
     reading_time_minutes: record.data?.reading_time_minutes,
     total_pages: Math.max(finalPages.length, 1),

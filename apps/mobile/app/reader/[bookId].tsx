@@ -14,10 +14,10 @@ import { useReadingSessionTracker } from "@/features/reading-stats";
 import { ReaderBookAudioProvider } from "@/features/reader/audio/reader-book-audio-context";
 import { BookListenPlayer } from "@/features/reader/components/book-listen-player";
 import { PageElements } from "@/features/reader/components/page-elements";
-import { ReaderBottomNowPlaying } from "@/features/reader/components/reader-bottom-now-playing";
-import { ReaderBottomReadingProgress } from "@/features/reader/components/reader-bottom-reading-progress";
+import { ReaderReadFooter } from "@/features/reader/components/reader-read-footer";
 import { ReaderListenLoading } from "@/features/reader/components/reader-listen-states";
 import { ReaderSettingsSheet } from "@/features/reader/components/reader-settings-sheet";
+import { ReaderVoicePickerOverlay } from "@/features/reader/components/reader-voice-picker-sheet";
 import { useReaderSettings } from "@/features/reader/settings/reader-settings-context";
 import { bookHasPlayableQuiz } from "@/features/quiz/api/quiz";
 import { useChapterQuotes, useQuotes } from "@/features/quotes";
@@ -38,11 +38,16 @@ import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import { useIsFocused } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import {
-  ChevronLeft,
-  ChevronRight,
+  useLocalSearchParams,
+  useNavigation,
+  useRouter,
+  useFocusEffect,
+  type Href,
+} from "expo-router";
+import {
   FileText,
   Headphones,
   Menu,
@@ -94,6 +99,7 @@ function ReaderChrome({
   onSaveQuote,
   savingQuote,
   onDismissSelection,
+  onOpenVoiceMenu,
 }: {
   document: BookDocument;
   hasAudio: boolean;
@@ -126,6 +132,7 @@ function ReaderChrome({
   onSaveQuote: () => void;
   savingQuote: boolean;
   onDismissSelection: () => void;
+  onOpenVoiceMenu?: () => void;
 }) {
   const currentPage = pages[pageIndex] ?? null;
   const pageProgress =
@@ -170,92 +177,64 @@ function ReaderChrome({
           </View>
         )}
         {readMode === "listen" && hasAudio && (
-          <BookListenPlayer document={document} onRetryAudio={onRetryAudio} />
+          <BookListenPlayer
+            document={document}
+            onRetryAudio={onRetryAudio}
+            onOpenVoiceMenu={onOpenVoiceMenu ?? (() => {})}
+          />
         )}
       </View>
 
-      {showLastPageActions &&
-      ((showFinishButton && onFinishBook) || onOpenQuiz) ? (
-        <View className="flex-row items-center justify-center gap-3 bg-[#FBFAF2] dark:bg-[#101512] px-[22px] py-3">
-          {showFinishButton && onFinishBook ? (
-            <Pressable
-              onPress={onFinishBook}
-              disabled={finishing}
-              accessibilityRole="button"
-              accessibilityLabel={t("reader.finishBook")}
-              className={`min-h-[44px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90 ${finishing ? "opacity-70" : ""}`}
-            >
-              {finishing ? (
-                <ActivityIndicator size="small" color="#FBFAF2" />
-              ) : (
-                <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#FBFAF2]">
-                  {t("reader.finishBook")}
-                </Text>
-              )}
-            </Pressable>
+      {readMode === "read" ? (
+        <>
+          {showLastPageActions &&
+          ((showFinishButton && onFinishBook) || onOpenQuiz) ? (
+            <View className="flex-row items-center justify-center gap-3 bg-[#FBFAF2] dark:bg-[#101512] px-[22px] py-3">
+              {showFinishButton && onFinishBook ? (
+                <Pressable
+                  onPress={onFinishBook}
+                  disabled={finishing}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("reader.finishBook")}
+                  className={`min-h-[44px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90 ${finishing ? "opacity-70" : ""}`}
+                >
+                  {finishing ? (
+                    <ActivityIndicator size="small" color="#FBFAF2" />
+                  ) : (
+                    <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#FBFAF2]">
+                      {t("reader.finishBook")}
+                    </Text>
+                  )}
+                </Pressable>
+              ) : null}
+              {onOpenQuiz ? (
+                <Pressable
+                  onPress={onOpenQuiz}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("bookDetail.takeQuiz")}
+                  className="min-h-[44px] items-center justify-center rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
+                >
+                  <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#059669] dark:text-[#34D399]">
+                    {t("bookDetail.takeQuiz")}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           ) : null}
-          {onOpenQuiz ? (
-            <Pressable
-              onPress={onOpenQuiz}
-              accessibilityRole="button"
-              accessibilityLabel={t("bookDetail.takeQuiz")}
-              className="min-h-[44px] items-center justify-center rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
-            >
-              <Text className="text-[14px] font-medium tracking-[-0.56px] text-[#059669] dark:text-[#34D399]">
-                {t("bookDetail.takeQuiz")}
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
+
+          <ReaderReadFooter
+            document={document}
+            hasAudio={hasAudio}
+            pageIndex={pageIndex}
+            pages={pages}
+            totalPages={totalPages}
+            pageLabel={pageLabel}
+            pageProgress={pageProgress}
+            goNext={goNext}
+            goPrev={goPrev}
+          />
+        </>
       ) : null}
-
-      <View className="flex-row items-center justify-center gap-5 border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] py-3">
-        <Pressable
-          onPress={goPrev}
-          disabled={pageIndex <= 0}
-          className={`h-10 w-10 items-center justify-center rounded-[10px] ${
-            pageIndex <= 0
-              ? "border border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512]"
-              : "border border-[#C8C6B2] dark:border-[#3A4740] bg-[#FBFAF2] dark:bg-[#101512] active:opacity-80"
-          }`}
-        >
-          <ChevronLeft
-            size={22}
-            color={pageIndex <= 0 ? "#A8A58F" : "#1A2420"}
-            strokeWidth={2}
-          />
-        </Pressable>
-        <Text className="min-w-[72px] text-center text-sm font-medium text-[#4A5550] dark:text-[#B8C1BB]">
-          {t("reader.pageProgress", {
-            page: pageLabel,
-            total: totalPages || pages.length,
-          })}
-        </Text>
-        <Pressable
-          onPress={goNext}
-          disabled={pageIndex >= pages.length - 1}
-          className={`h-10 w-10 items-center justify-center rounded-[10px] ${
-            pageIndex >= pages.length - 1
-              ? "border border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512]"
-              : "border border-[#C8C6B2] dark:border-[#3A4740] bg-[#FBFAF2] dark:bg-[#101512] active:opacity-80"
-          }`}
-        >
-          <ChevronRight
-            size={22}
-            color={pageIndex >= pages.length - 1 ? "#A8A58F" : "#1A2420"}
-            strokeWidth={2}
-          />
-        </Pressable>
-      </View>
-
-      {hasAudio ? (
-        <ReaderBottomNowPlaying document={document} />
-      ) : (
-        <ReaderBottomReadingProgress
-          document={document}
-          pageProgress={pageProgress}
-        />
-      )}
     </>
   );
 }
@@ -264,6 +243,8 @@ export default function ReaderScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const { user } = useAuth();
   const { t } = useInterfaceLanguage();
   const { bookId: bookIdParam, mode: modeParam, focusQuoteId: focusQuoteIdParam } = useLocalSearchParams<{
@@ -314,6 +295,29 @@ export default function ReaderScreen() {
   const [finishing, setFinishing] = useState(false);
   const [hasQuiz, setHasQuiz] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [voiceMenuOpen, setVoiceMenuOpen] = useState(false);
+
+  const dismissReaderChrome = useCallback(() => {
+    setSettingsOpen(false);
+    setVoiceMenuOpen(false);
+    setSelectingBlockId(null);
+    setSelectionState(null);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        dismissReaderChrome();
+      };
+    }, [dismissReaderChrome]),
+  );
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", () => {
+      dismissReaderChrome();
+    });
+    return unsubscribe;
+  }, [dismissReaderChrome, navigation]);
 
   useEffect(() => {
     if (focusQuoteId) {
@@ -327,6 +331,8 @@ export default function ReaderScreen() {
     quoteFocusAppliedRef.current = null;
     setSelectingBlockId(null);
     setSelectionState(null);
+    setSettingsOpen(false);
+    setVoiceMenuOpen(false);
     setAudioState({ status: "checking", source: null, message: null });
     setHasQuiz(false);
   }, [bookId, focusQuoteId]);
@@ -593,20 +599,23 @@ export default function ReaderScreen() {
 
   const handleCloseReader = useCallback(() => {
     quoteSourceSessionRef.current = false;
+    dismissReaderChrome();
     router.back();
-  }, [router]);
+  }, [dismissReaderChrome, router]);
 
   const handleOpenQuiz = useCallback(() => {
     if (!document?.book_id) return;
+    dismissReaderChrome();
     router.push(`/quiz/${encodeURIComponent(document.book_id)}`);
-  }, [document?.book_id, router]);
+  }, [dismissReaderChrome, document?.book_id, router]);
 
   const handleFinishBook = useCallback(async () => {
     if (!user || !document?.book_id || finishing) return;
     setFinishing(true);
     try {
       await sessionTracker.flush({ completing: true });
-      router.replace("/(tabs)");
+      dismissReaderChrome();
+      router.dismissTo("/(tabs)");
     } catch {
       Alert.alert(
         t("reader.finishBook"),
@@ -615,7 +624,7 @@ export default function ReaderScreen() {
     } finally {
       setFinishing(false);
     }
-  }, [document?.book_id, finishing, router, sessionTracker, t, user]);
+  }, [dismissReaderChrome, document?.book_id, finishing, router, sessionTracker, t, user]);
 
   useEffect(() => {
     if (!user || !document?.book_id || pages.length === 0) return;
@@ -733,192 +742,231 @@ export default function ReaderScreen() {
     onDismissSelection: dismissSelection,
   };
 
+  const showAudioChrome =
+    !loading &&
+    !awaitingEditionResolution &&
+    !error &&
+    !!document &&
+    !audioChecking &&
+    hasAudio &&
+    audioState.status === "available";
+
+  const readerBody = (
+    <View className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]">
+      {(loading || awaitingEditionResolution) && (
+        <View className="flex-1 items-center justify-center p-6">
+          <ActivityIndicator size="large" color="#059669" />
+        </View>
+      )}
+      {!loading && !awaitingEditionResolution && error && (
+        <View className="flex-1 items-center justify-center p-6">
+          <Text className="mb-4 text-center text-base text-[#4A5550] dark:text-[#B8C1BB]">
+            {error}
+          </Text>
+          <Pressable
+            onPress={load}
+            className="min-h-[54px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90"
+          >
+            <Text className="text-lg font-medium text-[#FBFAF2]">
+              {t("common.retry")}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+      {!loading &&
+        !awaitingEditionResolution &&
+        !error &&
+        document &&
+        audioChecking && (
+        <ReaderListenLoading message={t("reader.loadingAudioAvailability")} />
+      )}
+      {showAudioChrome ? (
+        <ReaderChrome
+          document={document}
+          hasAudio
+          readMode={readMode}
+          pageIndex={pageIndex}
+          pages={pages}
+          totalPages={totalPages}
+          goNext={goNext}
+          goPrev={goPrev}
+          pageLabel={pageLabel}
+          onRetryAudio={reloadAudio}
+          showLastPageActions={showLastPageActions}
+          showFinishButton={showFinishButton}
+          onFinishBook={handleFinishBook}
+          finishing={finishing}
+          onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
+          onOpenVoiceMenu={() => setVoiceMenuOpen(true)}
+          {...quoteChromeProps}
+        />
+      ) : null}
+      {!loading &&
+        !awaitingEditionResolution &&
+        !error &&
+        document &&
+        !audioChecking &&
+        !showAudioChrome ? (
+        <ReaderChrome
+          document={document}
+          hasAudio={false}
+          readMode={readMode}
+          pageIndex={pageIndex}
+          pages={pages}
+          totalPages={totalPages}
+          goNext={goNext}
+          goPrev={goPrev}
+          pageLabel={pageLabel}
+          showLastPageActions={showLastPageActions}
+          showFinishButton={showFinishButton}
+          onFinishBook={handleFinishBook}
+          finishing={finishing}
+          onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
+          {...quoteChromeProps}
+        />
+      ) : null}
+    </View>
+  );
+
+  const readerHeader = (
+    <View className="flex-row items-center justify-between border-b border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-3 pb-2.5">
+      <Pressable
+        onPress={handleCloseReader}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={t("common.close")}
+        className="active:opacity-70"
+      >
+        <X size={28} color={colors.text} strokeWidth={2} />
+      </Pressable>
+
+      {audioState.status === "checking" && document ? (
+        <View className="h-10 min-w-[120px] items-center justify-center rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4">
+          <ActivityIndicator size="small" color={colors.textSecondary} />
+        </View>
+      ) : hasAudio ? (
+        <View className="flex-row gap-1 rounded-[12px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-0.5">
+          <Pressable
+            onPress={() => setReadMode("read")}
+            className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
+              readMode === "read" ? "bg-[#FBFAF2] dark:bg-[#101512]" : ""
+            }`}
+          >
+            <FileText
+              size={18}
+              color={readMode === "read" ? "#1A2420" : "#7A7868"}
+              strokeWidth={2}
+            />
+            <Text
+              className={`text-[13px] font-semibold ${
+                readMode === "read"
+                  ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                  : "text-[#7A7868] dark:text-[#8F9A93]"
+              }`}
+            >
+              {t("reader.read")}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setReadMode("listen")}
+            className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
+              readMode === "listen" ? "bg-[#FBFAF2] dark:bg-[#101512]" : ""
+            }`}
+          >
+            <Headphones
+              size={18}
+              color={readMode === "listen" ? "#1A2420" : "#7A7868"}
+              strokeWidth={2}
+            />
+            <Text
+              className={`text-[13px] font-semibold ${
+                readMode === "listen"
+                  ? "text-[#1A2420] dark:text-[#F3F4EE]"
+                  : "text-[#7A7868] dark:text-[#8F9A93]"
+              }`}
+            >
+              {t("reader.listen")}
+            </Text>
+          </Pressable>
+        </View>
+      ) : document ? (
+        <View className="flex-row items-center gap-1.5 rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-2">
+          <FileText size={18} color={colors.textTertiary} strokeWidth={2} />
+          <Text className="text-[13px] font-semibold text-[#7A7868] dark:text-[#8F9A93]">
+            {t("reader.read")}
+          </Text>
+        </View>
+      ) : (
+        <View className="h-10 w-[120px]" />
+      )}
+
+      <View className="flex-row items-center gap-3.5">
+        <Pressable
+          onPress={() => setSettingsOpen(true)}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t("settings.title")}
+        >
+          <Menu size={26} color={colors.text} strokeWidth={2} />
+        </Pressable>
+        <Pressable
+          onPress={() => setSettingsOpen(true)}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t("settings.appearance")}
+        >
+          <Text className="text-lg font-semibold text-[#1A2420] dark:text-[#F3F4EE]">
+            AA
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const readerOverlays = (
+    <>
+      <ReaderSettingsSheet
+        visible={isFocused && settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onLanguageChange={handleLanguageChange}
+      />
+      {showAudioChrome ? (
+        <ReaderVoicePickerOverlay
+          visible={isFocused && voiceMenuOpen}
+          onClose={() => setVoiceMenuOpen(false)}
+        />
+      ) : null}
+    </>
+  );
+
+  const readerShell = (
+    <View className="relative flex-1">
+      {readerHeader}
+      {readerBody}
+      {readerOverlays}
+    </View>
+  );
+
   return (
     <SafeAreaView
-      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      className="relative flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
       edges={["top", "left", "right"]}
     >
       <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
-      <View className="flex-row items-center justify-between border-b border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-3 pb-2.5">
-        <Pressable
-          onPress={handleCloseReader}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t("common.close")}
-          className="active:opacity-70"
+      {showAudioChrome && document ? (
+        <ReaderBookAudioProvider
+          bookId={document.book_id}
+          initialSource={audioState.source}
+          onSessionFlush={(audioPositionMs) =>
+            sessionTracker.flush({ audioPositionMs })
+          }
         >
-          <X size={28} color={colors.text} strokeWidth={2} />
-        </Pressable>
-
-        {audioState.status === "checking" && document ? (
-          <View className="h-10 min-w-[120px] items-center justify-center rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4">
-            <ActivityIndicator size="small" color={colors.textSecondary} />
-          </View>
-        ) : hasAudio ? (
-          <View className="flex-row gap-1 rounded-[12px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] p-0.5">
-            <Pressable
-              onPress={() => setReadMode("read")}
-              className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
-                readMode === "read" ? "bg-[#FBFAF2] dark:bg-[#101512]" : ""
-              }`}
-            >
-              <FileText
-                size={18}
-                color={readMode === "read" ? "#1A2420" : "#7A7868"}
-                strokeWidth={2}
-              />
-              <Text
-                className={`text-[13px] font-semibold ${
-                  readMode === "read"
-                    ? "text-[#1A2420] dark:text-[#F3F4EE]"
-                    : "text-[#7A7868] dark:text-[#8F9A93]"
-                }`}
-              >
-                {t("reader.read")}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setReadMode("listen")}
-              className={`flex-row items-center gap-1.5 rounded-lg px-3 py-2 ${
-                readMode === "listen" ? "bg-[#FBFAF2] dark:bg-[#101512]" : ""
-              }`}
-            >
-              <Headphones
-                size={18}
-                color={readMode === "listen" ? "#1A2420" : "#7A7868"}
-                strokeWidth={2}
-              />
-              <Text
-                className={`text-[13px] font-semibold ${
-                  readMode === "listen"
-                    ? "text-[#1A2420] dark:text-[#F3F4EE]"
-                    : "text-[#7A7868] dark:text-[#8F9A93]"
-                }`}
-              >
-                {t("reader.listen")}
-              </Text>
-            </Pressable>
-          </View>
-        ) : document ? (
-          <View className="flex-row items-center gap-1.5 rounded-[10px] border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-2">
-            <FileText size={18} color={colors.textTertiary} strokeWidth={2} />
-            <Text className="text-[13px] font-semibold text-[#7A7868] dark:text-[#8F9A93]">
-              {t("reader.read")}
-            </Text>
-          </View>
-        ) : (
-          <View className="h-10 w-[120px]" />
-        )}
-
-        <View className="flex-row items-center gap-3.5">
-          <Pressable
-            onPress={() => setSettingsOpen(true)}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t("settings.title")}
-          >
-            <Menu size={26} color={colors.text} strokeWidth={2} />
-          </Pressable>
-          <Pressable
-            onPress={() => setSettingsOpen(true)}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={t("settings.appearance")}
-          >
-            <Text className="text-lg font-semibold text-[#1A2420] dark:text-[#F3F4EE]">
-              AA
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <ReaderSettingsSheet
-        visible={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onLanguageChange={handleLanguageChange}
-      />
-
-      <View className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]">
-        {(loading || awaitingEditionResolution) && (
-          <View className="flex-1 items-center justify-center p-6">
-            <ActivityIndicator size="large" color="#059669" />
-          </View>
-        )}
-        {!loading && !awaitingEditionResolution && error && (
-          <View className="flex-1 items-center justify-center p-6">
-            <Text className="mb-4 text-center text-base text-[#4A5550] dark:text-[#B8C1BB]">
-              {error}
-            </Text>
-            <Pressable
-              onPress={load}
-              className="min-h-[54px] items-center justify-center rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90"
-            >
-              <Text className="text-lg font-medium text-[#FBFAF2]">
-                {t("common.retry")}
-              </Text>
-            </Pressable>
-          </View>
-        )}
-        {!loading &&
-          !awaitingEditionResolution &&
-          !error &&
-          document &&
-          audioChecking && (
-          <ReaderListenLoading message={t("reader.loadingAudioAvailability")} />
-        )}
-        {!loading &&
-          !awaitingEditionResolution &&
-          !error &&
-          document &&
-          !audioChecking &&
-          (hasAudio && audioState.status === "available" ? (
-            <ReaderBookAudioProvider
-              bookId={document.book_id}
-              initialSource={audioState.source}
-              onSessionFlush={(audioPositionMs) =>
-                sessionTracker.flush({ audioPositionMs })
-              }
-            >
-              <ReaderChrome
-                document={document}
-                hasAudio
-                readMode={readMode}
-                pageIndex={pageIndex}
-                pages={pages}
-                totalPages={totalPages}
-                goNext={goNext}
-                goPrev={goPrev}
-                pageLabel={pageLabel}
-                onRetryAudio={reloadAudio}
-                showLastPageActions={showLastPageActions}
-                showFinishButton={showFinishButton}
-                onFinishBook={handleFinishBook}
-                finishing={finishing}
-                onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
-                {...quoteChromeProps}
-              />
-            </ReaderBookAudioProvider>
-          ) : (
-            <ReaderChrome
-              document={document}
-              hasAudio={false}
-              readMode={readMode}
-              pageIndex={pageIndex}
-              pages={pages}
-              totalPages={totalPages}
-              goNext={goNext}
-              goPrev={goPrev}
-              pageLabel={pageLabel}
-              showLastPageActions={showLastPageActions}
-              showFinishButton={showFinishButton}
-              onFinishBook={handleFinishBook}
-              finishing={finishing}
-              onOpenQuiz={hasQuiz ? handleOpenQuiz : undefined}
-              {...quoteChromeProps}
-            />
-          ))}
-      </View>
+          {readerShell}
+        </ReaderBookAudioProvider>
+      ) : (
+        readerShell
+      )}
     </SafeAreaView>
   );
 }

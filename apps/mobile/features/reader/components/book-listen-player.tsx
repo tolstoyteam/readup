@@ -4,14 +4,12 @@ import { audioProgressFraction } from "@/features/reader/audio/audio-progress";
 import { useReaderBookAudio } from "@/features/reader/audio/reader-book-audio-context";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { BookCoverImage } from "@/features/books/components/book-cover-image";
 import {
   ReaderListenError,
   ReaderListenLoading,
 } from "@/features/reader/components/reader-listen-states";
-import { Image } from "expo-image";
 import {
-  BookOpen,
-  Check,
   ChevronDown,
   Pause,
   Play,
@@ -22,11 +20,11 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   LayoutChangeEvent,
-  Modal,
   Pressable,
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function formatClock(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -39,15 +37,17 @@ function formatClock(seconds: number): string {
 export function BookListenPlayer({
   document,
   onRetryAudio,
+  onOpenVoiceMenu,
 }: {
   document: BookDocument;
   onRetryAudio?: () => void;
+  onOpenVoiceMenu: () => void;
 }) {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
+  const insets = useSafeAreaInsets();
   const {
     voice,
-    setVoice,
     voices,
     audioUrl,
     isAudioLoading,
@@ -57,10 +57,8 @@ export function BookListenPlayer({
     seekToFraction,
     retryVoiceLoad,
   } = useReaderBookAudio();
-  const [voiceMenuOpen, setVoiceMenuOpen] = useState(false);
   const [barWidth, setBarWidth] = useState(1);
 
-  const thumbUri = coverUrl(document.cover_image_path);
   const currentVoiceLabel = voices.find((v) => v.id === voice)?.label ?? voice;
   const duration = status.duration;
   const current = status.currentTime;
@@ -105,20 +103,17 @@ export function BookListenPlayer({
   }
 
   return (
-    <View className="flex-1 justify-between bg-[#FBFAF2] dark:bg-[#101512] px-6 pb-4 pt-2">
+    <View
+      className="flex-1 justify-between bg-[#FBFAF2] dark:bg-[#101512] px-6 pt-2"
+      style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+    >
       <View className="items-center pt-4">
-        <View className="overflow-hidden rounded-2xl border border-[#E8E6D8] dark:border-[#2A3630]">
-          {thumbUri ? (
-            <Image
-              source={{ uri: thumbUri }}
-              className="h-[220px] w-[220px]"
-              accessibilityLabel={t("reader.bookCover")}
-            />
-          ) : (
-            <View className="h-[220px] w-[220px] items-center justify-center bg-[#F2F0E6] dark:bg-[#19211D]">
-              <BookOpen size={56} color={colors.textTertiary} strokeWidth={1.5} />
-            </View>
-          )}
+        <View className="rounded-2xl border border-[#E8E6D8] dark:border-[#2A3630]">
+          <BookCoverImage
+            uri={coverUrl(document.cover_image_path)}
+            title={document.title}
+            variant="listenHero"
+          />
         </View>
         <Text
           className="mt-6 text-center font-reader text-xl font-semibold text-[#1A2420] dark:text-[#F3F4EE]"
@@ -140,7 +135,7 @@ export function BookListenPlayer({
             {t("reader.narrationVoice")}
           </Text>
           <Pressable
-            onPress={() => setVoiceMenuOpen(true)}
+            onPress={onOpenVoiceMenu}
             accessibilityRole="button"
             accessibilityLabel={t("reader.chooseNarrationVoice")}
             className="flex-row items-center justify-between rounded-xl border border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] px-4 py-3.5 active:opacity-90"
@@ -222,48 +217,6 @@ export function BookListenPlayer({
           </Pressable>
         </View>
       </View>
-
-      <Modal
-        visible={voiceMenuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setVoiceMenuOpen(false)}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/55"
-          onPress={() => setVoiceMenuOpen(false)}
-        >
-          <Pressable
-            className="rounded-t-2xl border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-2 pb-8 pt-3"
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text className="mb-2 px-3 text-sm font-semibold text-[#7A7868] dark:text-[#8F9A93]">
-              {t("reader.narrationVoice")}
-            </Text>
-            {voices.map((v) => (
-              <Pressable
-                key={v.id}
-                onPress={() => {
-                  setVoice(v.id);
-                  setVoiceMenuOpen(false);
-                }}
-                className={`flex-row items-center justify-between rounded-xl px-3 py-3.5 active:bg-[#F2F0E6] dark:bg-[#19211D] ${
-                  voice === v.id ? "bg-[#F2F0E6] dark:bg-[#19211D]" : ""
-                }`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: voice === v.id }}
-              >
-                <Text className="text-base font-medium text-[#1A2420] dark:text-[#F3F4EE]">
-                  {v.label}
-                </Text>
-                {voice === v.id ? (
-                  <Check size={22} color="#059669" strokeWidth={2.5} />
-                ) : null}
-              </Pressable>
-            ))}
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }

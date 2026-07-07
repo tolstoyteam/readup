@@ -1,9 +1,10 @@
 import { Redirect, Tabs } from "expo-router";
 import { BookMarked, House, Search, UserRound } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { fetchProfile, type Profile } from "@/features/profile/api/profile";
+import { DevTabTouchDiagnostics } from "@/shared/components/dev-tab-touch-diagnostics";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
@@ -12,21 +13,25 @@ export default function TabLayout() {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
   const { user, loading } = useAuth();
+  const userId = user?.id;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setProfile(null);
       setProfileLoading(false);
+      setProfileError(null);
       return;
     }
 
     let mounted = true;
+    setProfile(null);
     setProfileLoading(true);
     setProfileError(null);
-    void fetchProfile(user.id)
+
+    void fetchProfile(userId)
       .then((nextProfile) => {
         if (mounted) setProfile(nextProfile);
       })
@@ -45,9 +50,11 @@ export default function TabLayout() {
     return () => {
       mounted = false;
     };
-  }, [user]);
+  }, [userId]);
 
-  if (loading || profileLoading) {
+  const awaitingInitialProfile = profile === null && profileLoading;
+
+  if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]">
         <ActivityIndicator size="large" color={colors.brand} />
@@ -59,101 +66,123 @@ export default function TabLayout() {
     return <Redirect href="/login" />;
   }
 
-  if (profileError) {
-    return (
-      <View className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512] px-8">
-        <Text className="text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
-          {profileError}
-        </Text>
-      </View>
-    );
-  }
-
-  if (!profile?.interests_step_done) {
+  if (!awaitingInitialProfile && profile && !profile.interests_step_done) {
     return <Redirect href="/(setup)/interests" />;
   }
 
-  if (!profile.goal_step_done) {
+  if (!awaitingInitialProfile && profile && !profile.goal_step_done) {
     return <Redirect href="/(setup)/goal" />;
   }
 
+  const showProfileOverlay =
+    awaitingInitialProfile || (profileError != null && profile === null);
+
   return (
-    <Tabs
-      initialRouteName="index"
-      screenOptions={{
-        tabBarActiveTintColor: colors.brand,
-        tabBarInactiveTintColor: colors.textTertiary,
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          minHeight: 72,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t("tabs.home"),
-          tabBarIcon: ({ color, focused }) => (
-            <House
-              pointerEvents="none"
-              size={24}
-              color={color}
-              strokeWidth={focused ? 2.5 : 2}
-            />
-          ),
+    <View style={styles.root}>
+      <Tabs
+        initialRouteName="index"
+        screenOptions={{
+          tabBarActiveTintColor: colors.brand,
+          tabBarInactiveTintColor: colors.textTertiary,
+          headerShown: false,
+          freezeOnBlur: true,
+          tabBarStyle: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            borderTopWidth: 1,
+            minHeight: 72,
+            paddingTop: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: "500",
+          },
         }}
-      />
-      <Tabs.Screen
-        name="library"
-        options={{
-          title: t("tabs.library"),
-          tabBarIcon: ({ color, focused }) => (
-            <BookMarked
-              pointerEvents="none"
-              size={24}
-              color={color}
-              strokeWidth={focused ? 2.5 : 2}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: t("tabs.search"),
-          tabBarIcon: ({ color, focused }) => (
-            <Search
-              pointerEvents="none"
-              size={24}
-              color={color}
-              strokeWidth={focused ? 2.5 : 2}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="account"
-        options={{
-          title: t("tabs.profile"),
-          tabBarIcon: ({ color, focused }) => (
-            <UserRound
-              pointerEvents="none"
-              size={24}
-              color={color}
-              strokeWidth={focused ? 2.5 : 2}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen name="explore" options={{ href: null }} />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: t("tabs.home"),
+            tabBarIcon: ({ color, focused }) => (
+              <House
+                pointerEvents="none"
+                size={24}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="library"
+          options={{
+            title: t("tabs.library"),
+            tabBarIcon: ({ color, focused }) => (
+              <BookMarked
+                pointerEvents="none"
+                size={24}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="search"
+          options={{
+            title: t("tabs.search"),
+            tabBarIcon: ({ color, focused }) => (
+              <Search
+                pointerEvents="none"
+                size={24}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="account"
+          options={{
+            title: t("tabs.profile"),
+            tabBarIcon: ({ color, focused }) => (
+              <UserRound
+                pointerEvents="none"
+                size={24}
+                color={color}
+                strokeWidth={focused ? 2.5 : 2}
+              />
+            ),
+          }}
+        />
+      </Tabs>
+      <DevTabTouchDiagnostics />
+      {showProfileOverlay ? (
+        <View
+          style={styles.profileOverlay}
+          pointerEvents="auto"
+          className="bg-[#FBFAF2] dark:bg-[#101512]"
+        >
+          {awaitingInitialProfile ? (
+            <ActivityIndicator size="large" color={colors.brand} />
+          ) : (
+            <Text className="px-8 text-center text-[15px] leading-6 text-[#4A5550] dark:text-[#B8C1BB]">
+              {profileError}
+            </Text>
+          )}
+        </View>
+      ) : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  profileOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

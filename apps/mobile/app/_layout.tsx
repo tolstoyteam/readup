@@ -67,7 +67,11 @@ export default function RootLayout() {
               <LibraryProvider>
                 <QuotesProvider>
                   <ReaderSettingsProvider>
-                    <Stack>
+                    <Stack
+                      screenOptions={{
+                        freezeOnBlur: true,
+                      }}
+                    >
                       <Stack.Screen
                         name="(onboarding)"
                         options={{ headerShown: false }}
@@ -76,8 +80,14 @@ export default function RootLayout() {
                         name="(tabs)"
                         options={{
                           headerShown: false,
-                          animation: "none",
                           gestureEnabled: false,
+                        }}
+                      />
+                      <Stack.Screen
+                        name="explore"
+                        options={{
+                          headerShown: false,
+                          animation: "none",
                         }}
                       />
                       <Stack.Screen
@@ -97,7 +107,10 @@ export default function RootLayout() {
                       />
                       <Stack.Screen
                         name="reader/[bookId]"
-                        options={{ headerShown: false }}
+                        options={{
+                          headerShown: false,
+                          animation: "slide_from_right",
+                        }}
                       />
                       <Stack.Screen
                         name="book/[bookId]"
@@ -110,6 +123,7 @@ export default function RootLayout() {
                         name="quiz/[bookId]"
                         options={{
                           headerShown: false,
+                          presentation: "modal",
                           animation: "slide_from_bottom",
                         }}
                       />
@@ -131,6 +145,7 @@ export default function RootLayout() {
                         name="subscription"
                         options={{
                           headerShown: false,
+                          presentation: "modal",
                           animation: "slide_from_bottom",
                         }}
                       />
