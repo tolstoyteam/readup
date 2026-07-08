@@ -1,7 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getLocales } from "expo-localization";
 
 import {
   DEFAULT_INTERFACE_LANGUAGE,
+  interfaceLanguageFromLocale,
   type InterfaceLanguage,
 } from "@/shared/i18n/interface-language";
 
@@ -15,7 +17,9 @@ function sanitize(raw: unknown): InterfaceLanguage {
 export async function loadInterfaceLanguage(): Promise<InterfaceLanguage> {
   try {
     const stored = await AsyncStorage.getItem(KEY);
-    if (!stored) return DEFAULT_INTERFACE_LANGUAGE;
+    if (!stored) {
+      return interfaceLanguageFromLocale(getLocales()[0]?.languageTag);
+    }
     return sanitize(stored);
   } catch {
     return DEFAULT_INTERFACE_LANGUAGE;
