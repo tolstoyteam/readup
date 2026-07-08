@@ -29,8 +29,8 @@ export function ReaderReadFooter({
   const { t } = useInterfaceLanguage();
 
   return (
-    <>
-      <View className="flex-row items-center justify-center gap-5 border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D] py-3">
+    <View className="border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#F2F0E6] dark:bg-[#19211D]">
+      <View className="flex-row items-center justify-center gap-5 px-3 py-2">
         <Pressable
           onPress={goPrev}
           disabled={pageIndex <= 0}
@@ -69,14 +69,16 @@ export function ReaderReadFooter({
         </Pressable>
       </View>
 
-      {hasAudio ? (
-        <ReaderBottomNowPlaying document={document} />
-      ) : (
-        <ReaderBottomReadingProgress
-          document={document}
-          pageProgress={pageProgress}
-        />
-      )}
-    </>
+      <View className="border-t border-[#E8E6D8] dark:border-[#2A3630]">
+        {hasAudio ? (
+          <ReaderBottomNowPlaying document={document} />
+        ) : (
+          <ReaderBottomReadingProgress
+            document={document}
+            pageProgress={pageProgress}
+          />
+        )}
+      </View>
+    </View>
   );
 }

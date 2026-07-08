@@ -33,7 +33,7 @@ export function ReaderBottomNowPlaying({
           accessibilityLabel={status.playing ? "Pause audio" : "Play audio"}
           disabled={!canToggleAudio}
           onPress={togglePlayback}
-          className={`rounded-full border border-[#C8C6B2] dark:border-[#3A4740] bg-[#FBFAF2] dark:bg-[#101512] p-1.5 active:opacity-80 ${!canToggleAudio ? "opacity-40" : ""}`}
+          className={`h-10 w-10 items-center justify-center rounded-full border border-[#C8C6B2] dark:border-[#3A4740] bg-[#FBFAF2] dark:bg-[#101512] active:opacity-80 ${!canToggleAudio ? "opacity-40" : ""}`}
         >
           {status.playing ? (
             <Pause size={24} color={colors.text} strokeWidth={2} />
