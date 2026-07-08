@@ -227,7 +227,10 @@ export function normalizeBookPayload(raw: unknown): BookDocument | null {
 }
 
 export function coverUrl(path: string | undefined): string | null {
-  return supabaseCoverPublicUrl(path);
+  const trimmed = path?.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return supabaseCoverPublicUrl(trimmed);
 }
 
 export async function fetchBooks(
@@ -310,6 +313,8 @@ export async function fetchBookByBookId(
               ...match,
               pages,
               total_pages: Math.max(pages.length, 1),
+              cover_image_path:
+                row.cover_image_url?.trim() || match.cover_image_path,
             },
           };
         }

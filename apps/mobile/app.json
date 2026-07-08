@@ -54,7 +54,6 @@
       "reactCompiler": true
     },
     "extra": {
-      "supabaseBookCoversBucket": "Storage",
       "supabaseBookAudioBucket": "book-audio",
       "router": {},
       "eas": {

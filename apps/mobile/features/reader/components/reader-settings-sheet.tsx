@@ -9,8 +9,9 @@ import { useReaderSettings } from "@/features/reader/settings/reader-settings-co
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import { ScreenOverlaySheet } from "@/shared/components/screen-overlay-sheet";
 import { Check, Minus, Plus } from "lucide-react-native";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 type SegmentedOption = { label: string; value: number };
 
@@ -102,17 +103,11 @@ export function ReaderSettingsSheet({
   };
 
   return (
-    <Modal
+    <ScreenOverlaySheet
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
+      onClose={onClose}
+      sheetClassName="gap-6 rounded-t-2xl border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-5 pb-9 pt-5"
     >
-      <Pressable className="flex-1 justify-end bg-black/55" onPress={onClose}>
-        <Pressable
-          className="gap-6 rounded-t-2xl border-t border-[#E8E6D8] dark:border-[#2A3630] bg-[#FBFAF2] dark:bg-[#101512] px-5 pb-9 pt-5"
-          onPress={(e) => e.stopPropagation()}
-        >
           <View className="-mt-1 mb-1 items-center">
             <View className="h-1 w-10 rounded-full bg-[#C8C6B2] dark:bg-[#344039]" />
           </View>
@@ -219,8 +214,6 @@ export function ReaderSettingsSheet({
               })}
             </View>
           </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    </ScreenOverlaySheet>
   );
 }
