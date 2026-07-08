@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   computeMinutesDelta,
   consumePendingReadingTime,
+  isDateInStreakWindow,
   pageForSessionSave,
 } from "./reading-stats";
 
@@ -62,5 +63,22 @@ describe("consumePendingReadingTime", () => {
 
     assert.equal(result.minutesDelta, 1);
     assert.equal(result.pendingElapsedMs, 29_000);
+  });
+});
+
+describe("isDateInStreakWindow", () => {
+  it("includes each day covered by the current streak ending on last_read_date", () => {
+    assert.equal(isDateInStreakWindow("2026-07-06", "2026-07-08", 3), true);
+    assert.equal(isDateInStreakWindow("2026-07-07", "2026-07-08", 3), true);
+    assert.equal(isDateInStreakWindow("2026-07-08", "2026-07-08", 3), true);
+  });
+
+  it("excludes days before the streak and after last_read_date", () => {
+    assert.equal(isDateInStreakWindow("2026-07-05", "2026-07-08", 3), false);
+    assert.equal(isDateInStreakWindow("2026-07-09", "2026-07-08", 3), false);
+  });
+
+  it("does not mark today when the active streak currently ends yesterday", () => {
+    assert.equal(isDateInStreakWindow("2026-07-08", "2026-07-07", 4), false);
   });
 });

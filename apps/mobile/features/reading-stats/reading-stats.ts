@@ -23,6 +23,16 @@ export function getEffectiveCurrentStreak(
   return profile.current_streak_days;
 }
 
+export function isDateInStreakWindow(
+  dayKey: string,
+  lastReadDate: string | null,
+  currentStreakDays: number,
+): boolean {
+  if (!lastReadDate || currentStreakDays <= 0) return false;
+  const daysFromLastRead = daysBetweenUtcDates(dayKey, lastReadDate);
+  return daysFromLastRead >= 0 && daysFromLastRead < currentStreakDays;
+}
+
 export function getTotalReadingDays(
   profile: Pick<Profile, "total_reading_days"> | null,
   logDayCount?: number,

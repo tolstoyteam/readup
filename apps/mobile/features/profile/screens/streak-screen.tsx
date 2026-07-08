@@ -30,7 +30,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { saveDailyReadingGoal } from "@/features/profile/api/profile";
-import { generateLastNDays, useReadingStats } from "@/features/reading-stats";
+import {
+  generateLastNDays,
+  isDateInStreakWindow,
+  useReadingStats,
+} from "@/features/reading-stats";
 import {
   useReadupColors,
   statusBarStyleForScheme,
@@ -247,7 +251,12 @@ export default function StreakScreen() {
 
             <View className="mt-4 flex-row items-center justify-between">
               {last7.map((day) => {
-                const active = (logByDate.get(day) ?? 0) > 0;
+                const active =
+                  isDateInStreakWindow(
+                    day,
+                    profile?.last_read_date ?? null,
+                    stats.currentStreakDays,
+                  ) || logByDate.has(day);
                 const isToday = day === todayKey;
                 return (
                   <View key={day} className="items-center gap-1.5">

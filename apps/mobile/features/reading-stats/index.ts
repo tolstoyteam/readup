@@ -9,6 +9,7 @@ export {
   consumePendingReadingTime,
   getEffectiveCurrentStreak,
   getTotalReadingDays,
+  isDateInStreakWindow,
   pageForSessionSave,
   type ReadingStatsSnapshot,
 } from "./reading-stats";
