@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { TabScreenRoot } from "@/shared/components/tab-screen-root";
-import { useReadingStats } from "@/features/reading-stats";
+import { isStreakActiveToday, useReadingStats } from "@/features/reading-stats";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
@@ -27,7 +27,7 @@ export default function HomeScreen() {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const { stats } = useReadingStats(1);
+  const { profile, stats, todayKey } = useReadingStats(1);
   const {
     items,
     loading,
@@ -47,7 +47,10 @@ export default function HomeScreen() {
     router.push(`/reader/${encodeURIComponent(item.bookId)}`);
   }
 
-  const hasStreak = stats.currentStreakDays > 0;
+  const hasStreak = isStreakActiveToday(
+    profile?.last_read_date ?? null,
+    todayKey,
+  );
 
   return (
     <TabScreenRoot>

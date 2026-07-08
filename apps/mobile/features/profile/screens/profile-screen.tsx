@@ -44,6 +44,7 @@ import {
 } from "@/features/profile/api/profile";
 import {
   buildReadingStatsSnapshot,
+  isStreakActiveToday,
   todayActivityDateKey,
 } from "@/features/reading-stats";
 import {
@@ -173,9 +174,11 @@ export default function ProfileScreen() {
     [achievementViewModels],
   );
 
+  const todayKey = todayActivityDateKey();
+
   const readingStats = useMemo(
-    () => buildReadingStatsSnapshot(profile, todayActivityDateKey()),
-    [profile],
+    () => buildReadingStatsSnapshot(profile, todayKey),
+    [profile, todayKey],
   );
 
   const selectedSet = useMemo(
@@ -273,7 +276,10 @@ export default function ProfileScreen() {
     );
   const goalDirty =
     profile != null && goal !== normalizeGoalId(profile.reading_goal);
-  const hasStreak = readingStats.currentStreakDays > 0;
+  const hasStreak = isStreakActiveToday(
+    profile?.last_read_date ?? null,
+    todayKey,
+  );
 
   if (!fontsLoaded) {
     return null;

@@ -10,6 +10,7 @@ export {
   getEffectiveCurrentStreak,
   getTotalReadingDays,
   isDateInStreakWindow,
+  isStreakActiveToday,
   pageForSessionSave,
   type ReadingStatsSnapshot,
 } from "./reading-stats";

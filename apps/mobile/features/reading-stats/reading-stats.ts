@@ -33,6 +33,13 @@ export function isDateInStreakWindow(
   return daysFromLastRead >= 0 && daysFromLastRead < currentStreakDays;
 }
 
+export function isStreakActiveToday(
+  lastReadDate: string | null,
+  todayKey: string,
+): boolean {
+  return lastReadDate === todayKey;
+}
+
 export function getTotalReadingDays(
   profile: Pick<Profile, "total_reading_days"> | null,
   logDayCount?: number,

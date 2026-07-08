@@ -33,6 +33,7 @@ import { saveDailyReadingGoal } from "@/features/profile/api/profile";
 import {
   generateLastNDays,
   isDateInStreakWindow,
+  isStreakActiveToday,
   useReadingStats,
 } from "@/features/reading-stats";
 import {
@@ -137,7 +138,10 @@ export default function StreakScreen() {
       : null;
 
   const hasAnyMinutes = activeDayCount > 0;
-  const hasCurrentStreak = stats.currentStreakDays > 0;
+  const isActiveToday = isStreakActiveToday(
+    profile?.last_read_date ?? null,
+    todayKey,
+  );
   const avgLineHeight = (avgMinutes / maxLogMinutes) * CHART_PLOT_HEIGHT;
 
   if (!fontsLoaded) {
@@ -185,7 +189,7 @@ export default function StreakScreen() {
             className="overflow-hidden rounded-[24px] border p-5"
             style={{
               backgroundColor: colors.surface,
-              borderColor: hasCurrentStreak ? "#F97316" : colors.border,
+              borderColor: isActiveToday ? "#F97316" : colors.border,
             }}
           >
             <View className="flex-row items-center justify-between">
@@ -196,8 +200,8 @@ export default function StreakScreen() {
                 >
                   <Flame
                     size={20}
-                    color={hasCurrentStreak ? "#F97316" : colors.textTertiary}
-                    fill={hasCurrentStreak ? "#F97316" : "transparent"}
+                    color={isActiveToday ? "#F97316" : colors.textTertiary}
+                    fill={isActiveToday ? "#F97316" : "transparent"}
                     strokeWidth={2.4}
                   />
                 </View>
@@ -205,7 +209,7 @@ export default function StreakScreen() {
                   className="text-[14px] tracking-[-0.56px]"
                   style={{
                     fontFamily: "Inter_500Medium",
-                    color: hasCurrentStreak ? "#F97316" : colors.textTertiary,
+                    color: isActiveToday ? "#F97316" : colors.textTertiary,
                   }}
                 >
                   {t("streak.currentStreak")}

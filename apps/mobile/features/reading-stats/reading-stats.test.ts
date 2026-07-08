@@ -5,6 +5,7 @@ import {
   computeMinutesDelta,
   consumePendingReadingTime,
   isDateInStreakWindow,
+  isStreakActiveToday,
   pageForSessionSave,
 } from "./reading-stats";
 
@@ -80,5 +81,12 @@ describe("isDateInStreakWindow", () => {
 
   it("does not mark today when the active streak currently ends yesterday", () => {
     assert.equal(isDateInStreakWindow("2026-07-08", "2026-07-07", 4), false);
+  });
+});
+
+describe("isStreakActiveToday", () => {
+  it("is active only after reading today", () => {
+    assert.equal(isStreakActiveToday("2026-07-08", "2026-07-08"), true);
+    assert.equal(isStreakActiveToday("2026-07-07", "2026-07-08"), false);
   });
 });
