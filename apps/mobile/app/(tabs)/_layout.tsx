@@ -2,9 +2,9 @@ import { Redirect, Tabs } from "expo-router";
 import { BookMarked, House, Search, UserRound } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchProfile, type Profile } from "@/features/profile/api/profile";
-import { DevTabTouchDiagnostics } from "@/shared/components/dev-tab-touch-diagnostics";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
@@ -13,6 +13,7 @@ export default function TabLayout() {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
   const { user, loading } = useAuth();
+  const insets = useSafeAreaInsets();
   const userId = user?.id;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -90,8 +91,12 @@ export default function TabLayout() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             borderTopWidth: 1,
-            minHeight: 72,
+            height: 64 + insets.bottom,
+            paddingBottom: insets.bottom,
             paddingTop: 8,
+          },
+          tabBarItemStyle: {
+            height: 56,
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -156,11 +161,10 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-      <DevTabTouchDiagnostics />
       {showProfileOverlay ? (
         <View
           style={styles.profileOverlay}
-          pointerEvents="auto"
+          pointerEvents="none"
           className="bg-[#FBFAF2] dark:bg-[#101512]"
         >
           {awaitingInitialProfile ? (
