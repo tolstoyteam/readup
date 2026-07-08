@@ -18,7 +18,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupLogo } from "@/shared/components/readup-logo";
-import { TabScreenRoot } from "@/shared/components/tab-screen-root";
 import { isStreakActiveToday, useReadingStats } from "@/features/reading-stats";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
@@ -53,11 +52,10 @@ export default function HomeScreen() {
   );
 
   return (
-    <TabScreenRoot>
-      <SafeAreaView
-        className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
-        edges={["top"]}
-      >
+    <SafeAreaView
+      className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
+      edges={["top"]}
+    >
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -217,7 +215,6 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
-      </SafeAreaView>
-    </TabScreenRoot>
+    </SafeAreaView>
   );
 }

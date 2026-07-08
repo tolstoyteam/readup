@@ -86,7 +86,6 @@ export default function TabLayout() {
           tabBarActiveTintColor: colors.brand,
           tabBarInactiveTintColor: colors.textTertiary,
           headerShown: false,
-          freezeOnBlur: true,
           tabBarStyle: {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
