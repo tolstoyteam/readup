@@ -5,7 +5,7 @@ import {
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
 import { Image } from "expo-image";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback } from "react";
 import {
@@ -81,9 +81,9 @@ export default function WelcomeScreen() {
     router.push("/onboarding");
   }, [router]);
 
-  const onLogin = useCallback(() => {
-    void markOnboardingComplete();
-    router.replace("/(auth)/login");
+  const onLogin = useCallback(async () => {
+    await markOnboardingComplete();
+    router.replace("/login");
   }, [router]);
 
   if (!fontsLoaded) {
@@ -204,34 +204,31 @@ export default function WelcomeScreen() {
 
             <View pointerEvents="none" style={styles.accountPromptSpacer} />
 
-            <Link href="/(auth)/login" replace asChild>
-              <Pressable
-                onPress={onLogin}
-                accessibilityRole="link"
-                accessibilityLabel={t("auth.loginCta")}
-                hitSlop={12}
-                style={({ pressed }) => [
-                  styles.accountPromptHit,
-                  pressed && styles.textActionPressed,
-                ]}
+            <Pressable
+              onPress={onLogin}
+              accessibilityRole="link"
+              accessibilityLabel={t("auth.loginCta")}
+              hitSlop={12}
+              style={({ pressed }) => [
+                styles.accountPromptHit,
+                pressed && styles.textActionPressed,
+              ]}
+            >
+              <Text
+                style={{
+                  color: colors.text,
+                  fontFamily: "Inter_400Regular",
+                  fontSize: 15,
+                  lineHeight: 21,
+                  textAlign: "center",
+                }}
               >
-                <Text
-                  onPress={onLogin}
-                  style={{
-                    color: colors.text,
-                    fontFamily: "Inter_400Regular",
-                    fontSize: 15,
-                    lineHeight: 21,
-                    textAlign: "center",
-                  }}
-                >
-                  {t("auth.alreadyHaveAccount")}{" "}
-                  <Text style={{ color: colors.brand }}>
-                    {t("auth.loginCta")}
-                  </Text>
+                {t("auth.alreadyHaveAccount")}{" "}
+                <Text style={{ color: colors.brand }}>
+                  {t("auth.loginCta")}
                 </Text>
-              </Pressable>
-            </Link>
+              </Text>
+            </Pressable>
           </View>
         </View>
       </View>
