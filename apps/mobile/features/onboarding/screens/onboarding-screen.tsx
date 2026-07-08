@@ -132,7 +132,7 @@ export default function OnboardingScreen() {
 
   const goToTabs = useCallback(async () => {
     await markOnboardingComplete();
-    router.replace("/(tabs)");
+    router.replace("/");
   }, [router]);
 
   const handleNext = useCallback(async () => {

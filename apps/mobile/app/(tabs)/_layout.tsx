@@ -8,6 +8,7 @@ import { fetchProfile, type Profile } from "@/features/profile/api/profile";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { getOnboardingComplete } from "@/shared/lib/onboarding-storage";
 
 export default function TabLayout() {
   const colors = useReadupColors();
@@ -15,9 +16,23 @@ export default function TabLayout() {
   const { user, loading } = useAuth();
   const insets = useSafeAreaInsets();
   const userId = user?.id;
+  const [onboardingReady, setOnboardingReady] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    void getOnboardingComplete().then((complete) => {
+      if (!mounted) return;
+      setOnboardingComplete(complete);
+      setOnboardingReady(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -55,12 +70,16 @@ export default function TabLayout() {
 
   const awaitingInitialProfile = profile === null && profileLoading;
 
-  if (loading) {
+  if (!onboardingReady || loading) {
     return (
       <View className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]">
         <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
+  }
+
+  if (!onboardingComplete) {
+    return <Redirect href="/welcome" />;
   }
 
   if (!user) {

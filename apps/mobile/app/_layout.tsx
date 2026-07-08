@@ -67,11 +67,7 @@ export default function RootLayout() {
               <LibraryProvider>
                 <QuotesProvider>
                   <ReaderSettingsProvider>
-                    <Stack
-                      screenOptions={{
-                        freezeOnBlur: true,
-                      }}
-                    >
+                    <Stack>
                       <Stack.Screen
                         name="(onboarding)"
                         options={{ headerShown: false }}
@@ -80,7 +76,7 @@ export default function RootLayout() {
                         name="(tabs)"
                         options={{
                           headerShown: false,
-                          gestureEnabled: true,
+                          gestureEnabled: false,
                         }}
                       />
                       <Stack.Screen

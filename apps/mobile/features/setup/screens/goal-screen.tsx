@@ -61,7 +61,7 @@ export default function GoalScreen() {
     setSaving(true);
     try {
       await saveGoal(user.id, nextGoal);
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (error) {
       Alert.alert(
         t("setup.goalSaveFailed"),

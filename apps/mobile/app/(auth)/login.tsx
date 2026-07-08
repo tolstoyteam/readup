@@ -49,7 +49,7 @@ export default function LoginScreen() {
         setErrorMessage(error.message);
         return;
       }
-      router.replace("/(tabs)");
+      router.replace("/");
     } finally {
       setSubmitting(false);
     }
@@ -64,7 +64,7 @@ export default function LoginScreen() {
         setErrorMessage(error.message);
         return;
       }
-      router.replace("/(tabs)");
+      router.replace("/");
     } finally {
       setOauthBusy(null);
     }
