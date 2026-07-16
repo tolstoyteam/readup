@@ -8,6 +8,10 @@ import { parseBookContentInput, type BookContentInput } from "@/lib/book-content
 import type { BookGenerationSettings } from "@readup/db";
 import { getLengthPreset } from "./length-presets";
 import {
+  buildLengthCorrectionAddendum,
+  chaptersOutsideSoftRange,
+} from "./chapter-length";
+import {
   buildGenerationSystemPrompt,
   buildGenerationUserPrompt,
 } from "./prompts/generation";
@@ -46,6 +50,8 @@ function buildGenerationBookSchema(settings: BookGenerationSettings, includeQuiz
     ? { quiz: generationQuizSchema }
     : { quiz: z.null() };
 
+  const sentenceDescribe = `Each chapter's paragraph blocks combined should contain approximately ${preset.minSentencesPerChapter}–${preset.maxSentencesPerChapter} sentences (${settings.length} length). Quote blocks do not count toward this total.`;
+
   return z.object({
     title: z.string().min(1),
     subtitle: z.string().min(1),
@@ -61,11 +67,15 @@ function buildGenerationBookSchema(settings: BookGenerationSettings, includeQuiz
           blocks: z
             .array(generationBlockSchema)
             .min(preset.minBlocks)
-            .max(preset.maxBlocks),
+            .max(preset.maxBlocks)
+            .describe(sentenceDescribe),
         }),
       )
       .min(preset.minChapters)
-      .max(preset.maxChapters),
+      .max(preset.maxChapters)
+      .describe(
+        `${preset.minChapters}–${preset.maxChapters} chapters. ${sentenceDescribe} Apply the sentence target to every chapter.`,
+      ),
     ...quizField,
   });
 }
@@ -79,8 +89,10 @@ type GenerateEnglishOptions = {
   };
 };
 
+type RawGeneratedBook = z.infer<ReturnType<typeof buildGenerationBookSchema>>;
+
 function toBookContentInput(
-  draft: z.infer<ReturnType<typeof buildGenerationBookSchema>>,
+  draft: RawGeneratedBook,
   includeQuiz: boolean,
 ): GeneratedEnglishDraft {
   const genres = draft.genres.length === 1 ? draft.genres : ["other" as const];
@@ -129,9 +141,10 @@ function toBookContentInput(
   };
 }
 
-export async function generateEnglishBook(
+async function generateRawBook(
   options: GenerateEnglishOptions,
-): Promise<GeneratedEnglishDraft> {
+  lengthCorrectionAddendum?: string,
+): Promise<RawGeneratedBook> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(
@@ -149,9 +162,25 @@ export async function generateEnglishBook(
     prompt: buildGenerationUserPrompt({
       settings: options.settings,
       source: options.source,
+      lengthCorrectionAddendum,
     }),
     temperature: 0.6,
   });
+
+  return object;
+}
+
+export async function generateEnglishBook(
+  options: GenerateEnglishOptions,
+): Promise<GeneratedEnglishDraft> {
+  const preset = getLengthPreset(options.settings.length);
+  let object = await generateRawBook(options);
+
+  const outliers = chaptersOutsideSoftRange(object.chapters, preset);
+  if (outliers.length > 0) {
+    const correction = buildLengthCorrectionAddendum(outliers, preset);
+    object = await generateRawBook(options, correction);
+  }
 
   const draft = toBookContentInput(object, options.includeQuiz);
   const parsed = parseBookContentInput(draft.content);

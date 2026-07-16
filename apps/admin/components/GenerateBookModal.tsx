@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BOOK_LENGTHS, READING_LEVELS } from "@readup/db";
 import type { ProgressEvent } from "@/lib/book-generation/types";
+import { getLengthPreset } from "@/lib/book-generation/length-presets";
 import { validateCoverFile } from "@/app/upload/BookUploadForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
@@ -299,6 +300,9 @@ export function GenerateBookModal({ open, onClose }: Props) {
                 </label>
               ))}
             </div>
+            <p className="mt-2 text-xs text-text-tertiary">
+              {getLengthPreset(length).uiHint}
+            </p>
           </fieldset>
 
           <LanguageSelector
