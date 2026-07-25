@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminNav } from "@/components/AdminNav";
-import { genreDisplayName, type BookGenre } from "@/lib/book-genres";
-import { languageLabel } from "@/lib/book-language";
+import { BooksWorkCard } from "@/components/books/BooksWorkCard";
 import { listBookWorks, type BookWorkListItem } from "@/lib/book-relational";
 import { getCoverImageSignedUrl } from "@/lib/cover-signed-url";
 
@@ -81,73 +80,25 @@ export default async function BooksPage() {
             </div>
           ) : (
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((row, i) => {
-                const coverUrl = coverUrls[i];
-                const genres = row.editions[0]?.genres ?? [];
-                const genrePreview = genres.slice(0, 2);
-                const genreExtra = genres.length - genrePreview.length;
-                return (
-                  <li key={row.id} className="min-h-0">
-                    <article className="flex h-full min-h-32 overflow-hidden rounded-card border border-elevated bg-surface shadow-sm">
-                        <div className="relative h-full w-17 shrink-0 bg-elevated">
-                          {coverUrl ? (
-                            <img
-                              src={coverUrl}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] leading-tight text-text-tertiary">
-                              {row.coverImageUrl ? "—" : "∅"}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-2 pr-3 pl-3">
-                          <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-                            {row.title}
-                          </h2>
-                          <p className="truncate text-xs text-text-secondary">
-                            {row.author}
-                          </p>
-                          <p className="truncate text-[11px] text-text-tertiary">
-                            {row.editions.length}{" "}
-                            {row.editions.length === 1 ? "edition" : "editions"} · shared cover
-                          </p>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {row.editions.map((edition) => (
-                              <Link
-                                key={edition.id}
-                                href={"/books/" + edition.id + "/edit"}
-                                className="rounded-chip border border-brand/30 bg-brand/10 px-2 py-px text-[10px] font-medium text-brand hover:bg-brand/15"
-                              >
-                                {languageLabel(edition.language)} · {edition.status}
-                              </Link>
-                            ))}
-                          </div>
-                          {row.editions[0]?.genres.length ? (
-                            <div className="mt-0.5 flex min-h-4.5 flex-wrap items-center gap-1">
-                              {genrePreview.map((g) => (
-                                <span
-                                  key={g}
-                                  className="max-w-22 truncate rounded-chip border border-brand/30 bg-brand/10 px-2 py-px text-[10px] font-medium text-brand"
-                                >
-                                  {genreDisplayName(g as BookGenre)}
-                                </span>
-                              ))}
-                              {genreExtra > 0 ? (
-                                <span className="text-[10px] font-medium text-text-tertiary">
-                                  +{genreExtra}
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <div className="min-h-4.5" aria-hidden />
-                          )}
-                        </div>
-                      </article>
-                  </li>
-                );
-              })}
+              {rows.map((row, i) => (
+                <li key={row.id} className="min-h-0">
+                  <BooksWorkCard
+                    work={{
+                      id: row.id,
+                      title: row.title,
+                      author: row.author,
+                      coverImageUrl: row.coverImageUrl,
+                      genres: row.editions[0]?.genres ?? [],
+                      editions: row.editions.map((edition) => ({
+                        id: edition.id,
+                        language: edition.language,
+                        status: edition.status,
+                      })),
+                    }}
+                    coverUrl={coverUrls[i] ?? null}
+                  />
+                </li>
+              ))}
             </ul>
           )}
         </div>

@@ -1,11 +1,9 @@
-import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
-import { booksTable } from "@readup/db";
-import { deleteAllBookTtsFromStorage } from "@/lib/book-audio-storage";
 import { parseBookContentInput } from "@/lib/book-content";
 import { validateCoverBytes } from "@/lib/cover-image";
+import { removeCoverFromStorage } from "@/lib/cover-storage";
 import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
 import {
+  deleteEditionById,
   getBookWithContent,
   replaceBookContent,
   type BookWithContent,
@@ -18,16 +16,6 @@ function parseId(param: string): number | null {
   const id = Number(param);
   if (!Number.isInteger(id) || id < 1) return null;
   return id;
-}
-
-async function removeCoverFromStorage(path: string) {
-  try {
-    const supabase = getSupabaseAdmin();
-    const bucket = getBookCoversBucket();
-    await supabase.storage.from(bucket).remove([path]);
-  } catch {
-    /* best-effort */
-  }
 }
 
 export async function GET(
@@ -233,18 +221,19 @@ export async function DELETE(
     return Response.json({ error: "Invalid book id" }, { status: 400 });
   }
 
-  const existing = await getBookWithContent(id);
-  if (!existing) {
-    return Response.json({ error: "Not found" }, { status: 404 });
+  try {
+    const result = await deleteEditionById(id);
+    if (!result) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    return Response.json({ ok: true, ...result });
+  } catch (e) {
+    console.error("DELETE /api/books/[id]:", e);
+    return Response.json(
+      {
+        error: e instanceof Error ? e.message : "Failed to delete language version",
+      },
+      { status: 500 },
+    );
   }
-
-  if (existing.coverImageUrl) {
-    await removeCoverFromStorage(existing.coverImageUrl);
-  }
-
-  await deleteAllBookTtsFromStorage(String(existing.id));
-
-  await db.delete(booksTable).where(eq(booksTable.id, id));
-
-  return Response.json({ ok: true });
 }

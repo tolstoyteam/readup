@@ -71,3 +71,14 @@ export async function uploadWorkCover(
 
   return objectPath;
 }
+
+/** Best-effort removal of a cover object from the covers bucket. */
+export async function removeCoverFromStorage(path: string): Promise<void> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const bucket = getBookCoversBucket();
+    await supabase.storage.from(bucket).remove([path]);
+  } catch {
+    /* best-effort */
+  }
+}

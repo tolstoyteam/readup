@@ -11,6 +11,8 @@ import {
   quizAnswersTable,
   quizQuestionsTable,
   quizzesTable,
+  userLibraryTable,
+  userWorkLibraryTable,
   type BookEditionStatus,
   type BookGenerationMetadata,
   type BookRecord,
@@ -19,9 +21,12 @@ import {
   type BookTtsAudio,
   type GenerationJobStatus,
   type GenerationJobType,
+  type WorkLibraryProgress,
 } from "@readup/db";
 import { genreRuLabel, isBookGenre } from "@readup/db";
+import { deleteAllBookTtsFromStorage } from "@/lib/book-audio-storage";
 import type { BookContentInput } from "@/lib/book-content";
+import { removeCoverFromStorage } from "@/lib/cover-storage";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -654,4 +659,145 @@ export async function getEditionByWorkLanguage(
     .where(and(eq(booksTable.workId, workId), eq(booksTable.language, language)))
     .limit(1);
   return row ? getBookWithContent(row.id) : null;
+}
+
+export type DeleteEditionResult =
+  | { deleted: "edition"; workId: string; editionId: number; language: string }
+  | { deleted: "work"; workId: string; editionIds: number[] };
+
+export type DeleteWorkResult = {
+  deleted: "work";
+  workId: string;
+  editionIds: number[];
+};
+
+/**
+ * Deletes one language edition. If it is the last edition for the work, deletes the
+ * entire work (shared cover + all TTS) instead.
+ */
+export async function deleteEditionById(
+  editionId: number,
+): Promise<DeleteEditionResult | null> {
+  const [edition] = await db
+    .select({
+      id: booksTable.id,
+      workId: booksTable.workId,
+      language: booksTable.language,
+    })
+    .from(booksTable)
+    .where(eq(booksTable.id, editionId))
+    .limit(1);
+
+  if (!edition) return null;
+
+  const siblings = await db
+    .select({ id: booksTable.id })
+    .from(booksTable)
+    .where(eq(booksTable.workId, edition.workId));
+
+  if (siblings.length <= 1) {
+    return deleteWorkById(edition.workId);
+  }
+
+  const editionIdStr = String(editionId);
+
+  await db.transaction(async (tx) => {
+    const libraryRows = await tx
+      .select()
+      .from(userWorkLibraryTable)
+      .where(eq(userWorkLibraryTable.workId, edition.workId));
+
+    for (const row of libraryRows) {
+      let preferredLanguage = row.preferredLanguage;
+      let progress = row.progress;
+      let dirty = false;
+
+      if (preferredLanguage === edition.language) {
+        preferredLanguage = null;
+        dirty = true;
+      }
+
+      if (progress?.edition_book_id === editionIdStr) {
+        const { edition_book_id: _removed, ...rest } = progress;
+        progress = rest as WorkLibraryProgress;
+        dirty = true;
+      }
+
+      if (dirty) {
+        await tx
+          .update(userWorkLibraryTable)
+          .set({
+            preferredLanguage,
+            progress,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(userWorkLibraryTable.userId, row.userId),
+              eq(userWorkLibraryTable.workId, row.workId),
+            ),
+          );
+      }
+    }
+
+    await tx
+      .delete(userLibraryTable)
+      .where(eq(userLibraryTable.bookId, editionIdStr));
+    await tx.delete(booksTable).where(eq(booksTable.id, editionId));
+  });
+
+  await deleteAllBookTtsFromStorage(editionIdStr);
+
+  return {
+    deleted: "edition",
+    workId: edition.workId,
+    editionId,
+    language: edition.language,
+  };
+}
+
+/** Deletes a logical book (work), every language edition, and related storage assets. */
+export async function deleteWorkById(workId: string): Promise<DeleteWorkResult | null> {
+  const [work] = await db
+    .select({
+      id: bookWorksTable.id,
+      coverImageUrl: bookWorksTable.coverImageUrl,
+    })
+    .from(bookWorksTable)
+    .where(eq(bookWorksTable.id, workId))
+    .limit(1);
+
+  if (!work) return null;
+
+  const editions = await db
+    .select({
+      id: booksTable.id,
+      coverImageUrl: booksTable.coverImageUrl,
+    })
+    .from(booksTable)
+    .where(eq(booksTable.workId, workId));
+
+  const editionIds = editions.map((edition) => edition.id);
+  const coverPath =
+    work.coverImageUrl ??
+    editions.find((edition) => edition.coverImageUrl)?.coverImageUrl ??
+    null;
+
+  await db.transaction(async (tx) => {
+    if (editionIds.length > 0) {
+      await tx
+        .delete(userLibraryTable)
+        .where(inArray(userLibraryTable.bookId, editionIds.map(String)));
+    }
+    await tx.delete(bookWorksTable).where(eq(bookWorksTable.id, workId));
+  });
+
+  if (coverPath) {
+    await removeCoverFromStorage(coverPath);
+  }
+  await Promise.all(
+    editionIds.map((id) => deleteAllBookTtsFromStorage(String(id))),
+  );
+
+  return { deleted: "work", workId, editionIds };
 }
