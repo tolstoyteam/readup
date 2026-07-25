@@ -150,7 +150,10 @@ describe("buildGenerationSystemPrompt", () => {
       assert.match(prompt, /Chapter length \(CRITICAL/i);
       assert.match(prompt, /do not add or remove chapters based on length/i);
       assert.match(prompt, /HARD REQUIREMENT/);
-      assert.match(prompt, /memorable, emotional, inspirational/);
+      assert.match(prompt, /quality over quantity/i);
+      assert.match(prompt, /default to zero/i);
+      assert.match(prompt, /stand on its own/i);
+      assert.match(prompt, /most chapters should have none/i);
     }
   });
 

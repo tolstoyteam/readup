@@ -22,7 +22,11 @@ import type { GeneratedEnglishDraft } from "./types";
 const DEFAULT_MODEL = process.env.BOOK_AI_MODEL ?? "gpt-4o-mini";
 
 const generationBlockSchema = z.object({
-  type: z.enum(["paragraph", "quote"]),
+  type: z
+    .enum(["paragraph", "quote"])
+    .describe(
+      'Use "paragraph" for narrative. Use "quote" only for rare, high-quality pull-quotes that stand alone with genuine insight; default is no quote — do not require one per chapter.',
+    ),
   text: z.string().min(1),
   source: z
     .string()

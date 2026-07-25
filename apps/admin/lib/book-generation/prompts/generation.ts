@@ -20,7 +20,7 @@ Book parameters:
 
 Structure:
 - ${preset.minChapters} to ${preset.maxChapters} chapters (chapter count is the same for short, medium, and long — do not add or remove chapters based on length)
-- Each chapter: ${preset.minBlocks} to ${preset.maxBlocks} blocks (mostly "paragraph", plus "quote" when appropriate)
+- Each chapter: ${preset.minBlocks} to ${preset.maxBlocks} blocks (mostly "paragraph"; quote blocks only when genuinely warranted — most chapters should have none)
 - Tone matched to the reading level
 
 Chapter length (CRITICAL — applies to EVERY chapter):
@@ -46,15 +46,25 @@ Always provide:
 
 Use "paragraph" blocks for narrative or analysis. Prefer fewer longer paragraphs over many one-sentence blocks when needed to hit the sentence target.
 
-Quotes:
-- When a chapter contains memorable, emotional, inspirational, humorous, or otherwise meaningful dialogue or narration, include 1–2 "quote" blocks.
+Quotes (quality over quantity — default to zero):
+- Do NOT generate a quote simply because a chapter or page exists. Most chapters should have no quote blocks.
+- First decide: does this chapter contain any genuinely quote-worthy passage? If none is strong enough, omit quotes entirely.
+- Only create a "quote" block when the selected passage meets ALL of these:
+  - Contains an important insight, lesson, principle, or key takeaway
+  - Is memorable, thought-provoking, or inspiring
+  - Can stand on its own and still make sense
+  - Provides genuine value to the reader
+- Never quote: generic explanations, transitional sentences, filler text, repeated information, or context-dependent fragments that are meaningless alone.
+- Prefer 0 quotes. Use 1 only when clearly justified. Use multiple only when several passages independently meet the bar — never force 1–2 quotes.
+- Place each quote block in the chapter's block list next to where that passage belongs (anywhere in the chapter — beginning, middle, or end). Placement depends only on where the strongest passage occurs; do not assume fixed positions.
 - Prefer extracting wording that already appears (or closely mirrors wording) in that chapter's paragraph content — do not fabricate unrelated epigraphs.
 - Set "source" for attribution when relevant (speaker, character, or work).
-- If a chapter genuinely has no quote-worthy content, omit quote blocks for that chapter.
 
 When source material is provided, stay faithful to it. Do not invent unrelated content.
 
-FINAL CHECK before responding: for each chapter, count the sentences in paragraph blocks and confirm each chapter is within ${preset.minSentencesPerChapter}–${preset.maxSentencesPerChapter}.`;
+FINAL CHECK before responding:
+- For each chapter, count the sentences in paragraph blocks and confirm each chapter is within ${preset.minSentencesPerChapter}–${preset.maxSentencesPerChapter}.
+- For each chapter, include a quote block only if it passes the quality gate above; otherwise omit quotes. Quality is far more important than quantity.`;
 }
 
 export function buildGenerationUserPrompt(args: {
