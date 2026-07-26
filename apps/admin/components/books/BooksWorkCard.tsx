@@ -163,7 +163,15 @@ export function BooksWorkCard({ work, coverUrl }: BooksWorkCardProps) {
           ) : (
             <div className="min-h-4.5" aria-hidden />
           )}
-          <div className="mt-1.5">
+          <div className="mt-1.5 flex flex-wrap items-center gap-3">
+            {work.editions[0] ? (
+              <Link
+                href={"/books/" + work.editions[0].id + "/edit"}
+                className="text-[10px] font-semibold text-brand underline-offset-2 hover:underline"
+              >
+                Edit book
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={openWorkDelete}

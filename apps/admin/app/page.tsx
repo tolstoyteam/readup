@@ -11,6 +11,8 @@ import { AdminNav } from "@/components/AdminNav";
 import { db } from "@/db/client";
 import { assignAdmin, revokeAdmin } from "@/app/admin-users/actions";
 import { requireAdminPage } from "@/lib/admin-auth";
+import { languageLabel } from "@/lib/book-language";
+import { listBooks } from "@/lib/book-relational";
 import { getSupabaseAdmin } from "@/lib/supabase-storage";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +55,7 @@ export default async function Home() {
     jobsCount,
     adminRows,
     recentJobs,
+    recentBooks,
     usersResult,
   ] = await Promise.all([
     getScalarCount(bookWorksTable),
@@ -71,6 +74,7 @@ export default async function Home() {
       .from(generationJobsTable)
       .orderBy(desc(generationJobsTable.updatedAt))
       .limit(5),
+    listBooks().then((books) => books.slice(0, 6)),
     supabase.auth.admin.listUsers({ page: 1, perPage: 100 }),
   ]);
 
@@ -139,7 +143,72 @@ export default async function Home() {
           </section>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <section className="min-w-0 rounded-[8px] border border-elevated bg-surface">
+            <div className="min-w-0 space-y-6">
+            <section className="rounded-[8px] border border-elevated bg-surface">
+              <div className="flex flex-col gap-1 border-b border-elevated px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">Recently uploaded books</h2>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    Open an existing edition to update its details, cover, chapters, quiz, or narration.
+                  </p>
+                </div>
+                <Link
+                  href="/books"
+                  className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
+                >
+                  View all
+                </Link>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                  <thead className="bg-background text-xs uppercase text-text-tertiary">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Book</th>
+                      <th className="px-4 py-3 font-semibold">Language</th>
+                      <th className="px-4 py-3 font-semibold">Status</th>
+                      <th className="px-4 py-3 font-semibold">Chapters</th>
+                      <th className="px-4 py-3 text-right font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentBooks.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="border-t border-elevated px-4 py-5 text-sm text-text-secondary">
+                          No books have been uploaded yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      recentBooks.map((book) => (
+                        <tr key={book.id} className="border-t border-elevated">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-foreground">{book.title}</div>
+                            <div className="mt-1 text-xs text-text-tertiary">{book.author}</div>
+                          </td>
+                          <td className="px-4 py-3 text-text-secondary">{languageLabel(book.language)}</td>
+                          <td className="px-4 py-3">
+                            <span className="rounded-[8px] bg-background px-2 py-1 text-xs font-semibold text-text-secondary">
+                              {book.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-text-secondary">{book.chapterCount}</td>
+                          <td className="px-4 py-3 text-right">
+                            <Link
+                              href={`/books/${book.id}/edit`}
+                              className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-brand/40 bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/15"
+                            >
+                              Edit
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="rounded-[8px] border border-elevated bg-surface">
               <div className="flex flex-col gap-1 border-b border-elevated px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-base font-semibold text-foreground">Users</h2>
@@ -207,6 +276,7 @@ export default async function Home() {
                 </table>
               </div>
             </section>
+            </div>
 
             <aside className="flex flex-col gap-4">
               <section className="rounded-[8px] border border-elevated bg-surface">
