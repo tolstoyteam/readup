@@ -1,4 +1,5 @@
 import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
+import { requireAdminApi } from "@/lib/admin-auth";
 import {
   createGenerationJob,
   getBookWithContent,
@@ -17,6 +18,9 @@ export async function POST(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const { id: idParam } = await context.params;
   const id = parseId(idParam);
   if (id === null) {

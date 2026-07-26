@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminNav } from "@/components/AdminNav";
+import { requireAdminPage } from "@/lib/admin-auth";
 import { UploadPageClient } from "./UploadPageClient";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
     "Compose a short book manually, or use AI to generate multilingual editions with optional narration.",
 };
 
-export default function UploadPage() {
+export default async function UploadPage() {
+  await requireAdminPage();
+
   return (
     <>
       <AdminNav

@@ -1,4 +1,5 @@
 import { parseBookContentInput } from "@/lib/book-content";
+import { requireAdminApi } from "@/lib/admin-auth";
 import { validateCoverBytes } from "@/lib/cover-image";
 import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
 import {
@@ -27,6 +28,9 @@ function successResponse(book: BookWithContent, extras: Record<string, unknown>,
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const contentType = request.headers.get("content-type") || "";
   if (contentType.includes("multipart/form-data")) {
     return postMultipart(request);
@@ -156,5 +160,8 @@ async function uploadCover(
 }
 
 export async function GET() {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   return Response.json(await listBooks());
 }

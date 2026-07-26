@@ -1,3 +1,4 @@
+import { requireAdminApi } from "@/lib/admin-auth";
 import { deleteWorkById } from "@/lib/book-relational";
 
 const UUID_RE =
@@ -7,6 +8,9 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ workId: string }> },
 ) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const { workId } = await context.params;
   if (!UUID_RE.test(workId)) {
     return Response.json({ error: "Invalid work id" }, { status: 400 });

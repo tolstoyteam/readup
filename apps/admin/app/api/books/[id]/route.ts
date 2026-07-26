@@ -1,4 +1,5 @@
 import { parseBookContentInput } from "@/lib/book-content";
+import { requireAdminApi } from "@/lib/admin-auth";
 import { validateCoverBytes } from "@/lib/cover-image";
 import { removeCoverFromStorage } from "@/lib/cover-storage";
 import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
@@ -22,6 +23,9 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const { id: idParam } = await context.params;
   const id = parseId(idParam);
   if (id === null) {
@@ -40,6 +44,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const { id: idParam } = await context.params;
   const id = parseId(idParam);
   if (id === null) {
@@ -215,6 +222,9 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const { id: idParam } = await context.params;
   const id = parseId(idParam);
   if (id === null) {

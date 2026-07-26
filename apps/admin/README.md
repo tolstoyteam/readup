@@ -27,4 +27,37 @@ Schema, migrations, and Drizzle config live in `packages/db` (`@readup/db`).
 
 ## Env
 
-Uses root `.env` or `apps/admin/.env.local`. Admin needs `DATABASE_URL` (and optionally `DIRECT_URL` for migrations).
+Uses root `.env` or `apps/admin/.env.local`.
+
+Admin needs:
+
+```bash
+DATABASE_URL=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_BOOK_COVERS_BUCKET=...
+```
+
+`DIRECT_URL` is optional and only needed for migrations. `SUPABASE_BOOK_AUDIO_BUCKET`
+is optional for generated TTS storage.
+
+## Auth
+
+The admin app uses Supabase Auth for sign-in and a server-side allowlist for
+authorization. Run `packages/db/sql/supabase-admin-auth.sql` in Supabase SQL
+Editor, then add allowed admin users:
+
+```sql
+insert into public.admin_users (user_id)
+values ('00000000-0000-0000-0000-000000000000')
+on conflict (user_id) do nothing;
+```
+
+Google sign-in must also be enabled in Supabase Dashboard under
+Authentication → Providers → Google, and the deployed admin URL must be allowed
+as an auth redirect URL. The callback path is:
+
+```text
+https://your-admin-domain.com/auth/callback
+```

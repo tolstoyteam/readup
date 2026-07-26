@@ -1,4 +1,5 @@
 import { TTS_VOICE_IDS, type TtsVoiceId } from "@readup/db";
+import { requireAdminApi } from "@/lib/admin-auth";
 import { getBookAudioSignedUrl } from "@/lib/book-audio-storage";
 import { getBookWithContent } from "@/lib/book-relational";
 
@@ -15,6 +16,9 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const { id: idParam } = await context.params;
   const id = parseId(idParam);
   if (id === null) {

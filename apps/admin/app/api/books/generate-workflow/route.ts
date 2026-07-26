@@ -1,5 +1,6 @@
 import "server-only";
 
+import { requireAdminApi } from "@/lib/admin-auth";
 import {
   SUPPORTED_SOURCE_DESCRIPTION,
   extractSourceText,
@@ -17,6 +18,9 @@ function sseEncode(event: ProgressEvent): string {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const contentType = request.headers.get("content-type") || "";
   let settingsInput: Record<string, unknown> = {};
   let sourceFile: File | null = null;

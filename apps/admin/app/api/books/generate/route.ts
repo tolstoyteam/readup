@@ -1,4 +1,5 @@
 import { generateBookContent } from "@/lib/book-ai-generate";
+import { requireAdminApi } from "@/lib/admin-auth";
 import {
   SUPPORTED_SOURCE_DESCRIPTION,
   extractSourceText,
@@ -11,6 +12,9 @@ export const maxDuration = 60;
 const TITLE_MAX_LENGTH = 200;
 
 export async function POST(request: Request) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("multipart/form-data")) {
     return Response.json(

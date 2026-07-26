@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminNav } from "@/components/AdminNav";
 import { BooksWorkCard } from "@/components/books/BooksWorkCard";
+import { requireAdminPage } from "@/lib/admin-auth";
 import { listBookWorks, type BookWorkListItem } from "@/lib/book-relational";
 import { getCoverImageSignedUrl } from "@/lib/cover-signed-url";
 
@@ -13,6 +14,8 @@ export const metadata: Metadata = {
 };
 
 export default async function BooksPage() {
+  await requireAdminPage();
+
   const rows: BookWorkListItem[] = await listBookWorks();
 
   const coverUrls = await Promise.all(

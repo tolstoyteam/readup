@@ -2,22 +2,21 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdminNav } from "@/components/AdminNav";
 import { BookUploadForm } from "@/app/upload/BookUploadForm";
+import { requireAdminPage } from "@/lib/admin-auth";
 import { getBookWithContent } from "@/lib/book-relational";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id: raw } = await params;
-  const id = Number(raw);
-  if (!Number.isInteger(id) || id < 1) return { title: "Book not found" };
-  const book = await getBookWithContent(id);
-  if (!book) return { title: "Book not found" };
-  return { title: book.title };
-}
+export const metadata: Metadata = {
+  title: "Edit book",
+  description: "Edit a saved book in Readup admin.",
+};
 
 export default async function EditBookPage({ params }: Props) {
+  await requireAdminPage();
+
   const { id: raw } = await params;
   const id = Number(raw);
   if (!Number.isInteger(id) || id < 1) notFound();

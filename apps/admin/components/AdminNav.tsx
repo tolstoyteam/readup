@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { signOut } from "@/app/auth/actions";
 
 type NavLink = {
   href: string;
@@ -30,9 +31,19 @@ export function AdminNav({ links = DEFAULT_LINKS }: Props) {
             </Link>
           ))}
         </div>
-        <span className="truncate text-xs font-semibold uppercase tracking-[0.2em] text-text-tertiary">
-          Readup admin
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="truncate text-xs font-semibold uppercase tracking-[0.2em] text-text-tertiary">
+            Readup admin
+          </span>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="text-xs font-semibold text-text-secondary transition-colors hover:text-brand"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
     </nav>
   );

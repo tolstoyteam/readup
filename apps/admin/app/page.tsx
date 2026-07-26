@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { requireAdminPage } from "@/lib/admin-auth";
 
-export default function Home() {
+export default async function Home() {
+  await requireAdminPage();
+
   return (
     <div className="flex min-h-full flex-1 flex-col items-center justify-center bg-background px-6 py-24">
       <main className="max-w-lg text-center">

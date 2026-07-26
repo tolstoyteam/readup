@@ -1,4 +1,5 @@
 import { translateBookEdition } from "@/lib/book-ai-translate";
+import { requireAdminApi } from "@/lib/admin-auth";
 import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
 import {
   createEditionForWork,
@@ -21,6 +22,9 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const { id: idParam } = await context.params;
   const sourceId = parseId(idParam);
   if (sourceId === null) {

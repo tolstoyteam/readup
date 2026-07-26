@@ -335,6 +335,13 @@ export const authUsersTable = authSchema.table("users", {
   id: uuid("id").primaryKey(),
 });
 
+export const adminUsersTable = pgTable("admin_users", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => authUsersTable.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const profilesTable = pgTable("profiles", {
   id: uuid("id")
     .primaryKey()
