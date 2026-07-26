@@ -12,11 +12,23 @@ export type BookRow = {
   data: BookDataColumn;
 };
 
+export type CatalogBook = {
+  id: number;
+  document: BookDocument;
+  /** ISO timestamp from book_works.created_at; null when the join is missing. */
+  workCreatedAt: string | null;
+};
+
 export type FetchBooksResult = {
-  books: { id: number; document: BookDocument }[];
+  books: CatalogBook[];
   /** How many table rows PostgREST returned (0 with no error often means RLS or an empty table). */
   tableRowCount: number;
 };
+
+type BookWorkJoin =
+  | { created_at?: string | null }
+  | { created_at?: string | null }[]
+  | null;
 
 type RelationalBookRow = {
   id: number;
@@ -31,10 +43,17 @@ type RelationalBookRow = {
   book_genres:
     | Array<{ genre: { name?: string | null; name_ru?: string | null } | { name?: string | null; name_ru?: string | null }[] | null }>
     | null;
+  book_works?: BookWorkJoin;
 };
 
 const BOOK_LIST_SELECT =
-  "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name))";
+  "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name)), book_works(created_at)";
+
+function workCreatedAtFromJoin(bookWorks: BookWorkJoin): string | null {
+  const work = Array.isArray(bookWorks) ? bookWorks[0] : bookWorks;
+  const createdAt = work?.created_at;
+  return typeof createdAt === "string" && createdAt.length > 0 ? createdAt : null;
+}
 
 export function extractGenresFromJoin(
   bookGenres: RelationalBookRow["book_genres"],
@@ -247,7 +266,7 @@ export async function fetchBooks(
   if (error) throw error;
 
   const rows = (data ?? []) as RelationalBookRow[];
-  const books: { id: number; document: BookDocument }[] = [];
+  const books: CatalogBook[] = [];
   const byWork = new Map<string, RelationalBookRow[]>();
 
   for (const row of rows) {
@@ -260,15 +279,28 @@ export async function fetchBooks(
 
   for (const workRows of byWork.values()) {
     const row = pickEditionForWork(workRows, settings.language);
+    const workCreatedAt =
+      workCreatedAtFromJoin(row.book_works) ??
+      workCreatedAtFromJoin(workRows[0]?.book_works ?? null);
     const fromLegacy = normalizeBooksFromCell(row.data);
     if (fromLegacy.length > 0) {
       const match =
         fromLegacy.find((document) => document.language === settings.language) ??
         fromLegacy[0];
-      if (match) books.push({ id: row.id, document: withAvailableLanguages(match, workRows) });
+      if (match) {
+        books.push({
+          id: row.id,
+          document: withAvailableLanguages(match, workRows),
+          workCreatedAt,
+        });
+      }
       continue;
     }
-    books.push({ id: row.id, document: withAvailableLanguages(documentFromRelationalRow(row), workRows) });
+    books.push({
+      id: row.id,
+      document: withAvailableLanguages(documentFromRelationalRow(row), workRows),
+      workCreatedAt,
+    });
   }
 
   if (__DEV__ && rows.length === 0) {
