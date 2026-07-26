@@ -461,7 +461,7 @@ export function BookUploadForm({
                   <FieldLabel>Language</FieldLabel>
                 <select
                   {...form.register("language")}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="h-12 w-full rounded-input border border-input bg-secondary px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
                 >
                   {LANGUAGE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -537,7 +537,7 @@ export function BookUploadForm({
                   onChange={(event) =>
                     setTranslationLanguage(event.target.value as typeof translationLanguage)
                   }
-                  className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="h-12 rounded-input border border-input bg-secondary px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
                 >
                   {LANGUAGE_OPTIONS.filter((option) => option.value !== editContext.initial.language).map((option) => (
                     <option key={option.value} value={option.value}>
@@ -589,7 +589,7 @@ export function BookUploadForm({
               <select
                 value={genrePick}
                 onChange={(event) => setGenrePick(event.target.value as BookGenre | "")}
-                className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-12 rounded-input border border-input bg-secondary px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
               >
                 <option value="">Выберите жанр</option>
                 {BOOK_GENRES.map((genre) => (
