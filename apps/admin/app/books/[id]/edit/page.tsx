@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AdminNav } from "@/components/AdminNav";
+import { AdminShell } from "@/components/AdminShell";
 import { BookUploadForm } from "@/app/upload/BookUploadForm";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { getBookWithContent } from "@/lib/book-relational";
@@ -25,15 +25,8 @@ export default async function EditBookPage({ params }: Props) {
   if (!book) notFound();
 
   return (
-    <>
-      <AdminNav
-        links={[
-          { href: "/", label: "← Home" },
-          { href: "/books", label: "Saved books" },
-          { href: "/upload", label: "New book" },
-        ]}
-      />
+    <AdminShell active="books">
       <BookUploadForm editContext={{ recordId: book.id, initial: book }} />
-    </>
+    </AdminShell>
   );
 }

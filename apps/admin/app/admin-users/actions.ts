@@ -23,7 +23,7 @@ export async function assignAdmin(formData: FormData) {
     .values({ userId })
     .onConflictDoNothing({ target: adminUsersTable.userId });
 
-  revalidatePath("/");
+  revalidatePath("/users");
 }
 
 export async function revokeAdmin(formData: FormData) {
@@ -35,5 +35,5 @@ export async function revokeAdmin(formData: FormData) {
   }
 
   await db.delete(adminUsersTable).where(eq(adminUsersTable.userId, userId));
-  revalidatePath("/");
+  revalidatePath("/users");
 }

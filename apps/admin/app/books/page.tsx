@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminNav } from "@/components/AdminNav";
-import { BooksWorkCard } from "@/components/books/BooksWorkCard";
+import { AdminShell } from "@/components/AdminShell";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { listBookWorks, type BookWorkListItem } from "@/lib/book-relational";
-import { getCoverImageSignedUrl } from "@/lib/cover-signed-url";
+import { languageLabel } from "@/lib/book-language";
 
 export const dynamic = "force-dynamic";
 
@@ -18,94 +17,109 @@ export default async function BooksPage() {
 
   const rows: BookWorkListItem[] = await listBookWorks();
 
-  const coverUrls = await Promise.all(
-    rows.map((row) =>
-      row.coverImageUrl
-        ? getCoverImageSignedUrl(row.coverImageUrl)
-        : Promise.resolve(null as string | null),
-    ),
-  );
-
   return (
-    <>
-      <AdminNav
-        links={[
-          { href: "/", label: "← Home" },
-          { href: "/upload", label: "Upload" },
-        ]}
-      />
-
-      <div className="min-h-full flex-1 bg-background text-foreground">
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <header className="mb-8 border-b border-elevated pb-6">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-brand">
-              Library
+    <AdminShell active="books">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
+        <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Books</h1>
+            <p className="mt-1 text-sm text-text-secondary">
+              {rows.length === 0
+                ? "No books uploaded yet."
+                : `${rows.length} book${rows.length === 1 ? "" : "s"} in the library.`}
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground sm:text-3xl">
-                  Saved books
-                </h1>
-                <p className="mt-1 max-w-md text-sm text-text-secondary">
-                  {rows.length === 0
-                    ? "Nothing here yet — add a book from the composer."
-                    : `${rows.length} work${rows.length === 1 ? "" : "s"} · one card per logical book.`}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <Link
-                  href="/upload?generate=1"
-                  className="inline-flex items-center justify-center rounded-button border-2 border-brand-dark bg-brand px-4 py-2 text-xs font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
-                >
-                  Generate with AI
-                </Link>
-                <Link
-                  href="/upload"
-                  className="inline-flex items-center justify-center rounded-button border border-elevated bg-surface px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:border-brand hover:text-brand"
-                >
-                  New book
-                </Link>
-              </div>
-            </div>
-          </header>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/upload?generate=1"
+              className="inline-flex min-h-10 items-center justify-center rounded-[8px] border-2 border-brand-dark bg-brand px-4 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
+            >
+              Generate
+            </Link>
+            <Link
+              href="/upload"
+              className="inline-flex min-h-10 items-center justify-center rounded-[8px] border border-elevated bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-brand hover:text-brand"
+            >
+              New book
+            </Link>
+          </div>
+        </header>
 
-          {rows.length === 0 ? (
-            <div className="mx-auto max-w-sm rounded-card border border-dashed border-elevated bg-surface p-8 text-center">
-              <p className="text-sm text-text-secondary">
-                No books saved yet. Compose one and save it from the upload page.
-              </p>
-              <Link
-                href="/upload"
-                className="mt-5 inline-flex items-center justify-center rounded-button border-2 border-brand-dark bg-brand px-5 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
-              >
-                Open composer
-              </Link>
-            </div>
-          ) : (
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((row, i) => (
-                <li key={row.id} className="min-h-0">
-                  <BooksWorkCard
-                    work={{
-                      id: row.id,
-                      title: row.title,
-                      author: row.author,
-                      coverImageUrl: row.coverImageUrl,
-                      genres: row.editions[0]?.genres ?? [],
-                      editions: row.editions.map((edition) => ({
-                        id: edition.id,
-                        language: edition.language,
-                        status: edition.status,
-                      })),
-                    }}
-                    coverUrl={coverUrls[i] ?? null}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <section className="overflow-hidden rounded-[8px] border border-elevated bg-surface">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+              <thead className="bg-background text-xs uppercase text-text-tertiary">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Book</th>
+                  <th className="px-4 py-3 font-semibold">Languages</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Genres</th>
+                  <th className="px-4 py-3 text-right font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="border-t border-elevated px-4 py-5 text-sm text-text-secondary">
+                      Upload or generate a book to see it here.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((row) => {
+                    const primaryEdition = row.editions[0];
+                    return (
+                      <tr key={row.id} className="border-t border-elevated">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-foreground">{row.title}</div>
+                          <div className="mt-1 text-xs text-text-tertiary">{row.author}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {row.editions.map((edition) => (
+                              <Link
+                                key={edition.id}
+                                href={`/books/${edition.id}/edit`}
+                                className="rounded-[8px] bg-brand/10 px-2 py-1 text-xs font-semibold text-brand hover:bg-brand/15"
+                              >
+                                {languageLabel(edition.language)}
+                              </Link>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {row.editions.map((edition) => (
+                              <span
+                                key={edition.id}
+                                className="rounded-[8px] bg-background px-2 py-1 text-xs font-semibold text-text-secondary"
+                              >
+                                {edition.status}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-text-secondary">
+                          {primaryEdition?.genres.length ? primaryEdition.genres.join(", ") : "None"}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {primaryEdition ? (
+                            <Link
+                              href={`/books/${primaryEdition.id}/edit`}
+                              className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-brand/40 bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/15"
+                            >
+                              Edit
+                            </Link>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
-    </>
+    </AdminShell>
   );
 }

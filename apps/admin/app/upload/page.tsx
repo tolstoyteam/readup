@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AdminNav } from "@/components/AdminNav";
+import { AdminShell } from "@/components/AdminShell";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { UploadPageClient } from "./UploadPageClient";
 
@@ -14,13 +14,7 @@ export default async function UploadPage() {
   await requireAdminPage();
 
   return (
-    <>
-      <AdminNav
-        links={[
-          { href: "/", label: "← Home" },
-          { href: "/books", label: "Saved books" },
-        ]}
-      />
+    <AdminShell active="upload">
       <Suspense
         fallback={
           <main className="min-h-full bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
@@ -30,6 +24,6 @@ export default async function UploadPage() {
       >
         <UploadPageClient />
       </Suspense>
-    </>
+    </AdminShell>
   );
 }
