@@ -21,6 +21,7 @@ import { contentLanguageForInterface } from "@/shared/i18n/interface-language";
 export type HomeBook = BookCardItem & {
   genres: string[];
   workId: string;
+  workCreatedAt: string | null;
 };
 
 export type HomeSection = {
@@ -59,6 +60,7 @@ export function useHomeFeed() {
         workId: r.document.work_id ?? r.document.book_id,
         cover: coverUrl(r.document.cover_image_path),
         genres: r.document.genres,
+        workCreatedAt: r.workCreatedAt,
       }));
 
       setItems(mapped);
@@ -121,6 +123,15 @@ export function useHomeFeed() {
     const trendingFallback =
       trendingSection.length > 0 ? trendingSection : items.slice(0, 10);
 
+    const newSection = [...items]
+      .sort((a, b) => {
+        const aTs = a.workCreatedAt ? Date.parse(a.workCreatedAt) : 0;
+        const bTs = b.workCreatedAt ? Date.parse(b.workCreatedAt) : 0;
+        if (bTs !== aTs) return bTs - aTs;
+        return b.id - a.id;
+      })
+      .slice(0, 12);
+
     const genreSections = buildGenreFeedSections(items, genres, language).map(
       (section) => ({
         title: section.title,
@@ -130,6 +141,7 @@ export function useHomeFeed() {
 
     return [
       { title: t("home.recommendations"), data: recommendedSection },
+      { title: t("home.new"), data: newSection },
       { title: t("home.trending"), data: trendingFallback },
       ...genreSections,
     ].filter((section) => section.data.length > 0);
