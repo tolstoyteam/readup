@@ -25,7 +25,11 @@ import {
 } from "@/features/quiz/api/quiz";
 import { resolveWorkId } from "@/features/library/lib/resolve-work-id";
 import { notifyEngagementRefresh } from "@/features/engagement/engagement-refresh";
-import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
+import {
+  ReadupColors,
+  useReadupColors,
+  statusBarStyleForScheme,
+} from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
@@ -242,7 +246,10 @@ export default function QuizScreen() {
                         ) : null}
                       </View>
                       <Text
-                        className="flex-1 text-[15px] tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
+                        className="flex-1 text-[15px] tracking-[-0.6px]"
+                        style={{
+                          color: selected ? ReadupColors.text : colors.text,
+                        }}
                         numberOfLines={3}
                       >
                         {answer.text}
