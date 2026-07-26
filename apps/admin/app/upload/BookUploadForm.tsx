@@ -404,7 +404,7 @@ export function BookUploadForm({
   };
 
   return (
-    <main className="min-h-full bg-background p-4 text-foreground sm:p-6 lg:p-8">
+    <main className="min-h-full bg-background p-5 text-foreground sm:p-8 lg:p-10">
       <form
         onSubmit={form.handleSubmit(submit)}
         className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_380px]"
@@ -412,13 +412,10 @@ export function BookUploadForm({
         <div className="flex flex-col gap-6">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                {editContext ? "Edit book" : "New book"}
-              </p>
-              <h1 className="text-2xl font-bold text-foreground">
-                Block-based book composer
+              <h1 className="text-[28px] font-bold leading-tight text-foreground">
+                {editContext ? "Edit book" : "Book upload"}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              <p className="mt-2 max-w-2xl text-base text-muted-foreground">
                 Chapters and paragraph/quote blocks save as normalized relational rows with stable
                 IDs for multilingual alignment. The JSON panel is only a request preview.
               </p>
@@ -461,7 +458,7 @@ export function BookUploadForm({
                   <FieldLabel>Language</FieldLabel>
                 <select
                   {...form.register("language")}
-                  className="h-12 w-full rounded-input border border-input bg-secondary px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
+                  className="h-11 w-full rounded-input border border-input bg-background px-3.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/15"
                 >
                   {LANGUAGE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -537,7 +534,7 @@ export function BookUploadForm({
                   onChange={(event) =>
                     setTranslationLanguage(event.target.value as typeof translationLanguage)
                   }
-                  className="h-12 rounded-input border border-input bg-secondary px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
+                  className="h-11 rounded-input border border-input bg-background px-3.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/15"
                 >
                   {LANGUAGE_OPTIONS.filter((option) => option.value !== editContext.initial.language).map((option) => (
                     <option key={option.value} value={option.value}>
@@ -589,7 +586,7 @@ export function BookUploadForm({
               <select
                 value={genrePick}
                 onChange={(event) => setGenrePick(event.target.value as BookGenre | "")}
-                className="h-12 rounded-input border border-input bg-secondary px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
+                className="h-11 rounded-input border border-input bg-background px-3.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/15"
               >
                 <option value="">Выберите жанр</option>
                 {BOOK_GENRES.map((genre) => (
@@ -722,7 +719,7 @@ export function BookUploadForm({
               {isSaving ? "Saving..." : editContext ? "Save changes" : "Create book"}
             </Button>
             <details className="min-w-full">
-              <summary className="cursor-pointer text-sm font-medium text-text-secondary hover:text-brand">
+              <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-primary">
                 Request preview JSON
               </summary>
               <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-foreground p-4 text-xs text-background">

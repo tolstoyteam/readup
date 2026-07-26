@@ -50,7 +50,7 @@ export function BlockEditor({ chapterIndex, blockIndex, block, register, onRemov
         </Button>
         <select
           {...register(`${base}.type`)}
-          className="h-12 rounded-input border border-input bg-secondary px-4 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
+          className="h-11 rounded-input border border-input bg-background px-3.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/15"
         >
           <option value="paragraph">Paragraph</option>
           <option value="quote">Quote</option>

@@ -30,11 +30,11 @@ export default async function BooksPage() {
 
   return (
     <AdminShell active="books">
-      <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8">
-        <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-5 p-5 sm:p-8 lg:p-10">
+        <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Books</h1>
-            <p className="mt-1 text-sm text-text-secondary">
+            <h1 className="text-[28px] font-bold leading-tight text-foreground">Books</h1>
+            <p className="mt-2 text-base text-muted-foreground">
               {rows.length === 0
                 ? "No books uploaded yet."
                 : `${rows.length} book${rows.length === 1 ? "" : "s"} in the library.`}
@@ -54,7 +54,7 @@ export default async function BooksPage() {
           </div>
         </header>
 
-        <section className="overflow-hidden rounded-lg border bg-card">
+        <section className="overflow-hidden rounded-card border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>

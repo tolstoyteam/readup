@@ -38,17 +38,18 @@ const NAV_ITEMS = [
 export function AdminShell({ active, children }: AdminShellProps) {
   return (
     <SidebarProvider>
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
+      <Sidebar collapsible="icon" className="border-r border-border">
+        <SidebarHeader className="px-3 py-4">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 size="lg"
                 tooltip="Readup"
+                className="font-semibold"
                 render={
                   <Link href="/books">
                     <BookOpenIcon />
-                    <span>Readup admin</span>
+                    <span>Readup</span>
                   </Link>
                 }
               />
@@ -57,14 +58,15 @@ export function AdminShell({ active, children }: AdminShellProps) {
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
+          <SidebarGroup className="px-3">
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 {NAV_ITEMS.map((item) => (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
                       tooltip={item.label}
                       isActive={item.key === active}
+                      className="h-10 rounded-xl text-[15px]"
                       render={
                         <Link href={item.href}>
                           <item.icon />
@@ -80,9 +82,9 @@ export function AdminShell({ active, children }: AdminShellProps) {
         </SidebarContent>
 
         <SidebarSeparator />
-        <SidebarFooter>
+        <SidebarFooter className="p-3">
           <form action={signOut}>
-            <Button type="submit" variant="outline" className="w-full justify-start">
+            <Button type="submit" variant="outline" className="w-full justify-start rounded-xl">
               Sign out
             </Button>
           </form>
@@ -92,7 +94,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
       <SidebarInset>
         <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
           <SidebarTrigger />
-          <span className="text-sm font-semibold">Readup admin</span>
+          <span className="text-sm font-semibold">Readup</span>
         </header>
         {children}
       </SidebarInset>

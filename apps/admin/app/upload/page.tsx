@@ -18,7 +18,7 @@ export default async function UploadPage() {
       <Suspense
         fallback={
           <main className="min-h-full bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
-            <p className="text-sm text-text-secondary">Loading composer…</p>
+            <p className="text-sm text-muted-foreground">Loading composer...</p>
           </main>
         }
       >
