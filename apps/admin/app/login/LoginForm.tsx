@@ -2,6 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 
 type Props = {
   nextPath: string;
@@ -58,77 +70,74 @@ export function LoginForm({ nextPath, supabaseConfig, initialError }: Props) {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-card border border-elevated bg-surface p-6 shadow-sm">
-      <div className="mb-6">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-brand">
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Readup admin
         </p>
-        <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground">
-          Sign in
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+        <CardTitle className="text-2xl">Sign in</CardTitle>
+        <CardDescription>
           Use an account that has been added to the admin allowlist.
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
 
+      <CardContent>
       {message ? (
-        <div className="mb-4 rounded-button border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {message}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
       ) : null}
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={signInWithGoogle}
         disabled={loading !== null || !supabase}
-        className="inline-flex min-h-[48px] w-full items-center justify-center rounded-button border border-elevated bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:border-brand disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full"
       >
         {loading === "google" ? "Opening Google..." : "Continue with Google"}
-      </button>
+      </Button>
 
       <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-elevated" />
-        <span className="text-xs font-medium uppercase tracking-[0.18em] text-text-tertiary">
+        <Separator className="flex-1" />
+        <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
           or
         </span>
-        <div className="h-px flex-1 bg-elevated" />
+        <Separator className="flex-1" />
       </div>
 
-      <form className="space-y-4" onSubmit={signInWithPassword}>
-        <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold text-text-secondary">
-            Email
-          </span>
-          <input
+      <form onSubmit={signInWithPassword}>
+        <FieldGroup>
+        <Field>
+          <FieldLabel>Email</FieldLabel>
+          <Input
             type="email"
             autoComplete="email"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="min-h-[46px] w-full rounded-button border border-elevated bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold text-text-secondary">
-            Password
-          </span>
-          <input
+        </Field>
+        <Field>
+          <FieldLabel>Password</FieldLabel>
+          <Input
             type="password"
             autoComplete="current-password"
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="min-h-[46px] w-full rounded-button border border-elevated bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-brand"
           />
-        </label>
-        <button
+        </Field>
+        <Button
           type="submit"
           disabled={loading !== null || !supabase}
-          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-button border-2 border-brand-dark bg-brand px-4 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full"
         >
           {loading === "password" ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
+        </FieldGroup>
       </form>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
