@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
+import { DeleteBookDialog } from "./DeleteBookDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,7 +62,7 @@ export default async function BooksPage() {
                 <TableHead>Languages</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Genres</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -105,17 +106,20 @@ export default async function BooksPage() {
                       <TableCell className="max-w-[260px] truncate text-muted-foreground">
                         {primaryEdition?.genres.length ? primaryEdition.genres.join(", ") : "None"}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {primaryEdition ? (
-                          <Button
-                            nativeButton={false}
-                            size="sm"
-                            variant="outline"
-                            render={<Link href={`/books/${primaryEdition.id}/edit`} />}
-                          >
-                            Edit
-                          </Button>
-                        ) : null}
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          {primaryEdition ? (
+                            <Button
+                              nativeButton={false}
+                              size="sm"
+                              variant="outline"
+                              render={<Link href={`/books/${primaryEdition.id}/edit`} />}
+                            >
+                              Edit
+                            </Button>
+                          ) : null}
+                          <DeleteBookDialog workId={row.id} title={row.title} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
