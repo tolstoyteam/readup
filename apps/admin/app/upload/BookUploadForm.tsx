@@ -22,6 +22,18 @@ import type { BookWithContent } from "@/lib/book-relational";
 import { BookPreview } from "@/app/upload/components/BookPreview";
 import { ChapterEditor } from "@/app/upload/components/ChapterEditor";
 import { QuizEditor, createDefaultQuiz } from "@/app/upload/components/QuizEditor";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { BOOK_GENRES, type BookEditorValues, type BookGenre } from "./types";
 
 export type BookEditContext = {
@@ -184,15 +196,17 @@ function SortableChapterShell({
   return (
     <div ref={sortable.setNodeRef} style={style}>
       <div className="mb-2 flex justify-end">
-        <button
+        <Button
           type="button"
+          size="xs"
+          variant="outline"
           aria-label="Drag chapter"
           {...sortable.attributes}
           {...sortable.listeners}
-          className="cursor-grab rounded-md border border-elevated bg-background px-2 py-1 text-xs font-medium text-text-tertiary active:cursor-grabbing"
+          className="cursor-grab active:cursor-grabbing"
         >
           Drag chapter
-        </button>
+        </Button>
       </div>
       {children}
     </div>
@@ -390,68 +404,64 @@ export function BookUploadForm({
   };
 
   return (
-    <main className="min-h-full bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
+    <main className="min-h-full bg-background p-4 text-foreground sm:p-6 lg:p-8">
       <form
         onSubmit={form.handleSubmit(submit)}
         className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_380px]"
       >
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-brand">
+              <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 {editContext ? "Edit book" : "New book"}
               </p>
-              <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-foreground">
+              <h1 className="text-2xl font-bold text-foreground">
                 Block-based book composer
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-text-secondary">
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
                 Chapters and paragraph/quote blocks save as normalized relational rows with stable
                 IDs for multilingual alignment. The JSON panel is only a request preview.
               </p>
               {editContext ? (
-                <p className="mt-2 text-xs text-text-tertiary">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Work {editContext.initial.workId} · {editContext.initial.status}
                 </p>
               ) : null}
             </div>
             {onRequestGenerate ? (
-              <button
+              <Button
                 type="button"
                 onClick={onRequestGenerate}
-                className="inline-flex shrink-0 items-center justify-center rounded-button border-2 border-brand-dark bg-brand px-5 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
               >
                 Generate with AI
-              </button>
+              </Button>
             ) : null}
           </header>
 
-          <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label>
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-                  Title
-                </span>
-                <input
+          <Card>
+            <CardHeader>
+              <CardTitle>Book information</CardTitle>
+              <CardDescription>Core metadata and cover image for this edition.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FieldGroup className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel>Title</FieldLabel>
+                  <Input
                   {...form.register("title")}
-                  className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
                 />
-              </label>
-              <label>
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-                  Author
-                </span>
-                <input
+                </Field>
+                <Field>
+                  <FieldLabel>Author</FieldLabel>
+                  <Input
                   {...form.register("author")}
-                  className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
                 />
-              </label>
-              <label>
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-                  Language
-                </span>
+                </Field>
+                <Field>
+                  <FieldLabel>Language</FieldLabel>
                 <select
                   {...form.register("language")}
-                  className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
+                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   {LANGUAGE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -459,12 +469,10 @@ export function BookUploadForm({
                     </option>
                   ))}
                 </select>
-              </label>
-              <label>
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-                  Cover image
-                </span>
-                <input
+                </Field>
+                <Field>
+                  <FieldLabel>Cover image</FieldLabel>
+                  <Input
                   type="file"
                   accept="image/png,image/jpeg,image/svg+xml"
                   onChange={async (event) => {
@@ -484,47 +492,52 @@ export function BookUploadForm({
                     setCoverFile(file);
                     setCoverRemoved(false);
                   }}
-                  className="w-full text-sm text-foreground file:mr-3 file:rounded-button file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-text-inverse hover:file:bg-brand-dark"
                 />
                 {coverFile ? (
-                  <p className="mt-2 text-xs text-text-tertiary">
+                  <p className="text-xs text-muted-foreground">
                     Selected: {coverFile.name}
                   </p>
                 ) : null}
-              </label>
-            </div>
+                </Field>
+              </FieldGroup>
             {coverHint ? (
-              <p className="mt-2 text-sm text-danger">{coverHint}</p>
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>{coverHint}</AlertDescription>
+              </Alert>
             ) : null}
             {editContext?.initial.coverImageUrl && !coverRemoved ? (
-              <button
+              <Button
                 type="button"
+                variant="destructive"
+                size="sm"
                 onClick={() => {
                   setCoverRemoved(true);
                   form.setValue("cover_image_url", null, { shouldDirty: true });
                 }}
-                className="mt-3 rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10"
+                className="mt-4"
               >
                 Remove existing cover
-              </button>
+              </Button>
             ) : null}
-          </section>
+            </CardContent>
+          </Card>
 
           {editContext ? (
-            <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
-              <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
-                Work languages
-              </h2>
-              <p className="mt-1 text-sm text-text-secondary">
-                Generate or retry only this edition without regenerating the whole work.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Work languages</CardTitle>
+                <CardDescription>
+                  Generate or retry only this edition without regenerating the whole work.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+              <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={translationLanguage}
                   onChange={(event) =>
                     setTranslationLanguage(event.target.value as typeof translationLanguage)
                   }
-                  className="rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
+                  className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   {LANGUAGE_OPTIONS.filter((option) => option.value !== editContext.initial.language).map((option) => (
                     <option key={option.value} value={option.value}>
@@ -532,43 +545,51 @@ export function BookUploadForm({
                     </option>
                   ))}
                 </select>
-                <button
+                <Button
                   type="button"
+                  size="sm"
+                  variant="outline"
                   onClick={generateTranslation}
                   disabled={isGeneratingTranslation}
-                  className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:pointer-events-none disabled:opacity-50"
                 >
                   {isGeneratingTranslation ? "Translating..." : "Generate translation"}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="outline"
                   onClick={retryTts}
                   disabled={isRetryingTts}
-                  className="rounded-button border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand disabled:pointer-events-none disabled:opacity-50"
                 >
                   {isRetryingTts ? "Regenerating TTS..." : "Retry TTS only"}
-                </button>
+                </Button>
               </div>
               {editContext.initial.translationError ? (
-                <p className="mt-3 text-xs text-danger">
-                  Translation error: {editContext.initial.translationError}
-                </p>
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>
+                    Translation error: {editContext.initial.translationError}
+                  </AlertDescription>
+                </Alert>
               ) : null}
               {editContext.initial.ttsError ? (
-                <p className="mt-1 text-xs text-danger">TTS error: {editContext.initial.ttsError}</p>
+                <Alert variant="destructive" className="mt-3">
+                  <AlertDescription>TTS error: {editContext.initial.ttsError}</AlertDescription>
+                </Alert>
               ) : null}
-            </section>
+              </CardContent>
+            </Card>
           ) : null}
 
-          <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
-            <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
-              Жанры и ключевые слова
-            </h2>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+          <Card>
+            <CardHeader>
+              <CardTitle>Genres and keywords</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="flex flex-col gap-3 sm:flex-row">
               <select
                 value={genrePick}
                 onChange={(event) => setGenrePick(event.target.value as BookGenre | "")}
-                className="rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
+                className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 <option value="">Выберите жанр</option>
                 {BOOK_GENRES.map((genre) => (
@@ -577,18 +598,19 @@ export function BookUploadForm({
                   </option>
                 ))}
               </select>
-              <button
+              <Button
                 type="button"
+                size="sm"
+                variant="outline"
                 onClick={addGenre}
-                className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15"
               >
                 Добавить жанр
-              </button>
+              </Button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {selectedGenres.map((genre) => (
-                <button
-                  type="button"
+                <Badge
+                  render={<button type="button" />}
                   key={genre}
                   onClick={() =>
                     form.setValue(
@@ -597,14 +619,13 @@ export function BookUploadForm({
                       { shouldDirty: true, shouldValidate: true },
                     )
                   }
-                  className="rounded-chip border border-brand/40 bg-brand/10 px-3 py-1 text-xs font-medium text-brand"
                 >
                   {genreDisplayName(genre)} ×
-                </button>
+                </Badge>
               ))}
             </div>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <input
+              <Input
                 value={keywordDraft}
                 onChange={(event) => setKeywordDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -613,21 +634,23 @@ export function BookUploadForm({
                     addKeyword();
                   }
                 }}
-                className="min-w-0 flex-1 rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+                className="min-w-0 flex-1"
                 placeholder="Keyword"
               />
-              <button
+              <Button
                 type="button"
+                size="sm"
+                variant="outline"
                 onClick={addKeyword}
-                className="rounded-button border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand"
               >
                 Add keyword
-              </button>
+              </Button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {keywords.map((keyword, index) => (
-                <button
-                  type="button"
+                <Badge
+                  variant="secondary"
+                  render={<button type="button" />}
                   key={`${keyword}-${index}`}
                   onClick={() =>
                     form.setValue(
@@ -636,20 +659,20 @@ export function BookUploadForm({
                       { shouldDirty: true, shouldValidate: true },
                     )
                   }
-                  className="rounded-chip border border-elevated bg-background px-3 py-1 text-xs text-text-secondary"
                 >
                   {keyword} ×
-                </button>
+                </Badge>
               ))}
             </div>
-          </section>
+            </CardContent>
+          </Card>
 
           <DndContext onDragEnd={handleChapterDragEnd}>
             <SortableContext
               items={chapters.fields.map((field) => field.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="space-y-5">
+              <div className="flex flex-col gap-5">
                 {chapters.fields.map((chapter, chapterIndex) => (
                   <SortableChapterShell key={chapter.fieldId} id={chapter.id}>
                     <ChapterEditor
@@ -665,13 +688,13 @@ export function BookUploadForm({
             </SortableContext>
           </DndContext>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => chapters.append(createChapter())}
-            className="rounded-button border border-brand/40 bg-brand/10 px-4 py-2 text-sm font-semibold text-brand hover:bg-brand/15"
           >
             Add chapter
-          </button>
+          </Button>
 
           <QuizEditor
             control={form.control}
@@ -681,29 +704,28 @@ export function BookUploadForm({
           />
 
           {error ? (
-            <p className="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm font-medium text-danger">
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : null}
           {status ? (
-            <p className="rounded-card border border-brand/40 bg-brand/10 p-3 text-sm font-medium text-brand">
-              {status}
-            </p>
+            <Alert>
+              <AlertDescription>{status}</AlertDescription>
+            </Alert>
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            <button
+            <Button
               type="submit"
               disabled={isSaving}
-              className="rounded-button border-2 border-brand-dark bg-brand px-6 py-2.5 text-sm font-semibold text-text-inverse shadow-sm hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-50"
             >
               {isSaving ? "Saving..." : editContext ? "Save changes" : "Create book"}
-            </button>
+            </Button>
             <details className="min-w-full">
               <summary className="cursor-pointer text-sm font-medium text-text-secondary hover:text-brand">
                 Request preview JSON
               </summary>
-              <pre className="mt-3 max-h-96 overflow-auto rounded-card bg-foreground p-4 text-xs text-text-inverse">
+              <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-foreground p-4 text-xs text-background">
                 {jsonPretty}
               </pre>
             </details>

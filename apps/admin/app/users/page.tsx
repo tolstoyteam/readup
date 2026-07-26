@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/AdminShell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { assignAdmin, revokeAdmin } from "@/app/admin-users/actions";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { listAdminPanelUsers } from "@/lib/admin-users-list";
@@ -30,7 +40,7 @@ export default async function UsersPage() {
 
   return (
     <AdminShell active="users">
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8">
         <header className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Users</h1>
@@ -43,67 +53,57 @@ export default async function UsersPage() {
           </p>
         </header>
 
-        <section className="overflow-hidden rounded-[8px] border border-elevated bg-surface">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-              <thead className="bg-background text-xs uppercase text-text-tertiary">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">User</th>
-                  <th className="px-4 py-3 font-semibold">Created</th>
-                  <th className="px-4 py-3 font-semibold">Last sign in</th>
-                  <th className="px-4 py-3 font-semibold">Role</th>
-                  <th className="px-4 py-3 text-right font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-t border-elevated">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-foreground">{userLabel(user.email)}</div>
-                      <div className="mt-1 font-mono text-[11px] text-text-tertiary">{user.id}</div>
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">{formatDate(user.createdAt)}</td>
-                    <td className="px-4 py-3 text-text-secondary">{formatDate(user.lastSignInAt)}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={
-                          user.isAdmin
-                            ? "rounded-[8px] bg-brand/10 px-2 py-1 text-xs font-semibold text-brand"
-                            : "rounded-[8px] bg-background px-2 py-1 text-xs font-semibold text-text-tertiary"
-                        }
-                      >
-                        {user.isAdmin ? "Admin" : "User"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {user.isAdmin ? (
-                        <form action={revokeAdmin}>
-                          <input type="hidden" name="userId" value={user.id} />
-                          <button
-                            type="submit"
-                            disabled={user.id === auth.userId}
-                            className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-elevated bg-background px-3 text-xs font-semibold text-text-secondary transition-colors hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-45"
-                          >
-                            Revoke
-                          </button>
-                        </form>
-                      ) : (
-                        <form action={assignAdmin}>
-                          <input type="hidden" name="userId" value={user.id} />
-                          <button
-                            type="submit"
-                            className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-brand/40 bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/15"
-                          >
-                            Make admin
-                          </button>
-                        </form>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <section className="overflow-hidden rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Last sign in</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="font-medium">{userLabel(user.email)}</div>
+                    <div className="font-mono text-xs text-muted-foreground">{user.id}</div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(user.createdAt)}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(user.lastSignInAt)}</TableCell>
+                  <TableCell>
+                    <Badge variant={user.isAdmin ? "default" : "secondary"}>
+                      {user.isAdmin ? "Admin" : "User"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {user.isAdmin ? (
+                      <form action={revokeAdmin}>
+                        <input type="hidden" name="userId" value={user.id} />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="destructive"
+                          disabled={user.id === auth.userId}
+                        >
+                          Revoke
+                        </Button>
+                      </form>
+                    ) : (
+                      <form action={assignAdmin}>
+                        <input type="hidden" name="userId" value={user.id} />
+                        <Button type="submit" size="sm" variant="outline">
+                          Make admin
+                        </Button>
+                      </form>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </section>
       </div>
     </AdminShell>

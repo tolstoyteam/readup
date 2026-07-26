@@ -1,6 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { requireAdminPage } from "@/lib/admin-auth";
 import { listBookWorks, type BookWorkListItem } from "@/lib/book-relational";
 import { languageLabel } from "@/lib/book-language";
@@ -19,7 +29,7 @@ export default async function BooksPage() {
 
   return (
     <AdminShell active="books">
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-5 p-4 sm:p-6 lg:p-8">
         <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Books</h1>
@@ -30,94 +40,89 @@ export default async function BooksPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/upload?generate=1"
-              className="inline-flex min-h-10 items-center justify-center rounded-[8px] border-2 border-brand-dark bg-brand px-4 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark"
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/upload?generate=1" />}
             >
               Generate
-            </Link>
-            <Link
-              href="/upload"
-              className="inline-flex min-h-10 items-center justify-center rounded-[8px] border border-elevated bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-brand hover:text-brand"
-            >
+            </Button>
+            <Button nativeButton={false} render={<Link href="/upload" />}>
               New book
-            </Link>
+            </Button>
           </div>
         </header>
 
-        <section className="overflow-hidden rounded-[8px] border border-elevated bg-surface">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] border-collapse text-left text-sm">
-              <thead className="bg-background text-xs uppercase text-text-tertiary">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Book</th>
-                  <th className="px-4 py-3 font-semibold">Languages</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Genres</th>
-                  <th className="px-4 py-3 text-right font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="border-t border-elevated px-4 py-5 text-sm text-text-secondary">
-                      Upload or generate a book to see it here.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row) => {
-                    const primaryEdition = row.editions[0];
-                    return (
-                      <tr key={row.id} className="border-t border-elevated">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-foreground">{row.title}</div>
-                          <div className="mt-1 text-xs text-text-tertiary">{row.author}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {row.editions.map((edition) => (
-                              <Link
-                                key={edition.id}
-                                href={`/books/${edition.id}/edit`}
-                                className="rounded-[8px] bg-brand/10 px-2 py-1 text-xs font-semibold text-brand hover:bg-brand/15"
-                              >
-                                {languageLabel(edition.language)}
-                              </Link>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {row.editions.map((edition) => (
-                              <span
-                                key={edition.id}
-                                className="rounded-[8px] bg-background px-2 py-1 text-xs font-semibold text-text-secondary"
-                              >
-                                {edition.status}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-text-secondary">
-                          {primaryEdition?.genres.length ? primaryEdition.genres.join(", ") : "None"}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {primaryEdition ? (
-                            <Link
-                              href={`/books/${primaryEdition.id}/edit`}
-                              className="inline-flex min-h-9 items-center justify-center rounded-[8px] border border-brand/40 bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/15"
+        <section className="overflow-hidden rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Book</TableHead>
+                <TableHead>Languages</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Genres</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-muted-foreground">
+                    Upload or generate a book to see it here.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row) => {
+                  const primaryEdition = row.editions[0];
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <div className="font-medium">{row.title}</div>
+                        <div className="text-xs text-muted-foreground">{row.author}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {row.editions.map((edition) => (
+                            <Badge
+                              key={edition.id}
+                              variant="secondary"
+                              render={<Link href={`/books/${edition.id}/edit`} />}
                             >
-                              Edit
-                            </Link>
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                              {languageLabel(edition.language)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {row.editions.map((edition) => (
+                            <Badge key={edition.id} variant="outline">
+                              {edition.status}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[260px] truncate text-muted-foreground">
+                        {primaryEdition?.genres.length ? primaryEdition.genres.join(", ") : "None"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {primaryEdition ? (
+                          <Button
+                            nativeButton={false}
+                            size="sm"
+                            variant="outline"
+                            render={<Link href={`/books/${primaryEdition.id}/edit`} />}
+                          >
+                            Edit
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </section>
       </div>
     </AdminShell>

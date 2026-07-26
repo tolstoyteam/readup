@@ -1,7 +1,17 @@
 "use client";
 
-import { useFieldArray, type Control, type UseFormRegister } from "react-hook-form";
+import {
+  Controller,
+  useFieldArray,
+  type Control,
+  type UseFormRegister,
+} from "react-hook-form";
 import type { BookEditorValues } from "@/app/upload/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 type Props = {
   control: Control<BookEditorValues>;
@@ -42,41 +52,48 @@ function AnswersEditor({
   });
 
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-3 flex flex-col gap-2">
       {answers.fields.map((answer, answerIndex) => (
         <div
           key={answer.fieldId}
-          className="flex flex-col gap-2 rounded-lg border border-elevated bg-background p-3 sm:flex-row sm:items-center"
+          className="flex flex-col gap-2 rounded-lg border bg-background p-3 sm:flex-row sm:items-center"
         >
-          <label className="flex min-w-0 flex-1 items-center gap-2">
-            <input
-              type="checkbox"
-              {...register(`quiz.questions.${questionIndex}.answers.${answerIndex}.is_correct`)}
-              className="h-4 w-4 rounded border-elevated accent-brand"
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Controller
+              control={control}
+              name={`quiz.questions.${questionIndex}.answers.${answerIndex}.is_correct`}
+              render={({ field }) => (
+                <Checkbox
+                  checked={Boolean(field.value)}
+                  onCheckedChange={(checked) => field.onChange(checked)}
+                />
+              )}
             />
-            <input
+            <Input
               {...register(`quiz.questions.${questionIndex}.answers.${answerIndex}.text`)}
-              className="min-w-0 flex-1 rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
+              className="min-w-0 flex-1"
               placeholder="Answer text"
             />
-          </label>
-          <button
+          </div>
+          <Button
             type="button"
+            size="sm"
+            variant="destructive"
             disabled={answers.fields.length <= 2}
             onClick={() => answers.remove(answerIndex)}
-            className="rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger disabled:pointer-events-none disabled:opacity-40"
           >
             Remove
-          </button>
+          </Button>
         </div>
       ))}
-      <button
+      <Button
         type="button"
+        size="sm"
+        variant="outline"
         onClick={() => answers.append(defaultAnswer(false))}
-        className="rounded-button border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand"
       >
         Add answer
-      </button>
+      </Button>
     </div>
   );
 }
@@ -89,69 +106,71 @@ export function QuizEditor({ control, register, enabled, onToggle }: Props) {
   });
 
   return (
-    <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
+    <Card>
+      <CardHeader>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">
-            Optional quiz
-          </h2>
-          <p className="text-sm text-text-secondary">
+          <CardTitle>Optional quiz</CardTitle>
+          <CardDescription>
             Keep 3-5 questions, with multiple answers per question.
-          </p>
+          </CardDescription>
         </div>
-        <label className="inline-flex items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
+        <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+          <Checkbox
             checked={enabled}
-            onChange={(event) => onToggle(event.target.checked)}
-            className="h-4 w-4 rounded border-elevated accent-brand"
+            onCheckedChange={(checked) => onToggle(checked)}
           />
           Include quiz
         </label>
       </div>
+      </CardHeader>
 
       {enabled ? (
-        <div className="mt-4 space-y-4">
+        <CardContent>
+        <div className="flex flex-col gap-4">
           {questions.fields.map((question, questionIndex) => (
-            <article
+            <Card
               key={question.fieldId}
-              className="rounded-card border border-elevated bg-background p-4"
+              size="sm"
             >
+              <CardContent>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <label className="min-w-0 flex-1">
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-                    Question {questionIndex + 1}
-                  </span>
-                  <input
+                <Field className="min-w-0 flex-1">
+                  <FieldLabel>Question {questionIndex + 1}</FieldLabel>
+                  <Input
                     {...register(`quiz.questions.${questionIndex}.question`)}
-                    className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
                     placeholder="Question"
                   />
-                </label>
-                <button
+                </Field>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="destructive"
                   disabled={questions.fields.length <= 3}
                   onClick={() => questions.remove(questionIndex)}
-                  className="self-end rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger disabled:pointer-events-none disabled:opacity-40"
+                  className="self-end"
                 >
                   Remove question
-                </button>
+                </Button>
               </div>
               <AnswersEditor questionIndex={questionIndex} control={control} register={register} />
-            </article>
+              </CardContent>
+            </Card>
           ))}
 
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant="outline"
             disabled={questions.fields.length >= 5}
             onClick={() => questions.append(defaultQuestion())}
-            className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:pointer-events-none disabled:opacity-40"
           >
             Add question
-          </button>
+          </Button>
         </div>
+        </CardContent>
       ) : null}
-    </section>
+    </Card>
   );
 }
 

@@ -1,6 +1,28 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import {
+  BookOpenIcon,
+  LibraryBigIcon,
+  UploadIcon,
+  UsersIcon,
+} from "lucide-react";
 import { signOut } from "@/app/auth/actions";
+import { Button } from "@/components/ui/button";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
 type AdminShellProps = {
   active: "books" | "users" | "upload";
@@ -8,65 +30,72 @@ type AdminShellProps = {
 };
 
 const NAV_ITEMS = [
-  { key: "books", href: "/books", label: "Books" },
-  { key: "users", href: "/users", label: "Users" },
-  { key: "upload", href: "/upload", label: "Book upload" },
+  { key: "books", href: "/books", label: "Books", icon: LibraryBigIcon },
+  { key: "users", href: "/users", label: "Users", icon: UsersIcon },
+  { key: "upload", href: "/upload", label: "Book upload", icon: UploadIcon },
 ] as const;
 
 export function AdminShell({ active, children }: AdminShellProps) {
   return (
-    <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
-      <aside className="border-b border-elevated bg-surface lg:min-h-screen lg:border-r lg:border-b-0">
-        <div className="flex items-center justify-between gap-4 px-4 py-4 lg:block lg:px-5 lg:py-6">
-          <Link href="/books" className="block">
-            <span className="text-base font-bold text-foreground">Readup</span>
-            <span className="mt-1 hidden text-xs font-medium text-text-tertiary lg:block">
-              Admin panel
-            </span>
-          </Link>
-          <form action={signOut} className="lg:hidden">
-            <button
-              type="submit"
-              className="rounded-[8px] border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:block lg:space-y-1 lg:px-3 lg:pb-0">
-          {NAV_ITEMS.map((item) => {
-            const selected = item.key === active;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                aria-current={selected ? "page" : undefined}
-                className={
-                  selected
-                    ? "block whitespace-nowrap rounded-[8px] bg-brand px-3 py-2 text-sm font-semibold text-text-inverse"
-                    : "block whitespace-nowrap rounded-[8px] px-3 py-2 text-sm font-semibold text-text-secondary transition-colors hover:bg-background hover:text-foreground"
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                size="lg"
+                tooltip="Readup"
+                render={
+                  <Link href="/books">
+                    <BookOpenIcon />
+                    <span>Readup admin</span>
+                  </Link>
                 }
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+              />
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
-        <div className="mt-auto hidden px-5 py-6 lg:block">
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {NAV_ITEMS.map((item) => (
+                  <SidebarMenuItem key={item.key}>
+                    <SidebarMenuButton
+                      tooltip={item.label}
+                      isActive={item.key === active}
+                      render={
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarSeparator />
+        <SidebarFooter>
           <form action={signOut}>
-            <button
-              type="submit"
-              className="w-full rounded-[8px] border border-elevated bg-background px-3 py-2 text-sm font-semibold text-text-secondary transition-colors hover:border-brand hover:text-brand"
-            >
+            <Button type="submit" variant="outline" className="w-full justify-start">
               Sign out
-            </button>
+            </Button>
           </form>
-        </div>
-      </aside>
+        </SidebarFooter>
+      </Sidebar>
 
-      <main className="min-w-0">{children}</main>
-    </div>
+      <SidebarInset>
+        <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
+          <SidebarTrigger />
+          <span className="text-sm font-semibold">Readup admin</span>
+        </header>
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

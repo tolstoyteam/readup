@@ -7,6 +7,27 @@ import type { ProgressEvent } from "@/lib/book-generation/types";
 import { getLengthPreset } from "@/lib/book-generation/length-presets";
 import { validateCoverFile } from "@/app/upload/BookUploadForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const SOURCE_ACCEPT = ".txt,.md,.markdown,application/pdf,text/plain,text/markdown";
 const SOURCE_LANGUAGE = "en";
@@ -30,7 +51,6 @@ type Props = {
 
 export function GenerateBookModal({ open, onClose }: Props) {
   const router = useRouter();
-  const headingId = useId();
   const topicId = useId();
   const coverId = useId();
   const sourceId = useId();
@@ -55,12 +75,7 @@ export function GenerateBookModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     topicInputRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previous;
-    };
   }, [open]);
 
   useEffect(() => {
@@ -190,46 +205,28 @@ export function GenerateBookModal({ open, onClose }: Props) {
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={headingId}
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) handleClose();
+      }}
     >
-      <button
-        type="button"
-        aria-label="Close dialog"
-        onClick={handleClose}
-        className="absolute inset-0 bg-foreground/40 backdrop-blur-sm"
-      />
-
-      <div className="relative z-10 max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-card border border-elevated bg-background p-6 shadow-xl sm:p-8">
-        <header className="mb-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-brand">
-            AI assist
-          </p>
-          <h2
-            id={headingId}
-            className="mt-1 text-2xl font-extrabold tracking-[-0.03em] text-foreground"
-          >
-            AI Book Generation
-          </h2>
-          <p className="mt-1 text-sm text-text-secondary">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>AI book generation</DialogTitle>
+          <DialogDescription>
             Configure the book, generate the English source edition, and any selected
             translations. Optionally upload a cover — the pipeline saves automatically when
             complete.
-          </p>
-        </header>
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <label htmlFor={topicId} className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Topic <span className="text-danger">*</span>
-            </span>
-            <input
+        <form onSubmit={handleSubmit}>
+          <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor={topicId}>Topic *</FieldLabel>
+            <Input
               id={topicId}
               ref={topicInputRef}
               type="text"
@@ -240,70 +237,55 @@ export function GenerateBookModal({ open, onClose }: Props) {
               autoComplete="off"
               required
               maxLength={200}
-              className="w-full rounded-input border border-elevated bg-surface px-4 py-3 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 disabled:opacity-60"
             />
-          </label>
+          </Field>
 
-          <fieldset>
-            <legend className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Reading level
-            </legend>
-            <div className="flex flex-wrap gap-2">
+          <FieldSet>
+            <FieldLegend variant="label">Reading level</FieldLegend>
+            <RadioGroup
+              value={readingLevel}
+              onValueChange={(value) =>
+                setReadingLevel(value as (typeof READING_LEVELS)[number])
+              }
+              className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+            >
               {READING_LEVELS.map((value) => (
                 <label
                   key={value}
-                  className={`cursor-pointer rounded-chip border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    readingLevel === value
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-elevated bg-surface text-foreground hover:border-brand/30"
-                  }`}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm"
                 >
-                  <input
-                    type="radio"
-                    name="reading_level"
+                  <RadioGroupItem
                     value={value}
-                    checked={readingLevel === value}
-                    onChange={() => setReadingLevel(value)}
                     disabled={isSubmitting}
-                    className="sr-only"
                   />
                   {READING_LEVEL_LABELS[value]}
                 </label>
               ))}
-            </div>
-          </fieldset>
+            </RadioGroup>
+          </FieldSet>
 
-          <fieldset>
-            <legend className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Length
-            </legend>
-            <div className="flex flex-wrap gap-2">
+          <FieldSet>
+            <FieldLegend variant="label">Length</FieldLegend>
+            <RadioGroup
+              value={length}
+              onValueChange={(value) => setLength(value as (typeof BOOK_LENGTHS)[number])}
+              className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+            >
               {BOOK_LENGTHS.map((value) => (
                 <label
                   key={value}
-                  className={`cursor-pointer rounded-chip border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    length === value
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-elevated bg-surface text-foreground hover:border-brand/30"
-                  }`}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm"
                 >
-                  <input
-                    type="radio"
-                    name="length"
+                  <RadioGroupItem
                     value={value}
-                    checked={length === value}
-                    onChange={() => setLength(value)}
                     disabled={isSubmitting}
-                    className="sr-only"
                   />
                   {LENGTH_LABELS[value]}
                 </label>
               ))}
-            </div>
-            <p className="mt-2 text-xs text-text-tertiary">
-              {getLengthPreset(length).uiHint}
-            </p>
-          </fieldset>
+            </RadioGroup>
+            <FieldDescription>{getLengthPreset(length).uiHint}</FieldDescription>
+          </FieldSet>
 
           <LanguageSelector
             selected={languages}
@@ -311,22 +293,18 @@ export function GenerateBookModal({ open, onClose }: Props) {
             disabled={isSubmitting}
           />
 
-          <label className="flex cursor-pointer items-center gap-3 rounded-input border border-elevated bg-surface px-3 py-2.5 text-sm">
-            <input
-              type="checkbox"
+          <label className="flex cursor-pointer items-center gap-3 rounded-lg border p-2 text-sm">
+            <Checkbox
               checked={includeQuiz}
-              onChange={(event) => setIncludeQuiz(event.target.checked)}
+              onCheckedChange={(checked) => setIncludeQuiz(checked)}
               disabled={isSubmitting}
-              className="h-4 w-4 rounded border-elevated text-brand focus:ring-brand/30"
             />
             <span className="font-medium text-foreground">Include quizzes</span>
           </label>
 
-          <label htmlFor={coverId} className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Upload cover <span className="text-text-tertiary">(optional)</span>
-            </span>
-            <input
+          <Field>
+            <FieldLabel htmlFor={coverId}>Upload cover optional</FieldLabel>
+            <Input
               id={coverId}
               ref={coverInputRef}
               type="file"
@@ -348,21 +326,18 @@ export function GenerateBookModal({ open, onClose }: Props) {
                 }
                 setCoverFile(file);
               }}
-              className="w-full text-sm text-foreground file:mr-3 file:rounded-button file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-text-inverse hover:file:bg-brand-dark disabled:opacity-60"
             />
             {coverFile ? (
-              <p className="mt-1 text-xs text-text-tertiary">Selected: {coverFile.name}</p>
+              <FieldDescription>Selected: {coverFile.name}</FieldDescription>
             ) : null}
             {coverHint ? (
-              <p className="mt-1 text-xs text-danger">{coverHint}</p>
+              <FieldDescription className="text-destructive">{coverHint}</FieldDescription>
             ) : null}
-          </label>
+          </Field>
 
-          <label htmlFor={sourceId} className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-              Source file <span className="text-text-tertiary">(optional)</span>
-            </span>
-            <input
+          <Field>
+            <FieldLabel htmlFor={sourceId}>Source file optional</FieldLabel>
+            <Input
               id={sourceId}
               ref={sourceInputRef}
               type="file"
@@ -371,23 +346,21 @@ export function GenerateBookModal({ open, onClose }: Props) {
               onChange={(event) => {
                 setSourceFile(event.target.files?.[0] ?? null);
               }}
-              className="w-full text-sm text-foreground file:mr-3 file:rounded-button file:border-0 file:bg-surface file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-foreground file:border-elevated hover:file:bg-elevated disabled:opacity-60"
             />
-            <p className="mt-1 text-xs text-text-tertiary">
-              Plain text (.txt, .md) or PDF, up to 10 MB.
-            </p>
-          </label>
+            <FieldDescription>Plain text (.txt, .md) or PDF, up to 10 MB.</FieldDescription>
+          </Field>
 
           {progressMessage && isSubmitting ? (
-            <div className="flex items-center gap-3 rounded-card border border-brand/30 bg-brand/5 p-3 text-sm text-foreground">
+            <Alert>
               <Spinner />
-              <span>{progressMessage}</span>
-            </div>
+              <AlertDescription>{progressMessage}</AlertDescription>
+            </Alert>
           ) : null}
 
           {warnings.length > 0 ? (
-            <div className="rounded-card border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
-              <p className="font-semibold">Some translations failed:</p>
+            <Alert variant="destructive">
+              <AlertTitle>Some translations failed</AlertTitle>
+              <AlertDescription>
               <ul className="mt-1 list-disc pl-5">
                 {warnings.map((warning) => (
                   <li key={warning.language}>
@@ -395,31 +368,28 @@ export function GenerateBookModal({ open, onClose }: Props) {
                   </li>
                 ))}
               </ul>
-            </div>
+              </AlertDescription>
+            </Alert>
           ) : null}
 
           {error ? (
-            <p
-              role="alert"
-              className="rounded-card border border-danger/40 bg-danger/10 p-3 text-sm font-medium text-danger"
-            >
-              {error}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : null}
 
-          <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
-            <button
+          <DialogFooter>
+            <Button
               type="button"
+              variant="outline"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="rounded-button border border-elevated bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-brand hover:text-brand disabled:opacity-60"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center gap-2 rounded-button border-2 border-brand-dark bg-brand px-6 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition-colors hover:bg-brand-dark disabled:pointer-events-none disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>
@@ -429,11 +399,12 @@ export function GenerateBookModal({ open, onClose }: Props) {
               ) : (
                 "Generate Book"
               )}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
+          </FieldGroup>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -441,10 +412,10 @@ function Spinner({ inverse = false }: { inverse?: boolean }) {
   return (
     <span
       aria-hidden
-      className={`inline-block h-4 w-4 animate-spin rounded-full border-2 ${
+      className={`inline-block size-4 animate-spin rounded-full border-2 ${
         inverse
-          ? "border-text-inverse/40 border-t-text-inverse"
-          : "border-brand/30 border-t-brand"
+          ? "border-primary-foreground/40 border-t-primary-foreground"
+          : "border-primary/30 border-t-primary"
       }`}
     />
   );

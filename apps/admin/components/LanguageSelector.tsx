@@ -2,6 +2,10 @@
 
 import { LANGUAGE_OPTIONS } from "@/lib/book-language";
 import { SOURCE_LANGUAGE } from "@/lib/book-generation/constants";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FieldLegend, FieldSet } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 
 const SELECTABLE_LANGUAGES = LANGUAGE_OPTIONS.filter(
   (option) => option.value !== "other",
@@ -25,36 +29,30 @@ export function LanguageSelector({ selected, onChange, disabled }: Props) {
   }
 
   return (
-    <fieldset className="space-y-2" disabled={disabled}>
-      <legend className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-        Languages
-      </legend>
-      <ul className="space-y-2">
+    <FieldSet disabled={disabled}>
+      <FieldLegend variant="label">Languages</FieldLegend>
+      <ul className="flex flex-col gap-2">
         {SELECTABLE_LANGUAGES.map((option) => {
           const isPrimary = option.value === SOURCE_LANGUAGE;
           const checked = isPrimary || additionalSelected.includes(option.value);
           return (
             <li key={option.value}>
               <label
-                className={`flex cursor-pointer items-center gap-3 rounded-input border px-3 py-2.5 text-sm transition-colors ${
-                  checked
-                    ? "border-brand/40 bg-brand/5 text-foreground"
-                    : "border-elevated bg-surface text-foreground"
-                } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-brand/30"}`}
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 rounded-lg border p-2 text-sm transition-colors",
+                  checked ? "bg-muted" : "bg-background",
+                  disabled ? "cursor-not-allowed opacity-60" : "hover:bg-muted/70",
+                )}
               >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-elevated text-brand focus:ring-brand/30"
+                <Checkbox
                   checked={checked}
                   disabled={disabled || isPrimary}
-                  onChange={() => toggleLanguage(option.value)}
+                  onCheckedChange={() => toggleLanguage(option.value)}
                 />
                 <span className="flex flex-1 items-center justify-between gap-2">
                   <span className="font-medium">{option.label}</span>
                   {isPrimary ? (
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">
-                      Primary · Source
-                    </span>
+                    <Badge variant="secondary">Primary source</Badge>
                   ) : null}
                 </span>
               </label>
@@ -62,6 +60,6 @@ export function LanguageSelector({ selected, onChange, disabled }: Props) {
           );
         })}
       </ul>
-    </fieldset>
+    </FieldSet>
   );
 }

@@ -5,6 +5,10 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useFieldArray, type Control, type UseFormRegister } from "react-hook-form";
 import { BlockEditor } from "@/app/upload/components/BlockEditor";
 import type { BookEditorValues } from "@/app/upload/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 type Props = {
   chapterIndex: number;
@@ -36,31 +40,32 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
   };
 
   return (
-    <section className="rounded-card border border-elevated bg-surface p-4 shadow-sm">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="min-w-0 flex-1">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-            Chapter title
-          </span>
-          <input
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <Field className="min-w-0 flex-1">
+            <FieldLabel>Chapter title</FieldLabel>
+            <Input
             {...register(`chapters.${chapterIndex}.title`)}
-            className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             placeholder="Chapter title"
           />
-        </label>
-        <button
+          </Field>
+          <Button
           type="button"
+          size="sm"
+          variant="destructive"
           disabled={!canRemove}
           onClick={onRemove}
-          className="rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10 disabled:pointer-events-none disabled:opacity-40"
         >
           Remove chapter
-        </button>
-      </div>
+          </Button>
+        </div>
+      </CardHeader>
 
+      <CardContent>
       <DndContext onDragEnd={handleDragEnd}>
         <SortableContext items={blocks.fields.map((field) => field.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {blocks.fields.map((block, blockIndex) => (
               <BlockEditor
                 key={block.fieldId}
@@ -76,8 +81,10 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
       </DndContext>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          size="sm"
+          variant="outline"
           onClick={() =>
             blocks.append({
               id: newId(),
@@ -85,12 +92,13 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
               content: { text: "" },
             })
           }
-          className="rounded-button border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15"
         >
           Add paragraph
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          size="sm"
+          variant="outline"
           onClick={() =>
             blocks.append({
               id: newId(),
@@ -98,11 +106,11 @@ export function ChapterEditor({ chapterIndex, control, register, onRemove, canRe
               content: { text: "", source: "" },
             })
           }
-          className="rounded-button border border-elevated bg-background px-3 py-2 text-xs font-semibold text-text-secondary hover:border-brand hover:text-brand"
         >
           Add quote
-        </button>
+        </Button>
       </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

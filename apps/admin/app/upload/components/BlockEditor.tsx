@@ -6,6 +6,11 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import type { UseFormRegister } from "react-hook-form";
 import type { BookEditorValues, EditorBlock } from "@/app/upload/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = {
   chapterIndex: number;
@@ -25,61 +30,61 @@ export function BlockEditor({ chapterIndex, blockIndex, block, register, onRemov
   const base = `chapters.${chapterIndex}.blocks.${blockIndex}` as const;
 
   return (
-    <article
+    <Card
       ref={sortable.setNodeRef}
       style={style}
-      className="rounded-card border border-elevated bg-background p-4 shadow-sm"
+      size="sm"
     >
+      <CardContent>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button
+        <Button
           type="button"
+          size="xs"
+          variant="outline"
           aria-label="Drag block"
           {...sortable.attributes}
           {...sortable.listeners}
-          className="cursor-grab rounded-md border border-elevated bg-surface px-2 py-1 text-xs font-medium text-text-tertiary active:cursor-grabbing"
+          className="cursor-grab active:cursor-grabbing"
         >
           Drag
-        </button>
+        </Button>
         <select
           {...register(`${base}.type`)}
-          className="rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground"
+          className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <option value="paragraph">Paragraph</option>
           <option value="quote">Quote</option>
         </select>
-        <button
+        <Button
           type="button"
+          size="xs"
+          variant="destructive"
           onClick={onRemove}
-          className="ml-auto rounded-lg border border-danger/40 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10"
+          className="ml-auto"
         >
           Remove block
-        </button>
+        </Button>
       </div>
 
-      <label className="block">
-        <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-          Text
-        </span>
-        <textarea
+      <Field>
+        <FieldLabel>Text</FieldLabel>
+        <Textarea
           {...register(`${base}.content.text`)}
           rows={block.type === "quote" ? 3 : 5}
-          className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
           placeholder={block.type === "quote" ? "Quote text" : "Paragraph text"}
         />
-      </label>
+      </Field>
 
       {block.type === "quote" ? (
-        <label className="mt-3 block">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-            Source optional
-          </span>
-          <input
+        <Field className="mt-3">
+          <FieldLabel>Source optional</FieldLabel>
+          <Input
             {...register(`${base}.content.source`)}
-            className="w-full rounded-lg border border-elevated bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
             placeholder="Speaker or source"
           />
-        </label>
+        </Field>
       ) : null}
-    </article>
+      </CardContent>
+    </Card>
   );
 }
