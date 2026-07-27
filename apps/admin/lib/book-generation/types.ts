@@ -36,7 +36,14 @@ export type ProgressEvent =
   | { step: "generating_english"; message: string }
   | { step: "saving_english"; message: string }
   | { step: "translating"; language: string; message: string }
-  | { step: "generating_tts"; language: string; message: string }
+  | {
+      step: "generating_tts";
+      language: string;
+      message: string;
+      chunk?: number;
+      voice?: string;
+      edition_id?: number;
+    }
   | {
       step: "completed";
       work_id: string;
@@ -44,6 +51,30 @@ export type ProgressEvent =
       warnings?: { language: string; error: string }[];
     }
   | { step: "error"; message: string; failed_language?: string };
+
+export type GenerationJobProgress = {
+  step: string;
+  message: string;
+  language?: string;
+  edition_id?: number;
+  chunk?: number;
+  voice?: string;
+};
+
+export type GenerationJobResult = {
+  work_id: string;
+  editions: { language: string; id: number }[];
+  warnings?: { language: string; error: string }[];
+};
+
+export type BookGenerationJobPayload = {
+  workflow_settings: WorkflowSettings;
+  source?: { filename: string; text: string };
+  cover_path?: string | null;
+  progress?: GenerationJobProgress | null;
+  heartbeat_at?: string | null;
+  result?: GenerationJobResult | null;
+};
 
 export type ProgressCallback = (event: ProgressEvent) => void;
 

@@ -1,5 +1,6 @@
 import type { ChapterBlockContent, ChapterBlockType } from "@readup/db";
 import type { BookWithContent } from "@/lib/book-relational";
+import { sanitizeTextForTts } from "@/lib/book-tts-sanitize";
 import { ttsPhrasesForLanguage } from "@/lib/book-tts-phrases";
 
 /** OpenAI Speech API `input` max length (characters). */
@@ -44,7 +45,33 @@ export function bookWithContentToSpeechText(book: BookWithContent): string {
   if (keywords) {
     lines.push(`${phrases.keywordsPrefix} ${keywords}`);
   }
-  return lines.join("\n\n").replace(/\s+\n/g, "\n").trim();
+  return sanitizeTextForTts(lines.join("\n\n").replace(/\s+\n/g, "\n").trim());
+}
+
+const SENTENCE_BREAK_PATTERNS = [
+  "\n\n",
+  ". ",
+  "! ",
+  "? ",
+  "… ",
+  ".\u00A0",
+  "!\u00A0",
+  "?\u00A0",
+  "\n",
+  " ",
+] as const;
+
+function findChunkBreakEnd(slice: string, minRel: number, maxChars: number): number {
+  let end = -1;
+  for (const pattern of SENTENCE_BREAK_PATTERNS) {
+    const idx = slice.lastIndexOf(pattern);
+    if (idx >= minRel) {
+      const candidate = idx + pattern.length;
+      if (candidate > end) end = candidate;
+    }
+  }
+  if (end < 0) return maxChars;
+  return end;
 }
 
 /**
@@ -63,25 +90,7 @@ export function chunkTextForTts(text: string, maxChars: number = TTS_INPUT_MAX_C
     const slice = rest.slice(0, maxChars);
     let end = -1;
 
-    const nn = slice.lastIndexOf("\n\n");
-    if (nn >= minRel) end = nn + 2;
-
-    if (end < 0) {
-      const dot = slice.lastIndexOf(". ");
-      if (dot >= minRel) end = dot + 2;
-    }
-
-    if (end < 0) {
-      const nl = slice.lastIndexOf("\n");
-      if (nl >= minRel) end = nl + 1;
-    }
-
-    if (end < 0) {
-      const sp = slice.lastIndexOf(" ");
-      if (sp >= minRel) end = sp + 1;
-    }
-
-    if (end < 0) end = maxChars;
+    end = findChunkBreakEnd(slice, minRel, maxChars);
 
     const part = rest.slice(0, end).trim();
     if (!part) {

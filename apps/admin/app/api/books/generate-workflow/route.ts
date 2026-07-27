@@ -1,21 +1,23 @@
 import "server-only";
 
+import { after } from "next/server";
 import { requireAdminApi } from "@/lib/admin-auth";
 import {
   SUPPORTED_SOURCE_DESCRIPTION,
   extractSourceText,
   truncateSourceText,
 } from "@/lib/book-source-text";
-import { runBookGenerationWorkflow } from "@/lib/book-generation/orchestrate";
-import { parseWorkflowSettings, type ProgressEvent } from "@/lib/book-generation/types";
-import { parseCoverUpload } from "@/lib/cover-storage";
+import { runBookGenerationWorkflowForJob } from "@/lib/book-generation/orchestrate";
+import {
+  parseWorkflowSettings,
+  type BookGenerationJobPayload,
+} from "@/lib/book-generation/types";
+import { createBookWork, createGenerationJob, updateWorkCover } from "@/lib/book-relational";
+import { parseCoverUpload, uploadWorkCover } from "@/lib/cover-storage";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
-
-function sseEncode(event: ProgressEvent): string {
-  return `data: ${JSON.stringify(event)}\n\n`;
-}
+/** Full pipeline including TTS may run in `after()`; set as high as your Vercel plan allows. */
+export const maxDuration = 800;
 
 export async function POST(request: Request) {
   const authError = await requireAdminApi();
@@ -87,38 +89,39 @@ export async function POST(request: Request) {
     return Response.json({ error: coverParsed.message }, { status: 400 });
   }
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      const send = (event: ProgressEvent) => {
-        controller.enqueue(encoder.encode(sseEncode(event)));
-      };
+  const work = await createBookWork();
+  let coverPath: string | null = null;
+  if (coverParsed.cover) {
+    coverPath = await uploadWorkCover(work.id, coverParsed.cover);
+    await updateWorkCover(work.id, coverPath);
+  }
 
-      try {
-        await runBookGenerationWorkflow({
-          settings: parsed.data,
-          source,
-          cover: coverParsed.cover ?? null,
-          onProgress: send,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Book generation failed.";
-        if (message) {
-          send({ step: "error", message });
-        }
-      } finally {
-        controller.close();
-      }
-    },
+  const payload: BookGenerationJobPayload = {
+    workflow_settings: parsed.data,
+    source,
+    cover_path: coverPath,
+    progress: { step: "queued", message: "Waiting to start..." },
+    heartbeat_at: new Date().toISOString(),
+    result: null,
+  };
+
+  const job = await createGenerationJob({
+    workId: work.id,
+    type: "book_generation",
+    payload: payload as unknown as Record<string, unknown>,
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-    },
+  after(async () => {
+    await runBookGenerationWorkflowForJob(job.id);
   });
+
+  return Response.json(
+    {
+      job_id: job.id,
+      work_id: work.id,
+    },
+    { status: 202 },
+  );
 }
 
 function parseLanguagesField(value: FormDataEntryValue | null): string[] {

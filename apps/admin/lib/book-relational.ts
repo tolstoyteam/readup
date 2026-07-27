@@ -346,6 +346,50 @@ export async function updateEditionStatus(
     .where(eq(booksTable.id, bookId));
 }
 
+export async function getGenerationJob(jobId: string) {
+  const [job] = await db
+    .select()
+    .from(generationJobsTable)
+    .where(eq(generationJobsTable.id, jobId))
+    .limit(1);
+  return job ?? null;
+}
+
+export async function patchGenerationJobPayload(
+  jobId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const job = await getGenerationJob(jobId);
+  if (!job) throw new Error("Generation job not found");
+  const current = (job.payload ?? {}) as Record<string, unknown>;
+  await db
+    .update(generationJobsTable)
+    .set({
+      payload: { ...current, ...patch },
+      updatedAt: new Date(),
+    })
+    .where(eq(generationJobsTable.id, jobId));
+}
+
+export type GenerationJobProgressUpdate = {
+  step: string;
+  message: string;
+  language?: string;
+  edition_id?: number;
+  chunk?: number;
+  voice?: string;
+};
+
+export async function updateGenerationJobProgress(
+  jobId: string,
+  progress: GenerationJobProgressUpdate,
+): Promise<void> {
+  await patchGenerationJobPayload(jobId, {
+    progress,
+    heartbeat_at: new Date().toISOString(),
+  });
+}
+
 export async function createGenerationJob(args: {
   workId: string;
   editionId?: number | null;
@@ -369,13 +413,21 @@ export async function updateGenerationJob(
   jobId: string,
   status: GenerationJobStatus,
   error?: string | null,
+  payloadPatch?: Record<string, unknown>,
 ) {
+  const job = payloadPatch ? await getGenerationJob(jobId) : null;
+  const payload =
+    payloadPatch && job
+      ? { ...((job.payload ?? {}) as Record<string, unknown>), ...payloadPatch }
+      : undefined;
+
   await db
     .update(generationJobsTable)
     .set({
       status,
       lastError: error ?? null,
       updatedAt: new Date(),
+      ...(payload ? { payload } : {}),
     })
     .where(eq(generationJobsTable.id, jobId));
 }

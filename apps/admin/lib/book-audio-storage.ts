@@ -29,6 +29,35 @@ export function bookTtsObjectPath(bookId: string, chunkIndex: number, voice: str
 
 export type UploadBookTtsResult = { ok: true; path: string } | { ok: false; message: string };
 
+export async function deleteOrphanTtsChunks(bookId: string, maxChunkIndex: number): Promise<void> {
+  const bucket = getBookAudioBucket();
+  if (!bucket) return;
+
+  const prefix = `editions/${bookId}/tts`;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: files, error } = await supabase.storage.from(bucket).list(prefix, { limit: 500 });
+    if (error || !files?.length) return;
+
+    const toRemove: string[] = [];
+    for (const file of files) {
+      if (!file.name) continue;
+      const match = /^part-(\d+)-/.exec(file.name);
+      if (!match) continue;
+      const index = Number.parseInt(match[1]!, 10);
+      if (Number.isFinite(index) && index > maxChunkIndex) {
+        toRemove.push(`${prefix}/${file.name}`);
+      }
+    }
+    if (toRemove.length > 0) {
+      const { error: rmError } = await supabase.storage.from(bucket).remove(toRemove);
+      if (rmError) console.error("TTS orphan storage remove:", rmError);
+    }
+  } catch (e) {
+    console.error("deleteOrphanTtsChunks:", e);
+  }
+}
+
 /** Removes every object under the current and legacy TTS prefixes (best-effort). */
 export async function deleteAllBookTtsFromStorage(bookId: string): Promise<void> {
   const bucket = getBookAudioBucket();

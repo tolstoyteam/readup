@@ -3,7 +3,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BOOK_LENGTHS, READING_LEVELS } from "@readup/db";
-import type { ProgressEvent } from "@/lib/book-generation/types";
 import { getLengthPreset } from "@/lib/book-generation/length-presets";
 import { validateCoverFile } from "@/app/upload/BookUploadForm";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -48,6 +47,49 @@ type Props = {
   open: boolean;
   onClose: () => void;
 };
+
+type GenerationJobPollResponse = {
+  id: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  last_error: string | null;
+  progress: { message: string } | null;
+  result: {
+    work_id: string;
+    editions: { language: string; id: number }[];
+    warnings?: { language: string; error: string }[];
+  } | null;
+};
+
+async function pollGenerationJob(
+  jobId: string,
+  onMessage: (message: string) => void,
+): Promise<GenerationJobPollResponse> {
+  const maxWaitMs = 60 * 60 * 1000;
+  const start = Date.now();
+  let intervalMs = 1500;
+
+  while (Date.now() - start < maxWaitMs) {
+    const res = await fetch(`/api/generation-jobs/${jobId}`);
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(data.error ?? "Could not load generation status.");
+    }
+    const data = (await res.json()) as GenerationJobPollResponse;
+    if (data.progress?.message) {
+      onMessage(data.progress.message);
+    }
+    if (data.status === "succeeded") return data;
+    if (data.status === "failed") {
+      throw new Error(data.last_error ?? "Book generation failed.");
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    intervalMs = Math.min(5000, intervalMs + 250);
+  }
+
+  throw new Error(
+    `Generation was interrupted or is still running. Job id: ${jobId}. Check Books or try again later.`,
+  );
+}
 
 export function GenerateBookModal({ open, onClose }: Props) {
   const router = useRouter();
@@ -112,47 +154,6 @@ export function GenerateBookModal({ open, onClose }: Props) {
     onClose();
   };
 
-  async function consumeWorkflowStream(response: Response) {
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("No response stream from the server.");
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop() ?? "";
-
-      for (const part of parts) {
-        const line = part
-          .split("\n")
-          .find((entry) => entry.startsWith("data: "));
-        if (!line) continue;
-        const event = JSON.parse(line.slice(6)) as ProgressEvent;
-        if (event.step === "error") {
-          throw new Error(event.message);
-        }
-        if ("message" in event && event.message) {
-          setProgressMessage(event.message);
-        }
-        if (event.step === "completed") {
-          if (event.warnings?.length) {
-            setWarnings(event.warnings);
-          }
-          return event;
-        }
-      }
-    }
-
-    throw new Error("Generation ended unexpectedly.");
-  }
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -186,17 +187,25 @@ export function GenerateBookModal({ open, onClose }: Props) {
         body: formData,
       });
 
-      if (!response.ok) {
+      if (response.status !== 202) {
         const data = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? "Book generation failed.");
       }
 
-      const completed = await consumeWorkflowStream(response);
+      const started = (await response.json()) as { job_id?: string };
+      if (!started.job_id) {
+        throw new Error("Server did not return a generation job id.");
+      }
+
+      const job = await pollGenerationJob(started.job_id, setProgressMessage);
+      if (job.result?.warnings?.length) {
+        setWarnings(job.result.warnings);
+      }
       resetState();
       onClose();
       router.push("/books");
       router.refresh();
-      void completed;
+      void job;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Book generation failed.");
       setProgressMessage(null);
