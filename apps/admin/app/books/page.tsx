@@ -30,7 +30,7 @@ export default async function BooksPage() {
 
   return (
     <AdminShell active="books">
-      <div className="flex flex-col gap-5 p-5 sm:p-8 lg:p-10">
+      <div className="flex min-w-0 flex-col gap-5 p-5 sm:p-8 lg:p-10">
         <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-[28px] font-bold leading-tight text-foreground">Books</h1>
@@ -54,7 +54,7 @@ export default async function BooksPage() {
           </div>
         </header>
 
-        <section className="overflow-hidden rounded-card border border-border bg-card">
+        <section className="min-w-0 overflow-hidden rounded-card border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
