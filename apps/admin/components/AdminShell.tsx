@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
-  BookOpenIcon,
   LibraryBigIcon,
   UploadIcon,
   UsersIcon,
@@ -40,21 +39,15 @@ export function AdminShell({ active, children }: AdminShellProps) {
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r border-border">
         <SidebarHeader className="px-3 py-4">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                tooltip="Readup"
-                className="font-semibold"
-                render={
-                  <Link href="/books">
-                    <BookOpenIcon />
-                    <span>Readup</span>
-                  </Link>
-                }
-              />
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <div className="flex h-10 items-center px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <img
+              src="/readup-logo.svg"
+              alt="Readup"
+              width="110"
+              height="30"
+              className="h-7 w-auto group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:max-w-5"
+            />
+          </div>
         </SidebarHeader>
 
         <SidebarContent>
@@ -94,7 +87,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
       <SidebarInset>
         <header className="flex h-14 items-center gap-2 border-b px-4 md:hidden">
           <SidebarTrigger />
-          <span className="text-sm font-semibold">Readup</span>
+          <img src="/readup-logo.svg" alt="Readup" width="88" height="24" className="h-6 w-auto" />
         </header>
         {children}
       </SidebarInset>
