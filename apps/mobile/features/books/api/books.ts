@@ -280,7 +280,7 @@ export async function fetchBooks(
   for (const workRows of byWork.values()) {
     const row = pickEditionForWork(workRows, settings.language);
     const workCreatedAt =
-      workCreatedAtFromJoin(row.book_works) ??
+      workCreatedAtFromJoin(row.book_works ?? null) ??
       workCreatedAtFromJoin(workRows[0]?.book_works ?? null);
     const fromLegacy = normalizeBooksFromCell(row.data);
     if (fromLegacy.length > 0) {

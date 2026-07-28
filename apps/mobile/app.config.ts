@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import path from "path";
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
-config({ path: path.resolve(__dirname, "../../.env") });
+config({ path: path.resolve(__dirname, "../../.env"), quiet: true });
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const plugins = [...(config.plugins ?? [])];
