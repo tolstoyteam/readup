@@ -1,21 +1,26 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { languageLabel } from "@/lib/book-language";
-import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
-import { type ParsedCover, uploadWorkCover } from "@/lib/cover-storage";
+import { deleteOrphanTtsChunks } from "@/lib/book-audio-storage";
 import {
+  claimGenerationJobLease,
   createEditionForWork,
   getBookWithContent,
   getEditionByWorkLanguage,
-  getGenerationJob,
-  markGenerationJobRunning,
-  replaceBookContent,
+  patchClaimedGenerationJob,
+  releaseGenerationJobLease,
+  updateBookTtsAudio,
+  updateBookTtsAudioProgress,
   updateEditionGenerationMetadata,
   updateEditionStatus,
-  updateGenerationJob,
-  updateGenerationJobProgress,
-  updateWorkCover,
 } from "@/lib/book-relational";
+import { mergeBookTtsPart, nextMissingTtsChunkIndex } from "@/lib/book-tts-audio";
+import {
+  getBookTtsChunks,
+  synthesizeBookTtsChunk,
+} from "@/lib/book-tts-synthesize";
+import { getBookAudioBucket } from "@/lib/supabase-storage";
 import { withExponentialBackoff } from "@/lib/retry";
 import { generateEnglishBook } from "./generate-english";
 import { buildGenerationMetadata, settingsFromWorkflow } from "./metadata";
@@ -24,265 +29,362 @@ import { SOURCE_LANGUAGE } from "./constants";
 import {
   normalizeWorkflowLanguages,
   type BookGenerationJobPayload,
-  type ProgressCallback,
-  type WorkflowSettings,
+  type GenerationJobProgress,
 } from "./types";
 
-export async function runBookGenerationWorkflowForJob(jobId: string): Promise<void> {
-  const job = await getGenerationJob(jobId);
-  if (!job) {
-    console.error("[book_generation] job not found", jobId);
-    return;
-  }
-  if (job.status !== "queued") {
-    console.warn("[book_generation] skipping job — not queued", jobId, job.status);
-    return;
-  }
+const STEP_LEASE_MS = 5.5 * 60 * 1000;
 
-  const payload = job.payload as BookGenerationJobPayload;
-  if (!payload?.workflow_settings) {
-    await updateGenerationJob(jobId, "failed", "Invalid job payload: missing workflow_settings.");
-    return;
-  }
+export type AdvanceBookGenerationResult =
+  | { kind: "advanced" | "terminal" }
+  | { kind: "busy"; retryAfterMs: number }
+  | { kind: "not_found" };
 
-  const onProgress = createJobProgressReporter(jobId, () => {});
-
-  try {
-    await markGenerationJobRunning(jobId);
-    await runBookGenerationWorkflow({
-      settings: payload.workflow_settings,
-      source: payload.source,
-      coverPath: payload.cover_path ?? undefined,
-      workId: job.workId,
-      jobId,
-      onProgress,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Book generation failed.";
-    console.error("[book_generation] job failed", { jobId, message, error });
-    await updateGenerationJob(jobId, "failed", message, {
-      progress: { step: "error", message },
-      heartbeat_at: new Date().toISOString(),
-    });
-  }
+function progress(step: string, message: string, extra: Partial<GenerationJobProgress> = {}) {
+  return { step, message, ...extra };
 }
 
-function createJobProgressReporter(
+function warningsWithoutLanguage(
+  warnings: { language: string; error: string }[],
+  language: string,
+) {
+  return warnings.filter((warning) => warning.language !== language);
+}
+
+async function updateProgress(
   jobId: string,
-  onProgress: ProgressCallback,
-): ProgressCallback {
-  return (event) => {
-    onProgress(event);
-    if (event.step === "error" || event.step === "completed") return;
-
-    void updateGenerationJobProgress(jobId, {
-      step: event.step,
-      message: event.message,
-      language: "language" in event ? event.language : undefined,
-      edition_id: "edition_id" in event ? event.edition_id : undefined,
-      chunk: "chunk" in event ? event.chunk : undefined,
-      voice: "voice" in event ? event.voice : undefined,
-    });
-  };
+  leaseToken: string,
+  nextProgress: GenerationJobProgress,
+): Promise<void> {
+  const updated = await patchClaimedGenerationJob(jobId, leaseToken, {
+    progress: nextProgress,
+  });
+  if (!updated) {
+    throw new Error("Generation step lease was lost.");
+  }
 }
 
-export async function runBookGenerationWorkflow(args: {
-  settings: WorkflowSettings;
-  source?: { filename: string; text: string };
-  cover?: ParsedCover | null;
-  coverPath?: string;
-  workId: string;
+async function releaseStep(args: {
   jobId: string;
-  onProgress: ProgressCallback;
-}): Promise<{
-  workId: string;
-  editions: { language: string; id: number }[];
-  warnings: { language: string; error: string }[];
-}> {
-  const { settings, source, cover, coverPath: initialCoverPath, workId, jobId, onProgress } = args;
-  const generationSettings = settingsFromWorkflow({
-    topic: settings.topic,
-    reading_level: settings.reading_level,
-    length: settings.length,
-    include_quiz: settings.include_quiz,
+  leaseToken: string;
+  nextProgress: GenerationJobProgress;
+  payloadPatch?: Partial<BookGenerationJobPayload>;
+}): Promise<void> {
+  const released = await releaseGenerationJobLease({
+    jobId: args.jobId,
+    leaseToken: args.leaseToken,
+    status: "running",
+    error: null,
+    payloadPatch: {
+      ...args.payloadPatch,
+      progress: args.nextProgress,
+    },
   });
-  const allLanguages = normalizeWorkflowLanguages(settings.languages);
-  const additionalLanguages = allLanguages.filter((lang) => lang !== SOURCE_LANGUAGE);
-
-  onProgress({ step: "generating_english", message: "Generating English book..." });
-
-  let englishDraft;
-  try {
-    englishDraft = await generateEnglishBook({
-      settings: generationSettings,
-      includeQuiz: settings.include_quiz,
-      source,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "English generation failed.";
-    onProgress({ step: "error", message });
-    throw new Error(message);
+  if (!released) {
+    throw new Error("Generation step completed after its lease was lost.");
   }
+}
 
-  onProgress({ step: "saving_english", message: "Saving..." });
+async function failStep(
+  jobId: string,
+  leaseToken: string,
+  error: unknown,
+): Promise<void> {
+  const message = error instanceof Error ? error.message : "Book generation failed.";
+  const released = await releaseGenerationJobLease({
+    jobId,
+    leaseToken,
+    status: "failed",
+    error: message,
+    payloadPatch: {
+      progress: progress("error", message),
+    },
+  });
+  if (!released) {
+    console.error("[book_generation] could not record failed step after lease loss", {
+      jobId,
+      message,
+    });
+  }
+}
 
-  const settingsWithInferredGenre = {
-    ...generationSettings,
-    genres: englishDraft.content.genres,
-  };
+export async function advanceBookGenerationJob(
+  jobId: string,
+): Promise<AdvanceBookGenerationResult> {
+  const leaseToken = randomUUID();
+  const claim = await claimGenerationJobLease({
+    jobId,
+    lease: {
+      token: leaseToken,
+      expires_at: new Date(Date.now() + STEP_LEASE_MS).toISOString(),
+    },
+  });
+
+  if (claim.kind === "not_found") return { kind: "not_found" };
+  if (claim.kind === "busy") {
+    return { kind: "busy", retryAfterMs: claim.retryAfterMs };
+  }
+  if (claim.kind === "terminal") return { kind: "terminal" };
+
+  const job = claim.job;
+  const payload = job.payload as BookGenerationJobPayload;
 
   try {
-    let coverPath = initialCoverPath;
-    if (!coverPath && cover) {
-      coverPath = await uploadWorkCover(workId, cover);
-      await updateWorkCover(workId, coverPath);
+    if (job.type !== "book_generation" || !payload.workflow_settings) {
+      throw new Error("Invalid book-generation job payload.");
     }
 
-    const englishMetadata = buildGenerationMetadata({
-      settings: settingsWithInferredGenre,
-      generatedLanguages: allLanguages,
-      subtitle: englishDraft.subtitle,
-      description: englishDraft.description,
+    const settings = payload.workflow_settings;
+    const allLanguages = normalizeWorkflowLanguages(settings.languages);
+    const additionalLanguages = allLanguages.filter((language) => language !== SOURCE_LANGUAGE);
+    const generationSettings = settingsFromWorkflow({
+      topic: settings.topic,
+      reading_level: settings.reading_level,
+      length: settings.length,
+      include_quiz: settings.include_quiz,
     });
 
-    const englishEdition = await createEditionForWork({
-      workId,
-      input: {
-        ...englishDraft.content,
-        cover_image_url: coverPath,
-      },
-      status: "generating_tts",
-      generationMetadata: englishMetadata,
-    });
+    let english = await getEditionByWorkLanguage(job.workId, SOURCE_LANGUAGE);
+    if (!english) {
+      await updateProgress(
+        jobId,
+        leaseToken,
+        progress("generating_english", "Generating English book..."),
+      );
+      const draft = await generateEnglishBook({
+        settings: generationSettings,
+        includeQuiz: settings.include_quiz,
+        source: payload.source,
+      });
+      const metadata = buildGenerationMetadata({
+        settings: {
+          ...generationSettings,
+          genres: draft.content.genres,
+        },
+        generatedLanguages: allLanguages,
+        subtitle: draft.subtitle,
+        description: draft.description,
+      });
+      english = await createEditionForWork({
+        workId: job.workId,
+        input: {
+          ...draft.content,
+          cover_image_url: payload.cover_path ?? undefined,
+        },
+        status: "generating_tts",
+        generationMetadata: metadata,
+      });
+      await releaseStep({
+        jobId,
+        leaseToken,
+        nextProgress: progress("saving_english", "English edition saved."),
+      });
+      return { kind: "advanced" };
+    }
 
-    const englishLoaded = (await getBookWithContent(englishEdition.id)) ?? englishEdition;
-    const warnings: { language: string; error: string }[] = [];
-    const editions: { language: string; id: number }[] = [
-      { language: SOURCE_LANGUAGE, id: englishLoaded.id },
-    ];
+    const warnings = payload.warnings ?? [];
+    for (const language of additionalLanguages) {
+      const existing = await getEditionByWorkLanguage(job.workId, language);
+      const previousFailure = warnings.find((warning) => warning.language === language);
+      if (existing || previousFailure) continue;
 
-    if (additionalLanguages.length > 0) {
-      const translationResults = await Promise.allSettled(
-        additionalLanguages.map(async (language) => {
-          onProgress({
-            step: "translating",
-            language,
-            message: `Translating to ${languageLabel(language)}...`,
-          });
-
-          const translated = await withExponentialBackoff(
-            () =>
-              translateBookEdition({
-                source: englishLoaded,
-                targetLanguage: language,
-              }),
-            { maxAttempts: 3, label: `translate-${language}` },
-          );
-
-          const existing = await getEditionByWorkLanguage(workId, language);
-          const edition = existing
-            ? await replaceBookContent(existing.id, translated.content)
-            : await createEditionForWork({
-                workId,
-                input: translated.content,
-                status: "generating_tts",
-                sourceEditionId: englishLoaded.id,
-                generationMetadata: translated.metadata,
-              });
-
-          if (!edition) {
-            throw new Error(`Could not save ${language} edition.`);
-          }
-
-          if (translated.metadata) {
-            await updateEditionGenerationMetadata(edition.id, translated.metadata);
-          }
-
-          return { language, id: edition.id };
+      await updateProgress(
+        jobId,
+        leaseToken,
+        progress("translating", `Translating to ${languageLabel(language)}...`, {
+          language,
         }),
       );
 
-      for (let index = 0; index < translationResults.length; index += 1) {
-        const result = translationResults[index];
-        const language = additionalLanguages[index] ?? "unknown";
-        if (result.status === "fulfilled") {
-          editions.push(result.value);
-        } else {
-          const message =
-            result.reason instanceof Error
-              ? result.reason.message
-              : `Translation to ${language} failed.`;
-          warnings.push({ language, error: message });
-          const failedEdition = await getEditionByWorkLanguage(workId, language);
-          if (failedEdition) {
-            await updateEditionStatus(failedEdition.id, "failed", "translationError", message);
-          }
-          console.error(`Translation failed for ${language}:`, result.reason);
+      try {
+        const translated = await withExponentialBackoff(
+          () =>
+            translateBookEdition({
+              source: english,
+              targetLanguage: language,
+            }),
+          { maxAttempts: 3, label: `translate-${language}` },
+        );
+        const edition = await createEditionForWork({
+          workId: job.workId,
+          input: translated.content,
+          status: "generating_tts",
+          sourceEditionId: english.id,
+          generationMetadata: translated.metadata,
+        });
+        if (translated.metadata) {
+          await updateEditionGenerationMetadata(edition.id, translated.metadata);
         }
+        await releaseStep({
+          jobId,
+          leaseToken,
+          nextProgress: progress(
+            "translating",
+            `${languageLabel(language)} translation saved.`,
+            { language, edition_id: edition.id },
+          ),
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : `Translation to ${language} failed.`;
+        const nextWarnings = [
+          ...warningsWithoutLanguage(warnings, language),
+          { language, error: message },
+        ];
+        const failedEdition = await getEditionByWorkLanguage(job.workId, language);
+        if (failedEdition) {
+          await updateEditionStatus(
+            failedEdition.id,
+            "failed",
+            "translationError",
+            message,
+          );
+        }
+        await releaseStep({
+          jobId,
+          leaseToken,
+          nextProgress: progress(
+            "translating",
+            `${languageLabel(language)} translation failed; continuing.`,
+            { language },
+          ),
+          payloadPatch: { warnings: nextWarnings },
+        });
       }
+      return { kind: "advanced" };
     }
 
-    const sortedEditions = [...editions].sort((a, b) => {
-      if (a.language === SOURCE_LANGUAGE) return -1;
-      if (b.language === SOURCE_LANGUAGE) return 1;
-      return a.language.localeCompare(b.language);
-    });
+    const editions = (
+      await Promise.all(
+        allLanguages.map(async (language) => {
+          const edition = await getEditionByWorkLanguage(job.workId, language);
+          return edition ? { language, edition } : null;
+        }),
+      )
+    ).filter(
+      (
+        item,
+      ): item is {
+        language: string;
+        edition: NonNullable<Awaited<ReturnType<typeof getBookWithContent>>>;
+      } => item !== null,
+    );
 
-    for (const edition of sortedEditions) {
-      const loaded = await getBookWithContent(edition.id);
-      if (!loaded) {
-        throw new Error(`Could not load edition ${edition.id} (${edition.language}) for TTS.`);
+    for (const { language, edition: initialEdition } of editions) {
+      const edition = (await getBookWithContent(initialEdition.id)) ?? initialEdition;
+      const chunks = getBookTtsChunks(edition);
+      if (chunks.length === 0) {
+        throw new Error(`No readable text to synthesize for ${languageLabel(language)}.`);
       }
 
-      onProgress({
-        step: "generating_tts",
-        language: edition.language,
-        edition_id: edition.id,
-        message: `Generating audio (${languageLabel(edition.language)})...`,
-      });
-
-      await finalizeBookTtsForBook(loaded, {
-        throwOnError: true,
-        onProgress: ({ chunkIndex, chunkCount, voice }) => {
-          onProgress({
-            step: "generating_tts",
-            language: edition.language,
-            edition_id: edition.id,
-            chunk: chunkIndex,
-            voice,
-            message: `Generating audio (${languageLabel(edition.language)}) part ${chunkIndex + 1}/${chunkCount} (${voice})...`,
+      const apiKey = process.env.OPENAI_API_KEY?.trim();
+      const bucket = getBookAudioBucket();
+      if (!apiKey || !bucket) {
+        if (edition.status !== "published") {
+          await updateEditionStatus(edition.id, "published");
+          await releaseStep({
+            jobId,
+            leaseToken,
+            nextProgress: progress(
+              "generating_tts",
+              `Audio skipped for ${languageLabel(language)}; edition published.`,
+              { language, edition_id: edition.id },
+            ),
           });
-        },
-      });
+          return { kind: "advanced" };
+        }
+        continue;
+      }
+
+      const chunkIndex = nextMissingTtsChunkIndex(edition.ttsAudio ?? undefined, chunks.length);
+      if (chunkIndex !== null) {
+        await updateProgress(
+          jobId,
+          leaseToken,
+          progress(
+            "generating_tts",
+            `Generating audio (${languageLabel(language)}) part ${chunkIndex + 1}/${chunks.length}...`,
+            {
+              language,
+              edition_id: edition.id,
+              chunk: chunkIndex,
+            },
+          ),
+        );
+        const generated = await synthesizeBookTtsChunk({
+          book: edition,
+          apiKey,
+          chunkIndex,
+        });
+        const nextAudio = mergeBookTtsPart(
+          edition.ttsAudio ?? undefined,
+          chunkIndex,
+          generated.paths,
+        );
+        await updateBookTtsAudioProgress(edition.id, nextAudio);
+        await releaseStep({
+          jobId,
+          leaseToken,
+          nextProgress: progress(
+            "generating_tts",
+            `Audio saved (${languageLabel(language)}) part ${chunkIndex + 1}/${chunks.length}.`,
+            {
+              language,
+              edition_id: edition.id,
+              chunk: chunkIndex,
+            },
+          ),
+        });
+        return { kind: "advanced" };
+      }
+
+      if (!edition.ttsAudio) {
+        throw new Error(`TTS metadata is missing for ${languageLabel(language)}.`);
+      }
+      if (edition.status !== "published") {
+        await deleteOrphanTtsChunks(String(edition.id), chunks.length - 1);
+        await updateBookTtsAudio(edition.id, edition.ttsAudio);
+        await releaseStep({
+          jobId,
+          leaseToken,
+          nextProgress: progress(
+            "generating_tts",
+            `${languageLabel(language)} audio completed.`,
+            { language, edition_id: edition.id },
+          ),
+        });
+        return { kind: "advanced" };
+      }
     }
 
     const result = {
-      work_id: workId,
-      editions,
+      work_id: job.workId,
+      editions: editions.map(({ language, edition }) => ({
+        language,
+        id: edition.id,
+      })),
       ...(warnings.length > 0 ? { warnings } : {}),
     };
-
-    await updateGenerationJob(jobId, "succeeded", null, {
-      result,
-      progress: { step: "completed", message: "Book generation finished." },
-      heartbeat_at: new Date().toISOString(),
+    const released = await releaseGenerationJobLease({
+      jobId,
+      leaseToken,
+      status: "succeeded",
+      error: null,
+      payloadPatch: {
+        result,
+        warnings,
+        progress: progress("completed", "Book generation finished."),
+      },
     });
-
-    onProgress({
-      step: "completed",
-      work_id: workId,
-      editions,
-      ...(warnings.length > 0 ? { warnings } : {}),
-    });
-
-    return { workId, editions, warnings };
+    if (!released) {
+      throw new Error("Book generation completed after its lease was lost.");
+    }
+    return { kind: "advanced" };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Book generation failed.";
-    await updateGenerationJob(jobId, "failed", message, {
-      progress: { step: "error", message },
-      heartbeat_at: new Date().toISOString(),
+    console.error("[book_generation] resumable step failed", {
+      jobId,
+      error,
     });
-    onProgress({ step: "error", message });
-    throw error;
+    await failStep(jobId, leaseToken, error);
+    return { kind: "advanced" };
   }
 }

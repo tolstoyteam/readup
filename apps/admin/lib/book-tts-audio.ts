@@ -27,3 +27,14 @@ export function fullTtsChunkIndexes(tts: BookTtsAudio | undefined): number[] {
   }
   return [...new Set(out)].sort((a, b) => a - b);
 }
+
+export function nextMissingTtsChunkIndex(
+  tts: BookTtsAudio | undefined,
+  chunkCount: number,
+): number | null {
+  const complete = new Set(fullTtsChunkIndexes(tts));
+  for (let index = 0; index < chunkCount; index += 1) {
+    if (!complete.has(index)) return index;
+  }
+  return null;
+}

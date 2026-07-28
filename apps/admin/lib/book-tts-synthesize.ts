@@ -37,13 +37,133 @@ export type SynthesizeFullBookTtsOptions = {
   onProgress?: (event: TtsSynthesisProgress) => void;
 };
 
-async function signVoicePaths(paths: BookTtsVoicePaths): Promise<Partial<Record<TtsVoiceId, string>>> {
+export type SynthesizeBookTtsChunkResult = {
+  chunkIndex: number;
+  chunkCount: number;
+  paths: BookTtsVoicePaths;
+};
+
+async function signVoicePaths(
+  paths: BookTtsVoicePaths,
+): Promise<Partial<Record<TtsVoiceId, string>>> {
   const out: Partial<Record<TtsVoiceId, string>> = {};
   for (const voice of TTS_VOICE_IDS) {
     const url = await getBookAudioSignedUrl(paths[voice]);
     if (url) out[voice] = url;
   }
   return out;
+}
+
+export function getBookTtsChunks(book: BookWithContent): string[] {
+  const fullText = bookWithContentToSpeechText(book);
+  return chunkTextForTts(fullText, TTS_INPUT_MAX_CHARS);
+}
+
+async function synthesizeBookTtsChunkWithClient(args: {
+  book: BookWithContent;
+  chunks: string[];
+  chunkIndex: number;
+  openai: OpenAI;
+  onProgress?: (event: TtsSynthesisProgress) => void;
+}): Promise<SynthesizeBookTtsChunkResult> {
+  const { book, chunks, chunkIndex, openai, onProgress } = args;
+  const input = chunks[chunkIndex];
+  if (input === undefined) {
+    throw new TtsSynthesisError(`Invalid TTS chunk index ${chunkIndex}.`, {
+      bookId: book.id,
+      language: book.language,
+      chunkIndex,
+    });
+  }
+
+  const paths: Partial<BookTtsVoicePaths> = {};
+  for (const voice of TTS_VOICE_IDS) {
+    onProgress?.({ chunkIndex, chunkCount: chunks.length, voice });
+
+    const ctx = {
+      bookId: book.id,
+      language: book.language,
+      chunkIndex,
+      voice,
+    };
+
+    try {
+      const buffer = await withExponentialBackoff(
+        async () => {
+          const mp3 = await openai.audio.speech.create({
+            model: TTS_MODEL,
+            voice,
+            input,
+            instructions: TTS_INSTRUCTIONS,
+            response_format: "mp3",
+          });
+          return Buffer.from(await mp3.arrayBuffer());
+        },
+        {
+          label: `tts book=${book.id} lang=${book.language} chunk=${chunkIndex} voice=${voice}`,
+          onRetry: ({ attempt }) => {
+            logTtsError({ ...ctx, attempt }, new Error("retrying TTS request"));
+          },
+        },
+      );
+
+      const uploaded = await withExponentialBackoff(
+        async () => {
+          const result = await uploadBookTtsAudio({
+            bookId: String(book.id),
+            chunkIndex,
+            voice,
+            buffer,
+          });
+          if (!result.ok) {
+            throw new Error(
+              `Storage upload failed for part ${chunkIndex + 1}, voice ${voice}: ${result.message}`,
+            );
+          }
+          return result;
+        },
+        { label: `tts-upload book=${book.id} chunk=${chunkIndex} voice=${voice}` },
+      );
+
+      paths[voice] = uploaded.path;
+    } catch (error) {
+      logTtsError(ctx, error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : `TTS failed for chunk ${chunkIndex + 1}, voice ${voice}`;
+      throw new TtsSynthesisError(message, ctx, error);
+    }
+  }
+
+  return {
+    chunkIndex,
+    chunkCount: chunks.length,
+    paths: paths as BookTtsVoicePaths,
+  };
+}
+
+export async function synthesizeBookTtsChunk(args: {
+  book: BookWithContent;
+  apiKey: string;
+  chunkIndex: number;
+  onProgress?: (event: TtsSynthesisProgress) => void;
+}): Promise<SynthesizeBookTtsChunkResult> {
+  const chunks = getBookTtsChunks(args.book);
+  if (chunks.length === 0) {
+    throw new TtsSynthesisError("No readable text to synthesize.", {
+      bookId: args.book.id,
+      language: args.book.language,
+    });
+  }
+
+  return synthesizeBookTtsChunkWithClient({
+    book: args.book,
+    chunks,
+    chunkIndex: args.chunkIndex,
+    openai: new OpenAI({ apiKey: args.apiKey }),
+    onProgress: args.onProgress,
+  });
 }
 
 /**
@@ -54,8 +174,7 @@ export async function synthesizeFullBookTts(
   apiKey: string,
   options: SynthesizeFullBookTtsOptions = {},
 ): Promise<{ tts_audio: BookTtsAudio; previewUrls: TtsPreviewUrlsByChunk }> {
-  const fullText = bookWithContentToSpeechText(book);
-  const chunks = chunkTextForTts(fullText, TTS_INPUT_MAX_CHARS);
+  const chunks = getBookTtsChunks(book);
   if (chunks.length === 0) {
     throw new TtsSynthesisError("No readable text to synthesize.", {
       bookId: book.id,
@@ -68,71 +187,15 @@ export async function synthesizeFullBookTts(
   const previewUrls: TtsPreviewUrlsByChunk = {};
 
   for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-    const input = chunks[chunkIndex]!;
-    const paths: Partial<BookTtsVoicePaths> = {};
-
-    for (const voice of TTS_VOICE_IDS) {
-      options.onProgress?.({ chunkIndex, chunkCount: chunks.length, voice });
-
-      const ctx = {
-        bookId: book.id,
-        language: book.language,
-        chunkIndex,
-        voice,
-      };
-
-      try {
-        const buffer = await withExponentialBackoff(
-          async () => {
-            const mp3 = await openai.audio.speech.create({
-              model: TTS_MODEL,
-              voice,
-              input,
-              instructions: TTS_INSTRUCTIONS,
-              response_format: "mp3",
-            });
-            return Buffer.from(await mp3.arrayBuffer());
-          },
-          {
-            label: `tts book=${book.id} lang=${book.language} chunk=${chunkIndex} voice=${voice}`,
-            onRetry: ({ attempt }) => {
-              logTtsError({ ...ctx, attempt }, new Error("retrying TTS request"));
-            },
-          },
-        );
-
-        const uploaded = await withExponentialBackoff(
-          async () => {
-            const result = await uploadBookTtsAudio({
-              bookId: String(book.id),
-              chunkIndex,
-              voice,
-              buffer,
-            });
-            if (!result.ok) {
-              throw new Error(
-                `Storage upload failed for part ${chunkIndex + 1}, voice ${voice}: ${result.message}`,
-              );
-            }
-            return result;
-          },
-          { label: `tts-upload book=${book.id} chunk=${chunkIndex} voice=${voice}` },
-        );
-
-        paths[voice] = uploaded.path;
-      } catch (error) {
-        logTtsError(ctx, error);
-        const message =
-          error instanceof Error
-            ? error.message
-            : `TTS failed for chunk ${chunkIndex + 1}, voice ${voice}`;
-        throw new TtsSynthesisError(message, ctx, error);
-      }
-    }
-
-    const voicePaths = paths as BookTtsVoicePaths;
-    tts = mergeBookTtsPart(tts, chunkIndex, voicePaths);
-    previewUrls[String(chunkIndex)] = await signVoicePaths(voicePaths);
+    const chunk = await synthesizeBookTtsChunkWithClient({
+      book,
+      chunks,
+      chunkIndex,
+      openai,
+      onProgress: options.onProgress,
+    });
+    tts = mergeBookTtsPart(tts, chunkIndex, chunk.paths);
+    previewUrls[String(chunkIndex)] = await signVoicePaths(chunk.paths);
   }
 
   const completed = fullTtsChunkIndexes(tts!);
@@ -150,6 +213,5 @@ export async function synthesizeFullBookTts(
 }
 
 export function getTtsChunkCount(book: BookWithContent): number {
-  const fullText = bookWithContentToSpeechText(book);
-  return chunkTextForTts(fullText, TTS_INPUT_MAX_CHARS).length;
+  return getBookTtsChunks(book).length;
 }

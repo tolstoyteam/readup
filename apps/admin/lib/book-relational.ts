@@ -27,6 +27,11 @@ import { genreRuLabel, isBookGenre } from "@readup/db";
 import { deleteAllBookTtsFromStorage } from "@/lib/book-audio-storage";
 import type { BookContentInput } from "@/lib/book-content";
 import { removeCoverFromStorage } from "@/lib/cover-storage";
+import type {
+  BookGenerationJobPayload,
+  GenerationJobLease,
+} from "@/lib/book-generation/types";
+import { generationJobLeaseRetryAfterMs } from "@/lib/book-generation/job-lease";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -330,6 +335,20 @@ export async function updateBookTtsAudio(
     .where(eq(booksTable.id, bookId));
 }
 
+export async function updateBookTtsAudioProgress(
+  bookId: number,
+  ttsAudio: BookTtsAudio,
+): Promise<void> {
+  await db
+    .update(booksTable)
+    .set({
+      ttsAudio,
+      ttsError: null,
+      status: "generating_tts",
+    })
+    .where(eq(booksTable.id, bookId));
+}
+
 export async function updateEditionStatus(
   bookId: number,
   status: BookEditionStatus,
@@ -355,38 +374,136 @@ export async function getGenerationJob(jobId: string) {
   return job ?? null;
 }
 
-export async function patchGenerationJobPayload(
-  jobId: string,
-  patch: Record<string, unknown>,
-): Promise<void> {
-  const job = await getGenerationJob(jobId);
-  if (!job) throw new Error("Generation job not found");
-  const current = (job.payload ?? {}) as Record<string, unknown>;
-  await db
-    .update(generationJobsTable)
-    .set({
-      payload: { ...current, ...patch },
-      updatedAt: new Date(),
-    })
-    .where(eq(generationJobsTable.id, jobId));
+export type GenerationJobLeaseClaim =
+  | { kind: "claimed"; job: NonNullable<Awaited<ReturnType<typeof getGenerationJob>>> }
+  | { kind: "busy"; retryAfterMs: number }
+  | { kind: "terminal"; job: NonNullable<Awaited<ReturnType<typeof getGenerationJob>>> }
+  | { kind: "not_found" };
+
+export async function claimGenerationJobLease(args: {
+  jobId: string;
+  lease: GenerationJobLease;
+}): Promise<GenerationJobLeaseClaim> {
+  return db.transaction(async (tx) => {
+    const [job] = await tx
+      .select()
+      .from(generationJobsTable)
+      .where(eq(generationJobsTable.id, args.jobId))
+      .limit(1)
+      .for("update");
+
+    if (!job) return { kind: "not_found" } as const;
+    if (job.status === "succeeded") return { kind: "terminal", job } as const;
+
+    const payload = (job.payload ?? {}) as BookGenerationJobPayload;
+    const retryAfterMs = generationJobLeaseRetryAfterMs(payload.lease);
+    if (retryAfterMs !== null) {
+      return {
+        kind: "busy",
+        retryAfterMs,
+      } as const;
+    }
+
+    const restarting = job.status === "queued" || job.status === "failed";
+    const nextPayload: BookGenerationJobPayload = {
+      ...payload,
+      lease: args.lease,
+      heartbeat_at: new Date().toISOString(),
+    };
+    await tx
+      .update(generationJobsTable)
+      .set({
+        status: "running",
+        attemptCount: restarting ? job.attemptCount + 1 : job.attemptCount,
+        lastError: null,
+        payload: nextPayload as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(generationJobsTable.id, args.jobId));
+
+    return {
+      kind: "claimed",
+      job: {
+        ...job,
+        status: "running",
+        attemptCount: restarting ? job.attemptCount + 1 : job.attemptCount,
+        lastError: null,
+        payload: nextPayload as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      },
+    } as const;
+  });
 }
 
-export type GenerationJobProgressUpdate = {
-  step: string;
-  message: string;
-  language?: string;
-  edition_id?: number;
-  chunk?: number;
-  voice?: string;
-};
-
-export async function updateGenerationJobProgress(
+export async function patchClaimedGenerationJob(
   jobId: string,
-  progress: GenerationJobProgressUpdate,
-): Promise<void> {
-  await patchGenerationJobPayload(jobId, {
-    progress,
-    heartbeat_at: new Date().toISOString(),
+  leaseToken: string,
+  patch: Partial<BookGenerationJobPayload>,
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [job] = await tx
+      .select()
+      .from(generationJobsTable)
+      .where(eq(generationJobsTable.id, jobId))
+      .limit(1)
+      .for("update");
+    if (!job) return false;
+
+    const payload = (job.payload ?? {}) as BookGenerationJobPayload;
+    if (payload.lease?.token !== leaseToken) return false;
+
+    await tx
+      .update(generationJobsTable)
+      .set({
+        payload: {
+          ...payload,
+          ...patch,
+          lease: payload.lease,
+          heartbeat_at: new Date().toISOString(),
+        } as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(generationJobsTable.id, jobId));
+    return true;
+  });
+}
+
+export async function releaseGenerationJobLease(args: {
+  jobId: string;
+  leaseToken: string;
+  status?: GenerationJobStatus;
+  error?: string | null;
+  payloadPatch?: Partial<BookGenerationJobPayload>;
+}): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [job] = await tx
+      .select()
+      .from(generationJobsTable)
+      .where(eq(generationJobsTable.id, args.jobId))
+      .limit(1)
+      .for("update");
+    if (!job) return false;
+
+    const payload = (job.payload ?? {}) as BookGenerationJobPayload;
+    if (payload.lease?.token !== args.leaseToken) return false;
+
+    const payloadWithoutLease = { ...payload };
+    delete payloadWithoutLease.lease;
+    const nextPayload = {
+      ...payloadWithoutLease,
+      ...(args.payloadPatch ?? {}),
+      heartbeat_at: new Date().toISOString(),
+    };
+    await tx
+      .update(generationJobsTable)
+      .set({
+        status: args.status ?? job.status,
+        lastError: args.error === undefined ? job.lastError : args.error,
+        payload: nextPayload as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(generationJobsTable.id, args.jobId));
+    return true;
   });
 }
 

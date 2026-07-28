@@ -1,13 +1,11 @@
 import "server-only";
 
-import { after } from "next/server";
 import { requireAdminApi } from "@/lib/admin-auth";
 import {
   SUPPORTED_SOURCE_DESCRIPTION,
   extractSourceText,
   truncateSourceText,
 } from "@/lib/book-source-text";
-import { runBookGenerationWorkflowForJob } from "@/lib/book-generation/orchestrate";
 import {
   parseWorkflowSettings,
   type BookGenerationJobPayload,
@@ -16,8 +14,7 @@ import { createBookWork, createGenerationJob, updateWorkCover } from "@/lib/book
 import { parseCoverUpload, uploadWorkCover } from "@/lib/cover-storage";
 
 export const runtime = "nodejs";
-/** Full pipeline including TTS may run in `after()`; set as high as your Vercel plan allows. */
-export const maxDuration = 800;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const authError = await requireAdminApi();
@@ -109,10 +106,6 @@ export async function POST(request: Request) {
     workId: work.id,
     type: "book_generation",
     payload: payload as unknown as Record<string, unknown>,
-  });
-
-  after(async () => {
-    await runBookGenerationWorkflowForJob(job.id);
   });
 
   return Response.json(

@@ -32,26 +32,6 @@ export type GeneratedEnglishDraft = {
   description?: string;
 };
 
-export type ProgressEvent =
-  | { step: "generating_english"; message: string }
-  | { step: "saving_english"; message: string }
-  | { step: "translating"; language: string; message: string }
-  | {
-      step: "generating_tts";
-      language: string;
-      message: string;
-      chunk?: number;
-      voice?: string;
-      edition_id?: number;
-    }
-  | {
-      step: "completed";
-      work_id: string;
-      editions: { language: string; id: number }[];
-      warnings?: { language: string; error: string }[];
-    }
-  | { step: "error"; message: string; failed_language?: string };
-
 export type GenerationJobProgress = {
   step: string;
   message: string;
@@ -67,6 +47,11 @@ export type GenerationJobResult = {
   warnings?: { language: string; error: string }[];
 };
 
+export type GenerationJobLease = {
+  token: string;
+  expires_at: string;
+};
+
 export type BookGenerationJobPayload = {
   workflow_settings: WorkflowSettings;
   source?: { filename: string; text: string };
@@ -74,9 +59,9 @@ export type BookGenerationJobPayload = {
   progress?: GenerationJobProgress | null;
   heartbeat_at?: string | null;
   result?: GenerationJobResult | null;
+  warnings?: { language: string; error: string }[];
+  lease?: GenerationJobLease | null;
 };
-
-export type ProgressCallback = (event: ProgressEvent) => void;
 
 export function normalizeWorkflowLanguages(languages: string[]): string[] {
   const additional = languages

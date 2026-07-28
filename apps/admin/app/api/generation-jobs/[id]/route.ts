@@ -2,11 +2,7 @@ import "server-only";
 
 import { requireAdminApi } from "@/lib/admin-auth";
 import { getGenerationJob } from "@/lib/book-relational";
-import type {
-  BookGenerationJobPayload,
-  GenerationJobProgress,
-  GenerationJobResult,
-} from "@/lib/book-generation/types";
+import { generationJobResponse } from "@/lib/book-generation/job-response";
 
 function parseId(param: string): string | null {
   const trimmed = param.trim();
@@ -32,21 +28,5 @@ export async function GET(
     return Response.json({ error: "Not found." }, { status: 404 });
   }
 
-  const payload = (job.payload ?? {}) as BookGenerationJobPayload;
-  const progress = (payload.progress ?? null) as GenerationJobProgress | null;
-  const result = (payload.result ?? null) as GenerationJobResult | null;
-
-  return Response.json({
-    id: job.id,
-    work_id: job.workId,
-    type: job.type,
-    status: job.status,
-    attempt_count: job.attemptCount,
-    last_error: job.lastError,
-    progress,
-    heartbeat_at: payload.heartbeat_at ?? null,
-    result,
-    created_at: job.createdAt,
-    updated_at: job.updatedAt,
-  });
+  return Response.json(generationJobResponse(job));
 }

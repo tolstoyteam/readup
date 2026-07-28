@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/book-generation/chapter-length.test.ts lib/retry.test.ts lib/book-tts-text.test.ts lib/book-tts-audio.test.ts"
+    "test": "tsx --test lib/book-generation/chapter-length.test.ts lib/book-generation/job-lease.test.ts lib/retry.test.ts lib/book-tts-text.test.ts lib/book-tts-audio.test.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.65",

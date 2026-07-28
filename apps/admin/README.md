@@ -44,15 +44,26 @@ is optional for generated TTS storage.
 
 ## Book generation on Vercel
 
-AI book generation runs as a **background job** (`generation_jobs`) started from
-`POST /api/books/generate-workflow` (returns `202` + `job_id`). The admin UI polls
-`GET /api/generation-jobs/[id]` for progress.
+AI book generation is a resumable sequence of bounded Vercel Function invocations:
 
-- Set `maxDuration` on [`app/api/books/generate-workflow/route.ts`](app/api/books/generate-workflow/route.ts)
-  as high as your Vercel plan allows (default in repo: 800 seconds).
-- Enable **Fluid Compute** on the admin project for longer, more reliable function runs.
-- If jobs remain `running` after failures, check function logs for timeouts and query
-  `generation_jobs` where `status = 'running'` and `updated_at` is stale.
+1. `POST /api/books/generate-workflow` validates input, creates the work and
+   `generation_jobs` row, then returns `202` + `job_id`.
+2. The admin browser repeatedly calls
+   `POST /api/generation-jobs/[id]/advance`.
+3. Each call claims a short database lease and completes one durable step:
+   English generation, one translation, one edition audio chunk, edition
+   finalization, or job finalization.
+4. Completed editions and audio chunks are stored immediately. A timed-out or
+   interrupted job resumes from the first missing step instead of regenerating
+   completed audio.
+
+The advance route uses the Vercel Hobby-compatible 300-second maximum. Keep the
+generation modal open while the browser advances the job. If the tab closes or a
+step fails, open the modal again and use **Resume generation**; the job id is
+stored locally in the admin browser.
+
+`GET /api/generation-jobs/[id]` remains available for status inspection. Supabase
+stores job state and audio files but does not execute the pipeline.
 
 ## Auth
 

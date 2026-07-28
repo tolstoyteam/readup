@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const SOURCE_ACCEPT = ".txt,.md,.markdown,application/pdf,text/plain,text/markdown";
 const SOURCE_LANGUAGE = "en";
+const ACTIVE_GENERATION_JOB_KEY = "readup:book-generation-job:v1";
 
 const LENGTH_LABELS: Record<(typeof BOOK_LENGTHS)[number], string> = {
   short: "Short",
@@ -48,7 +49,7 @@ type Props = {
   onClose: () => void;
 };
 
-type GenerationJobPollResponse = {
+type GenerationJobResponse = {
   id: string;
   status: "queued" | "running" | "succeeded" | "failed";
   last_error: string | null;
@@ -58,23 +59,52 @@ type GenerationJobPollResponse = {
     editions: { language: string; id: number }[];
     warnings?: { language: string; error: string }[];
   } | null;
+  busy?: boolean;
+  retry_after_ms?: number;
 };
 
-async function pollGenerationJob(
+function saveActiveGenerationJob(jobId: string) {
+  try {
+    window.localStorage.setItem(ACTIVE_GENERATION_JOB_KEY, jobId);
+  } catch {
+    // Resuming still works in the current tab when storage is unavailable.
+  }
+}
+
+function loadActiveGenerationJob(): string | null {
+  try {
+    return window.localStorage.getItem(ACTIVE_GENERATION_JOB_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearActiveGenerationJob() {
+  try {
+    window.localStorage.removeItem(ACTIVE_GENERATION_JOB_KEY);
+  } catch {
+    // The completed job no longer appears in component state either way.
+  }
+}
+
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runGenerationJob(
   jobId: string,
   onMessage: (message: string) => void,
-): Promise<GenerationJobPollResponse> {
-  const maxWaitMs = 60 * 60 * 1000;
-  const start = Date.now();
-  let intervalMs = 1500;
-
-  while (Date.now() - start < maxWaitMs) {
-    const res = await fetch(`/api/generation-jobs/${jobId}`);
+): Promise<GenerationJobResponse> {
+  while (true) {
+    const res = await fetch(`/api/generation-jobs/${jobId}/advance`, {
+      method: "POST",
+      cache: "no-store",
+    });
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(data.error ?? "Could not load generation status.");
+      throw new Error(data.error ?? `Generation step failed. Job id: ${jobId}.`);
     }
-    const data = (await res.json()) as GenerationJobPollResponse;
+    const data = (await res.json()) as GenerationJobResponse;
     if (data.progress?.message) {
       onMessage(data.progress.message);
     }
@@ -82,13 +112,12 @@ async function pollGenerationJob(
     if (data.status === "failed") {
       throw new Error(data.last_error ?? "Book generation failed.");
     }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-    intervalMs = Math.min(5000, intervalMs + 250);
+    if (data.busy) {
+      await wait(Math.min(Math.max(data.retry_after_ms ?? 1000, 500), 5000));
+    } else {
+      await wait(150);
+    }
   }
-
-  throw new Error(
-    `Generation was interrupted or is still running. Job id: ${jobId}. Check Books or try again later.`,
-  );
 }
 
 export function GenerateBookModal({ open, onClose }: Props) {
@@ -110,6 +139,7 @@ export function GenerateBookModal({ open, onClose }: Props) {
   const [warnings, setWarnings] = useState<{ language: string; error: string }[]>([]);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resumableJobId, setResumableJobId] = useState<string | null>(null);
 
   const topicInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -118,6 +148,10 @@ export function GenerateBookModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     topicInputRef.current?.focus();
+    const frame = window.requestAnimationFrame(() => {
+      setResumableJobId(loadActiveGenerationJob());
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [open]);
 
   useEffect(() => {
@@ -152,6 +186,35 @@ export function GenerateBookModal({ open, onClose }: Props) {
     if (isSubmitting) return;
     resetState();
     onClose();
+  };
+
+  const continueGeneration = async (jobId: string) => {
+    const job = await runGenerationJob(jobId, setProgressMessage);
+    if (job.result?.warnings?.length) {
+      setWarnings(job.result.warnings);
+    }
+    clearActiveGenerationJob();
+    setResumableJobId(null);
+    resetState();
+    onClose();
+    router.push("/books");
+    router.refresh();
+  };
+
+  const handleResume = async () => {
+    if (!resumableJobId) return;
+    setError(null);
+    setWarnings([]);
+    setIsSubmitting(true);
+    setProgressMessage("Resuming generation...");
+    try {
+      await continueGeneration(resumableJobId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Book generation failed.");
+      setProgressMessage(null);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -197,15 +260,9 @@ export function GenerateBookModal({ open, onClose }: Props) {
         throw new Error("Server did not return a generation job id.");
       }
 
-      const job = await pollGenerationJob(started.job_id, setProgressMessage);
-      if (job.result?.warnings?.length) {
-        setWarnings(job.result.warnings);
-      }
-      resetState();
-      onClose();
-      router.push("/books");
-      router.refresh();
-      void job;
+      saveActiveGenerationJob(started.job_id);
+      setResumableJobId(started.job_id);
+      await continueGeneration(started.job_id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Book generation failed.");
       setProgressMessage(null);
@@ -366,17 +423,26 @@ export function GenerateBookModal({ open, onClose }: Props) {
             </Alert>
           ) : null}
 
+          {resumableJobId && !isSubmitting ? (
+            <Alert>
+              <AlertTitle>Unfinished generation found</AlertTitle>
+              <AlertDescription>
+                Resume the saved job from its last completed edition or audio part.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           {warnings.length > 0 ? (
             <Alert variant="destructive">
               <AlertTitle>Some translations failed</AlertTitle>
               <AlertDescription>
-              <ul className="mt-1 list-disc pl-5">
-                {warnings.map((warning) => (
-                  <li key={warning.language}>
-                    {warning.language}: {warning.error}
-                  </li>
-                ))}
-              </ul>
+                <ul className="mt-1 list-disc pl-5">
+                  {warnings.map((warning) => (
+                    <li key={warning.language}>
+                      {warning.language}: {warning.error}
+                    </li>
+                  ))}
+                </ul>
               </AlertDescription>
             </Alert>
           ) : null}
@@ -396,6 +462,11 @@ export function GenerateBookModal({ open, onClose }: Props) {
             >
               Cancel
             </Button>
+            {resumableJobId && !isSubmitting ? (
+              <Button type="button" variant="outline" onClick={handleResume}>
+                Resume generation
+              </Button>
+            ) : null}
             <Button
               type="submit"
               disabled={isSubmitting}
