@@ -1,24 +1,37 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { deleteWorkById } from "@/lib/book-relational";
+import { deleteWorkById, isWorkUuid } from "@/lib/book-relational";
 import { requireAdminPage } from "@/lib/admin-auth";
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+export type DeleteBookState =
+  | { ok: true }
+  | { ok: false; error: string };
 
-export async function deleteBook(formData: FormData) {
-  await requireAdminPage();
+export async function deleteBook(
+  _prevState: DeleteBookState | null,
+  formData: FormData,
+): Promise<DeleteBookState> {
+  try {
+    await requireAdminPage();
 
-  const workId = formData.get("workId");
-  if (typeof workId !== "string" || !UUID_RE.test(workId)) {
-    throw new Error("Invalid book id");
+    const workId = formData.get("workId");
+    if (typeof workId !== "string" || !isWorkUuid(workId)) {
+      return { ok: false, error: "Invalid book id" };
+    }
+
+    const result = await deleteWorkById(workId);
+    if (!result) {
+      return { ok: false, error: "Book not found" };
+    }
+
+    revalidatePath("/books");
+    return { ok: true };
+  } catch (e) {
+    console.error("deleteBook:", e);
+    return {
+      ok: false,
+      error: "Failed to delete book. Please try again.",
+    };
   }
-
-  const result = await deleteWorkById(workId);
-  if (!result) {
-    throw new Error("Book not found");
-  }
-
-  revalidatePath("/books");
 }

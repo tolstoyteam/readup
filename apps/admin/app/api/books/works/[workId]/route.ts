@@ -1,8 +1,5 @@
 import { requireAdminApi } from "@/lib/admin-auth";
-import { deleteWorkById } from "@/lib/book-relational";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { deleteWorkById, isWorkUuid } from "@/lib/book-relational";
 
 export async function DELETE(
   _request: Request,
@@ -12,7 +9,7 @@ export async function DELETE(
   if (authError) return authError;
 
   const { workId } = await context.params;
-  if (!UUID_RE.test(workId)) {
+  if (!isWorkUuid(workId)) {
     return Response.json({ error: "Invalid work id" }, { status: 400 });
   }
 

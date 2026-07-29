@@ -77,8 +77,11 @@ export async function removeCoverFromStorage(path: string): Promise<void> {
   try {
     const supabase = getSupabaseAdmin();
     const bucket = getBookCoversBucket();
-    await supabase.storage.from(bucket).remove([path]);
-  } catch {
-    /* best-effort */
+    const { error } = await supabase.storage.from(bucket).remove([path]);
+    if (error) {
+      console.error("removeCoverFromStorage:", path, error);
+    }
+  } catch (e) {
+    console.error("removeCoverFromStorage:", path, e);
   }
 }

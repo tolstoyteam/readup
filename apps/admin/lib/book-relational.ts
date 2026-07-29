@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   bookGenresTable,
@@ -11,6 +11,7 @@ import {
   quizAnswersTable,
   quizQuestionsTable,
   quizzesTable,
+  readingDailyLogTable,
   userLibraryTable,
   userWorkLibraryTable,
   type BookEditionStatus,
@@ -35,8 +36,13 @@ import { generationJobLeaseRetryAfterMs } from "@/lib/book-generation/job-lease"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Returns true when `id` is a canonical UUID (work / stable_id shape). */
+export function isWorkUuid(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
 function stableIdFromEditorId(id: string | undefined): string | undefined {
-  return id && UUID_RE.test(id) ? id : undefined;
+  return id && isWorkUuid(id) ? id : undefined;
 }
 
 export type BookBlock = {
@@ -947,10 +953,13 @@ export async function deleteWorkById(workId: string): Promise<DeleteWorkResult |
     .where(eq(booksTable.workId, workId));
 
   const editionIds = editions.map((edition) => edition.id);
-  const coverPath =
-    work.coverImageUrl ??
-    editions.find((edition) => edition.coverImageUrl)?.coverImageUrl ??
-    null;
+  const coverPaths = [
+    ...new Set(
+      [work.coverImageUrl, ...editions.map((edition) => edition.coverImageUrl)].filter(
+        (path): path is string => typeof path === "string" && path.length > 0,
+      ),
+    ),
+  ];
 
   await db.transaction(async (tx) => {
     if (editionIds.length > 0) {
@@ -958,12 +967,40 @@ export async function deleteWorkById(workId: string): Promise<DeleteWorkResult |
         .delete(userLibraryTable)
         .where(inArray(userLibraryTable.bookId, editionIds.map(String)));
     }
+
+    // Soft jsonb reference — no FK; scrub deleted work ids from analytics rows.
+    const logRows = await tx
+      .select({
+        userId: readingDailyLogTable.userId,
+        activityDate: readingDailyLogTable.activityDate,
+        touchedWorkIds: readingDailyLogTable.touchedWorkIds,
+      })
+      .from(readingDailyLogTable)
+      .where(
+        sql`${readingDailyLogTable.touchedWorkIds} @> ${JSON.stringify([workId])}::jsonb`,
+      );
+
+    for (const row of logRows) {
+      const nextIds = row.touchedWorkIds.filter((id) => id !== workId);
+      if (nextIds.length === row.touchedWorkIds.length) continue;
+      await tx
+        .update(readingDailyLogTable)
+        .set({
+          touchedWorkIds: nextIds,
+          booksTouched: nextIds.length,
+        })
+        .where(
+          and(
+            eq(readingDailyLogTable.userId, row.userId),
+            eq(readingDailyLogTable.activityDate, row.activityDate),
+          ),
+        );
+    }
+
     await tx.delete(bookWorksTable).where(eq(bookWorksTable.id, workId));
   });
 
-  if (coverPath) {
-    await removeCoverFromStorage(coverPath);
-  }
+  await Promise.all(coverPaths.map((path) => removeCoverFromStorage(path)));
   await Promise.all(
     editionIds.map((id) => deleteAllBookTtsFromStorage(String(id))),
   );
