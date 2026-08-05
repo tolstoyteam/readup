@@ -7,7 +7,7 @@ import { useFonts } from "expo-font";
 import { router } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
@@ -49,7 +49,7 @@ export default function SettingsScreen() {
   const colors = useReadupColors();
   const { preference, setPreference } = useThemePreference();
   const { language, setLanguage, t } = useInterfaceLanguage();
-  const { user, updateEmail, updatePassword, signOut } = useAuth();
+  const { user, updateEmail, updatePassword, signOut, deleteAccount } = useAuth();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -64,6 +64,7 @@ export default function SettingsScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const emailEnabled = useMemo(() => hasEmailIdentity(user), [user]);
 
@@ -144,6 +145,20 @@ export default function SettingsScreen() {
     router.replace("/login");
   }
 
+  async function deleteAccountPermanently() {
+    setDeletingAccount(true);
+    try {
+      const { error } = await deleteAccount();
+      if (error) {
+        Alert.alert(t("settings.deleteFailedTitle"), t("settings.deleteFailedBody"));
+        return;
+      }
+      router.replace("/login");
+    } finally {
+      setDeletingAccount(false);
+    }
+  }
+
   function onDeleteAccount() {
     Alert.alert(
       t("settings.deleteAccountAlertTitle"),
@@ -153,12 +168,7 @@ export default function SettingsScreen() {
         {
           text: t("settings.deleteAccount"),
           style: "destructive",
-          onPress: () => {
-            Alert.alert(
-              t("settings.deleteUnavailableTitle"),
-              t("settings.deleteUnavailableBody"),
-            );
-          },
+          onPress: () => void deleteAccountPermanently(),
         },
       ],
     );
@@ -464,6 +474,8 @@ export default function SettingsScreen() {
 
           <Pressable
             accessibilityRole="button"
+            accessibilityState={{ disabled: deletingAccount, busy: deletingAccount }}
+            disabled={deletingAccount}
             onPress={onDeleteAccount}
             className="mt-3 items-center justify-center rounded-[100px] border px-4 py-3 active:opacity-80"
             style={{
@@ -471,12 +483,16 @@ export default function SettingsScreen() {
               backgroundColor: "transparent",
             }}
           >
-            <Text
-              className="text-[18px] font-medium tracking-[-0.72px]"
-              style={{ fontFamily: "Inter_500Medium", color: "#DC2626" }}
-            >
-              {t("settings.deleteAccount")}
-            </Text>
+            {deletingAccount ? (
+              <ActivityIndicator color="#DC2626" />
+            ) : (
+              <Text
+                className="text-[18px] font-medium tracking-[-0.72px]"
+                style={{ fontFamily: "Inter_500Medium", color: "#DC2626" }}
+              >
+                {t("settings.deleteAccount")}
+              </Text>
+            )}
           </Pressable>
         </View>
       </ScrollView>

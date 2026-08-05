@@ -223,9 +223,9 @@ const baseTranslations = {
     "settings.deleteAccountAlertTitle": "Удалить аккаунт?",
     "settings.deleteAccountBody":
       "Удаление аккаунта необратимо. Это действие удалит ваши данные.",
-    "settings.deleteUnavailableBody":
-      "Чтобы удалить аккаунт безопасно, нужна серверная функция Supabase (Edge Function) с правами администратора. Мы можем подключить её следующим шагом.",
-    "settings.deleteUnavailableTitle": "Функция пока не подключена",
+    "settings.deleteFailedBody":
+      "Аккаунт не был удалён. Проверьте подключение и попробуйте ещё раз.",
+    "settings.deleteFailedTitle": "Не удалось удалить аккаунт",
     "settings.dangerZone": "Опасная зона",
     "settings.emailInvalidBody": "Пожалуйста, введите корректный адрес.",
     "settings.emailInvalidTitle": "Некорректный email",
@@ -507,9 +507,9 @@ const baseTranslations = {
     "settings.deleteAccountAlertTitle": "Delete account?",
     "settings.deleteAccountBody":
       "Deleting your account cannot be undone. This action will remove your data.",
-    "settings.deleteUnavailableBody":
-      "A Supabase Edge Function with admin privileges is needed to delete accounts safely. We can connect it next.",
-    "settings.deleteUnavailableTitle": "Not connected yet",
+    "settings.deleteFailedBody":
+      "Your account was not deleted. Check your connection and try again.",
+    "settings.deleteFailedTitle": "Could not delete account",
     "settings.dangerZone": "Danger zone",
     "settings.emailInvalidBody": "Please enter a valid address.",
     "settings.emailInvalidTitle": "Invalid email",
@@ -799,9 +799,9 @@ export const spanishTranslations: Partial<Record<TranslationKey, string>> = {
   "settings.deleteAccountAlertTitle": "¿Eliminar cuenta?",
   "settings.deleteAccountBody":
     "Eliminar tu cuenta no se puede deshacer. Esta acción eliminará tus datos.",
-  "settings.deleteUnavailableBody":
-    "Para eliminar cuentas de forma segura se necesita una función Edge de Supabase con permisos de administrador. Podemos conectarla después.",
-  "settings.deleteUnavailableTitle": "Aún no está conectado",
+  "settings.deleteFailedBody":
+    "Tu cuenta no se eliminó. Comprueba la conexión e inténtalo de nuevo.",
+  "settings.deleteFailedTitle": "No se pudo eliminar la cuenta",
   "settings.dangerZone": "Zona peligrosa",
   "settings.emailInvalidBody": "Introduce una dirección válida.",
   "settings.emailInvalidTitle": "Email no válido",

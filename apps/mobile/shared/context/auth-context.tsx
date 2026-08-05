@@ -16,6 +16,8 @@ import { useInterfaceLanguage } from "@/shared/context/interface-language-contex
 
 type OAuthProvider = "google" | "apple";
 
+type AccountActionResult = { error: Error | null };
+
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
@@ -28,6 +30,7 @@ type AuthContextValue = {
   ) => Promise<{ error: AuthError | null }>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
+  deleteAccount: () => Promise<AccountActionResult>;
   updateFullName: (fullName: string) => Promise<{ error: AuthError | null }>;
   updateEmail: (newEmail: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
@@ -136,6 +139,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   }, []);
 
+  const deleteAccount = useCallback(async (): Promise<AccountActionResult> => {
+    const { data, error } = await supabase.functions.invoke<{ deleted?: boolean }>(
+      "delete-account",
+    );
+    if (error) return { error };
+    if (data?.deleted !== true) {
+      return { error: new Error("Account deletion was not confirmed by the server.") };
+    }
+
+    await supabase.auth.signOut({ scope: "local" });
+    return { error: null };
+  }, []);
+
   const updateFullName = useCallback(async (fullName: string) => {
     const { error } = await supabase.auth.updateUser({
       data: { full_name: fullName },
@@ -162,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signInWithOAuth,
       signOut,
+      deleteAccount,
       updateFullName,
       updateEmail,
       updatePassword,
@@ -173,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signInWithOAuth,
       signOut,
+      deleteAccount,
       updateFullName,
       updateEmail,
       updatePassword,
