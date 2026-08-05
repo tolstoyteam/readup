@@ -12,6 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.sanat.readup",
       "infoPlist": {
+        "CFBundleDisplayName": "Readup",
+        "CFBundleName": "Readup",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
