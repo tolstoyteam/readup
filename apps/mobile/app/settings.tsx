@@ -92,10 +92,10 @@ export default function SettingsScreen() {
         return;
       }
       setEmailEditing(false);
-      Alert.alert(
-        t("settings.emailUpdatedTitle"),
-        t("settings.emailUpdatedBody"),
-      );
+      router.push({
+        pathname: "/(auth)/verify-email",
+        params: { email: trimmed, purpose: "email_change" },
+      });
     } finally {
       setSavingEmail(false);
     }

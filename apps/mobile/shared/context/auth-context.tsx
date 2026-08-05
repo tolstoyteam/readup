@@ -11,12 +11,23 @@ import {
   type ReactNode,
 } from "react";
 
-import { supabase } from "@/shared/lib/supabase";
+import {
+  type EmailOtpPurpose,
+  isEmailNotConfirmedError,
+  verifyOtpTypeForPurpose,
+} from "@/features/auth/lib/otp-errors";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { supabase } from "@/shared/lib/supabase";
 
 type OAuthProvider = "google" | "apple";
 
 type AccountActionResult = { error: Error | null };
+
+export type SignUpResult = {
+  error: AuthError | null;
+  session: Session | null;
+  needsEmailVerification: boolean;
+};
 
 type AuthContextValue = {
   session: Session | null;
@@ -27,8 +38,19 @@ type AuthContextValue = {
     email: string,
     password: string,
     options?: { fullName?: string },
-  ) => Promise<{ error: AuthError | null }>;
+  ) => Promise<SignUpResult>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: AuthError | null }>;
+  signInWithEmailOtp: (email: string) => Promise<{ error: AuthError | null }>;
+  verifyEmailOtp: (params: {
+    email: string;
+    token: string;
+    purpose: EmailOtpPurpose;
+  }) => Promise<{ error: AuthError | null }>;
+  resendEmailOtp: (params: {
+    email: string;
+    purpose: EmailOtpPurpose;
+  }) => Promise<{ error: AuthError | null }>;
+  isEmailNotConfirmedError: (error: AuthError | null | undefined) => boolean;
   signOut: () => Promise<{ error: AuthError | null }>;
   deleteAccount: () => Promise<AccountActionResult>;
   updateFullName: (fullName: string) => Promise<{ error: AuthError | null }>;
@@ -73,13 +95,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback(
     async (email: string, password: string, options?: { fullName?: string }) => {
       const fullName = options?.fullName?.trim();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options:
           fullName != null && fullName.length > 0
             ? { data: { full_name: fullName } }
             : undefined,
+      });
+      const nextSession = data.session ?? null;
+      return {
+        error,
+        session: nextSession,
+        needsEmailVerification: error == null && nextSession == null,
+      };
+    },
+    [],
+  );
+
+  const signInWithEmailOtp = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    return { error };
+  }, []);
+
+  const verifyEmailOtp = useCallback(
+    async (params: { email: string; token: string; purpose: EmailOtpPurpose }) => {
+      const { error } = await supabase.auth.verifyOtp({
+        email: params.email,
+        token: params.token,
+        type: verifyOtpTypeForPurpose(params.purpose),
+      });
+      return { error };
+    },
+    [],
+  );
+
+  const resendEmailOtp = useCallback(
+    async (params: { email: string; purpose: EmailOtpPurpose }) => {
+      if (params.purpose === "login") {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: params.email,
+          options: { shouldCreateUser: false },
+        });
+        return { error };
+      }
+
+      if (params.purpose === "email_change") {
+        const { error } = await supabase.auth.resend({
+          type: "email_change",
+          email: params.email,
+        });
+        return { error };
+      }
+
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: params.email,
       });
       return { error };
     },
@@ -177,6 +251,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signInWithOAuth,
+      signInWithEmailOtp,
+      verifyEmailOtp,
+      resendEmailOtp,
+      isEmailNotConfirmedError,
       signOut,
       deleteAccount,
       updateFullName,
@@ -189,6 +267,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signInWithOAuth,
+      signInWithEmailOtp,
+      verifyEmailOtp,
+      resendEmailOtp,
       signOut,
       deleteAccount,
       updateFullName,

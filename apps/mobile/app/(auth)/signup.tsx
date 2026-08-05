@@ -55,11 +55,18 @@ export default function SignupScreen() {
     }
     setSubmitting(true);
     try {
-      const { error } = await signUp(email.trim(), password, {
+      const { error, needsEmailVerification } = await signUp(email.trim(), password, {
         fullName: fullName.trim(),
       });
       if (error) {
         setErrorMessage(error.message);
+        return;
+      }
+      if (needsEmailVerification) {
+        router.replace({
+          pathname: "/(auth)/verify-email",
+          params: { email: email.trim(), purpose: "signup" },
+        });
         return;
       }
       router.replace("/(setup)/interests");

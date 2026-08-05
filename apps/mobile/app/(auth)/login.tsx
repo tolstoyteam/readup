@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OutlinePillButton } from "@/features/auth/components/outline-pill-button";
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
+import { otpErrorToTranslationKey } from "@/features/auth/lib/otp-errors";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
@@ -27,7 +28,8 @@ import { useInterfaceLanguage } from "@/shared/context/interface-language-contex
 
 export default function LoginScreen() {
   const colors = useReadupColors();
-  const { signIn, signInWithOAuth } = useAuth();
+  const { signIn, signInWithOAuth, signInWithEmailOtp, isEmailNotConfirmedError } =
+    useAuth();
   const { t } = useInterfaceLanguage();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -37,8 +39,20 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [otpBusy, setOtpBusy] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<null | "google" | "apple">(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function goToVerify(purpose: "signup" | "login", options?: { cooldown?: "0" | "60" }) {
+    router.replace({
+      pathname: "/(auth)/verify-email",
+      params: {
+        email: email.trim(),
+        purpose,
+        ...(options?.cooldown != null ? { cooldown: options.cooldown } : {}),
+      },
+    });
+  }
 
   async function onSubmit() {
     setErrorMessage(null);
@@ -46,12 +60,36 @@ export default function LoginScreen() {
     try {
       const { error } = await signIn(email.trim(), password);
       if (error) {
+        if (isEmailNotConfirmedError(error)) {
+          goToVerify("signup", { cooldown: "0" });
+          return;
+        }
         setErrorMessage(error.message);
         return;
       }
       router.replace("/");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function onSignInWithCode() {
+    const trimmed = email.trim();
+    setErrorMessage(null);
+    if (!trimmed) {
+      setErrorMessage(t("settings.emailInvalidBody"));
+      return;
+    }
+    setOtpBusy(true);
+    try {
+      const { error } = await signInWithEmailOtp(trimmed);
+      if (error) {
+        setErrorMessage(t(otpErrorToTranslationKey(error)));
+        return;
+      }
+      goToVerify("login");
+    } finally {
+      setOtpBusy(false);
     }
   }
 
@@ -73,6 +111,8 @@ export default function LoginScreen() {
   if (!fontsLoaded) {
     return null;
   }
+
+  const busy = submitting || otpBusy || oauthBusy != null;
 
   return (
     <SafeAreaView
@@ -108,7 +148,7 @@ export default function LoginScreen() {
               autoComplete="email"
               keyboardType="email-address"
               textContentType="emailAddress"
-              editable={!submitting && oauthBusy == null}
+              editable={!busy}
               style={{ fontFamily: "Inter_400Regular" }}
             />
             <ReadupTextField
@@ -120,7 +160,7 @@ export default function LoginScreen() {
               secureTextEntry
               autoComplete="password"
               textContentType="password"
-              editable={!submitting && oauthBusy == null}
+              editable={!busy}
               style={{ fontFamily: "Inter_400Regular" }}
             />
           </View>
@@ -129,7 +169,7 @@ export default function LoginScreen() {
             <Pressable
               accessibilityRole="button"
               hitSlop={8}
-              disabled={submitting || oauthBusy != null}>
+              disabled={busy}>
               <Text style={[styles.forgotText, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
                 {t("auth.forgotPassword")}
               </Text>
@@ -148,20 +188,26 @@ export default function LoginScreen() {
             <PrimaryButton
               label={t("auth.loginCta")}
               loading={submitting}
-              disabled={oauthBusy != null}
+              disabled={otpBusy || oauthBusy != null}
               onPress={onSubmit}
               style={styles.primaryBtn}
             />
             <OutlinePillButton
+              label={t("auth.loginWithCode")}
+              loading={otpBusy}
+              disabled={submitting || oauthBusy != null}
+              onPress={() => void onSignInWithCode()}
+            />
+            <OutlinePillButton
               label={t("auth.continueWithGoogle")}
               loading={oauthBusy === "google"}
-              disabled={submitting || (oauthBusy != null && oauthBusy !== "google")}
+              disabled={submitting || otpBusy || (oauthBusy != null && oauthBusy !== "google")}
               onPress={() => void onOAuth("google")}
             />
             <OutlinePillButton
               label={t("auth.continueWithApple")}
               loading={oauthBusy === "apple"}
-              disabled={submitting || (oauthBusy != null && oauthBusy !== "apple")}
+              disabled={submitting || otpBusy || (oauthBusy != null && oauthBusy !== "apple")}
               onPress={() => void onOAuth("apple")}
             />
           </View>
@@ -173,7 +219,7 @@ export default function LoginScreen() {
             <Link href="/signup" asChild>
               <Pressable
                 accessibilityRole="link"
-                disabled={submitting || oauthBusy != null}
+                disabled={busy}
                 hitSlop={8}>
                 <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
                   {t("auth.signupLink")}
