@@ -21,6 +21,24 @@ type Props = {
   initialError?: string;
 };
 
+function friendlyAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("invalid login credentials") ||
+    lower.includes("invalid credentials") ||
+    lower.includes("email not confirmed")
+  ) {
+    return "Incorrect email or password.";
+  }
+  if (lower.includes("rate limit") || lower.includes("for security purposes")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  if (lower.includes("network") || lower.includes("fetch") || lower.includes("failed to fetch")) {
+    return "Network error. Check your connection and try again.";
+  }
+  return "Could not sign in. Please try again.";
+}
+
 export function LoginForm({ nextPath, supabaseConfig, initialError }: Props) {
   const supabase = useMemo(
     () =>
@@ -44,11 +62,14 @@ export function LoginForm({ nextPath, supabaseConfig, initialError }: Props) {
     if (!supabase) return;
     setMessage("");
     setLoading("password");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
     setLoading(null);
 
     if (error) {
-      setMessage(error.message);
+      setMessage(friendlyAuthError(error.message));
       return;
     }
     window.location.assign(nextPath);
@@ -65,7 +86,7 @@ export function LoginForm({ nextPath, supabaseConfig, initialError }: Props) {
     });
     if (error) {
       setLoading(null);
-      setMessage(error.message);
+      setMessage(friendlyAuthError(error.message));
     }
   }
 

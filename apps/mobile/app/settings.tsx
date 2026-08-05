@@ -11,6 +11,10 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "rea
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
+import {
+  looksLikeEmail,
+  validateNewPassword,
+} from "@/features/auth/lib/password-validation";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
@@ -39,10 +43,6 @@ function hasEmailIdentity(
   user: { identities?: { provider: string }[] | null } | null,
 ): boolean {
   return user?.identities?.some((i) => i.provider === "email") ?? false;
-}
-
-function looksLikeEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 export default function SettingsScreen() {
@@ -102,14 +102,15 @@ export default function SettingsScreen() {
   }
 
   async function onSavePassword() {
-    if (newPassword.length < 6) {
+    const issue = validateNewPassword(newPassword, confirmPassword);
+    if (issue === "too_short") {
       Alert.alert(
         t("settings.passwordTooShortTitle"),
         t("settings.passwordTooShortBody"),
       );
       return;
     }
-    if (newPassword !== confirmPassword) {
+    if (issue === "empty_confirm" || issue === "mismatch") {
       Alert.alert(
         t("settings.passwordMismatchTitle"),
         t("settings.passwordMismatchBody"),

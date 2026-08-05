@@ -2,7 +2,7 @@ import type { AuthError } from "@supabase/supabase-js";
 
 import type { TranslationKey } from "@/shared/i18n/translations";
 
-export type EmailOtpPurpose = "signup" | "login" | "email_change";
+export type EmailOtpPurpose = "signup" | "email_change" | "recovery";
 
 export function isEmailNotConfirmedError(error: AuthError | null | undefined): boolean {
   if (error == null) return false;
@@ -60,6 +60,8 @@ export function otpErrorToTranslationKey(error: AuthError): TranslationKey {
 
 export function verifyOtpTypeForPurpose(
   purpose: EmailOtpPurpose,
-): "email" | "email_change" {
-  return purpose === "email_change" ? "email_change" : "email";
+): "email" | "email_change" | "recovery" {
+  if (purpose === "email_change") return "email_change";
+  if (purpose === "recovery") return "recovery";
+  return "email";
 }

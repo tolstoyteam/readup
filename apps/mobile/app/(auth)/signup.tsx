@@ -6,7 +6,7 @@ import {
 import { useFonts } from "expo-font";
 import { Link, router } from "expo-router";
 import * as Linking from "expo-linking";
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,14 +21,32 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OutlinePillButton } from "@/features/auth/components/outline-pill-button";
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
+import { authErrorToTranslationKey } from "@/features/auth/lib/auth-errors";
+import {
+  isPasswordLongEnough,
+  looksLikeEmail,
+  normalizeEmail,
+  passwordsMatch,
+  validateNewPassword,
+} from "@/features/auth/lib/password-validation";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import type { TranslationKey } from "@/shared/i18n/translations";
 
 const PRIVACY_POLICY_URL =
   process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://readup.kz/privacy";
+
+function passwordIssueKey(
+  issue: ReturnType<typeof validateNewPassword>,
+): TranslationKey | null {
+  if (issue === "too_short") return "auth.passwordTooShort";
+  if (issue === "empty_confirm") return "auth.passwordConfirmEmpty";
+  if (issue === "mismatch") return "auth.passwordMismatch";
+  return null;
+}
 
 export default function SignupScreen() {
   const colors = useReadupColors();
@@ -42,35 +60,84 @@ export default function SignupScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<null | "google" | "apple">(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailHasError, setEmailHasError] = useState(false);
+  const submittingRef = useRef(false);
+
+  const passwordHint = useMemo(() => {
+    if (password.length === 0 && confirmPassword.length === 0) return null;
+    if (password.length > 0 && !isPasswordLongEnough(password)) {
+      return { key: "auth.passwordTooShort" as const, tone: "error" as const };
+    }
+    if (confirmPassword.length === 0) {
+      return password.length > 0
+        ? { key: "auth.passwordConfirmEmpty" as const, tone: "muted" as const }
+        : null;
+    }
+    if (!passwordsMatch(password, confirmPassword)) {
+      return { key: "auth.passwordMismatch" as const, tone: "error" as const };
+    }
+    return { key: "auth.passwordMatch" as const, tone: "ok" as const };
+  }, [confirmPassword, password]);
+
+  const canSubmit =
+    privacyAccepted &&
+    fullName.trim().length > 0 &&
+    looksLikeEmail(normalizeEmail(email)) &&
+    validateNewPassword(password, confirmPassword) == null;
 
   async function onSubmit() {
+    if (submittingRef.current) return;
     setErrorMessage(null);
+    setEmailHasError(false);
     if (!privacyAccepted) {
       setErrorMessage(t("auth.privacyRequired"));
       return;
     }
+    const issue = validateNewPassword(password, confirmPassword);
+    const issueKey = passwordIssueKey(issue);
+    if (issueKey) {
+      setErrorMessage(t(issueKey));
+      return;
+    }
+    const normalized = normalizeEmail(email);
+    if (!looksLikeEmail(normalized)) {
+      setErrorMessage(t("auth.emailInvalid"));
+      setEmailHasError(true);
+      return;
+    }
+
+    submittingRef.current = true;
     setSubmitting(true);
     try {
-      const { error, needsEmailVerification } = await signUp(email.trim(), password, {
-        fullName: fullName.trim(),
-      });
+      const { error, needsEmailVerification, alreadyRegistered } = await signUp(
+        normalized,
+        password,
+        { fullName: fullName.trim() },
+      );
+      if (alreadyRegistered) {
+        setEmailHasError(true);
+        setErrorMessage(t("auth.emailAlreadyExistsDetail", { email: normalized }));
+        return;
+      }
       if (error) {
-        setErrorMessage(error.message);
+        setErrorMessage(t(authErrorToTranslationKey(error, "signup")));
         return;
       }
       if (needsEmailVerification) {
         router.replace({
           pathname: "/(auth)/verify-email",
-          params: { email: email.trim(), purpose: "signup" },
+          params: { email: normalized, purpose: "signup" },
         });
         return;
       }
       router.replace("/(setup)/interests");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -136,13 +203,18 @@ export default function SignupScreen() {
               label={t("auth.emailLabel")}
               labelFontFamily="Inter_500Medium"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(next) => {
+                setEmail(next);
+                if (emailHasError) setEmailHasError(false);
+                if (errorMessage) setErrorMessage(null);
+              }}
               placeholder="example@gmail.com"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
               textContentType="emailAddress"
               editable={!busy}
+              error={emailHasError}
               style={{ fontFamily: "Inter_400Regular" }}
             />
             <ReadupTextField
@@ -152,11 +224,43 @@ export default function SignupScreen() {
               onChangeText={setPassword}
               placeholder="••••••••"
               secureTextEntry
+              secureToggle
               autoComplete="new-password"
               textContentType="newPassword"
               editable={!busy}
               style={{ fontFamily: "Inter_400Regular" }}
             />
+            <ReadupTextField
+              label={t("auth.confirmPasswordLabel")}
+              labelFontFamily="Inter_500Medium"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="••••••••"
+              secureTextEntry
+              secureToggle
+              autoComplete="new-password"
+              textContentType="newPassword"
+              editable={!busy}
+              style={{ fontFamily: "Inter_400Regular" }}
+            />
+            {passwordHint ? (
+              <Text
+                style={[
+                  styles.hintText,
+                  {
+                    fontFamily: "Inter_400Regular",
+                    color:
+                      passwordHint.tone === "ok"
+                        ? colors.brand
+                        : passwordHint.tone === "error"
+                          ? "#8F0620"
+                          : colors.textSecondary,
+                  },
+                ]}
+                accessibilityLiveRegion="polite">
+                {t(passwordHint.key)}
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.consentRow}>
@@ -176,9 +280,6 @@ export default function SignupScreen() {
                       : colors.elevated,
                     borderColor: privacyAccepted ? colors.brand : colors.border,
                   },
-                  privacyAccepted && [
-                    { backgroundColor: colors.brand },
-                  ],
                 ]}
               >
                 {privacyAccepted ? (
@@ -214,7 +315,7 @@ export default function SignupScreen() {
             <PrimaryButton
               label={t("auth.signupCta")}
               loading={submitting}
-              disabled={oauthBusy != null}
+              disabled={oauthBusy != null || !canSubmit}
               onPress={onSubmit}
               style={styles.primaryBtn}
             />
@@ -283,6 +384,11 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 338,
     alignSelf: "center",
+  },
+  hintText: {
+    marginTop: -4,
+    fontSize: 12,
+    letterSpacing: -0.48,
   },
   consentRow: {
     flexDirection: "row",

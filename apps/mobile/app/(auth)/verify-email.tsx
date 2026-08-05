@@ -34,7 +34,7 @@ const OTP_LENGTH = 6;
 
 function parsePurpose(raw: string | string[] | undefined): EmailOtpPurpose {
   const value = Array.isArray(raw) ? raw[0] : raw;
-  if (value === "login" || value === "email_change") return value;
+  if (value === "email_change" || value === "recovery") return value;
   return "signup";
 }
 
@@ -82,8 +82,8 @@ export default function VerifyEmailScreen() {
   }, [secondsLeft]);
 
   const subtitle = useMemo(() => {
-    if (purpose === "login") {
-      return t("auth.otpSubtitleLogin", { email });
+    if (purpose === "recovery") {
+      return t("auth.otpSubtitleRecovery", { email });
     }
     if (purpose === "email_change") {
       return t("auth.otpSubtitleEmailChange", { email });
@@ -92,8 +92,8 @@ export default function VerifyEmailScreen() {
   }, [email, purpose, t]);
 
   const navigateAfterSuccess = useCallback(() => {
-    if (purpose === "login") {
-      router.replace("/");
+    if (purpose === "recovery") {
+      router.replace("/(auth)/reset-password");
       return;
     }
     if (purpose === "email_change") {

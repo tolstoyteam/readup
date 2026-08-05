@@ -4,7 +4,7 @@ import {
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
-import { Link, router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -17,85 +17,68 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { OutlinePillButton } from "@/features/auth/components/outline-pill-button";
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import { authErrorToTranslationKey } from "@/features/auth/lib/auth-errors";
-import { normalizeEmail } from "@/features/auth/lib/password-validation";
+import {
+  looksLikeEmail,
+  normalizeEmail,
+} from "@/features/auth/lib/password-validation";
 import { PrimaryButton } from "@/shared/components/primary-button";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { ReadupColors, useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const colors = useReadupColors();
-  const { signIn, signInWithOAuth, isEmailNotConfirmedError } = useAuth();
+  const { requestPasswordReset } = useAuth();
   const { t } = useInterfaceLanguage();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const initialEmail = Array.isArray(params.email) ? params.email[0] : params.email;
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_800ExtraBold,
   });
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [submitting, setSubmitting] = useState(false);
-  const [oauthBusy, setOauthBusy] = useState<null | "google" | "apple">(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const submittingRef = useRef(false);
-
-  function goToVerify(options?: { cooldown?: "0" | "60" }) {
-    router.replace({
-      pathname: "/(auth)/verify-email",
-      params: {
-        email: normalizeEmail(email),
-        purpose: "signup",
-        ...(options?.cooldown != null ? { cooldown: options.cooldown } : {}),
-      },
-    });
-  }
 
   async function onSubmit() {
     if (submittingRef.current) return;
     setErrorMessage(null);
+    setSuccessMessage(null);
+    const normalized = normalizeEmail(email);
+    if (!looksLikeEmail(normalized)) {
+      setErrorMessage(t("auth.emailInvalid"));
+      return;
+    }
+
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const { error } = await signIn(normalizeEmail(email), password);
+      const { error } = await requestPasswordReset(normalized);
       if (error) {
-        if (isEmailNotConfirmedError(error)) {
-          goToVerify({ cooldown: "0" });
-          return;
-        }
-        setErrorMessage(t(authErrorToTranslationKey(error, "login")));
+        setErrorMessage(t(authErrorToTranslationKey(error, "generic")));
         return;
       }
-      router.replace("/");
+      // Anti-enumeration: same success path whether or not the email exists.
+      setSuccessMessage(t("auth.forgotPasswordSuccess"));
+      router.replace({
+        pathname: "/(auth)/verify-email",
+        params: { email: normalized, purpose: "recovery" },
+      });
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
     }
   }
 
-  async function onOAuth(provider: "google" | "apple") {
-    setErrorMessage(null);
-    setOauthBusy(provider);
-    try {
-      const { error } = await signInWithOAuth(provider);
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-      router.replace("/");
-    } finally {
-      setOauthBusy(null);
-    }
-  }
-
   if (!fontsLoaded) {
     return null;
   }
-
-  const busy = submitting || oauthBusy != null;
 
   return (
     <SafeAreaView
@@ -117,7 +100,15 @@ export default function LoginScreen() {
               styles.headline,
               { fontFamily: "Inter_800ExtraBold", color: colors.brand },
             ]}>
-            {t("auth.loginHeadline")}
+            {t("auth.forgotPasswordHeadline")}
+          </Text>
+
+          <Text
+            style={[
+              styles.subtitle,
+              { fontFamily: "Inter_400Regular", color: colors.textSecondary },
+            ]}>
+            {t("auth.forgotPasswordSubtitle")}
           </Text>
 
           <View style={styles.form}>
@@ -131,87 +122,52 @@ export default function LoginScreen() {
               autoComplete="email"
               keyboardType="email-address"
               textContentType="emailAddress"
-              editable={!busy}
+              editable={!submitting}
               style={{ fontFamily: "Inter_400Regular" }}
             />
-            <ReadupTextField
-              label={t("auth.passwordLabel")}
-              labelFontFamily="Inter_500Medium"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              secureTextEntry
-              secureToggle
-              autoComplete="password"
-              textContentType="password"
-              editable={!busy}
-              style={{ fontFamily: "Inter_400Regular" }}
-            />
-          </View>
-
-          <View style={styles.forgotWrap}>
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={8}
-              disabled={busy}
-              onPress={() => {
-                router.push({
-                  pathname: "/(auth)/forgot-password",
-                  params: email.trim()
-                    ? { email: normalizeEmail(email) }
-                    : undefined,
-                });
-              }}>
-              <Text style={[styles.forgotText, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
-                {t("auth.forgotPassword")}
-              </Text>
-            </Pressable>
           </View>
 
           {errorMessage ? (
             <Text
               style={[styles.errorText, { fontFamily: "Inter_400Regular" }]}
+              accessibilityLiveRegion="polite"
               numberOfLines={3}>
               {errorMessage}
             </Text>
           ) : null}
 
+          {successMessage ? (
+            <Text
+              style={[
+                styles.successText,
+                { fontFamily: "Inter_400Regular", color: colors.brand },
+              ]}
+              accessibilityLiveRegion="polite"
+              numberOfLines={3}>
+              {successMessage}
+            </Text>
+          ) : null}
+
           <View style={styles.ctaColumn}>
             <PrimaryButton
-              label={t("auth.loginCta")}
+              label={t("auth.forgotPasswordCta")}
               loading={submitting}
-              disabled={oauthBusy != null}
-              onPress={onSubmit}
+              disabled={submitting}
+              onPress={() => void onSubmit()}
               style={styles.primaryBtn}
-            />
-            <OutlinePillButton
-              label={t("auth.continueWithGoogle")}
-              loading={oauthBusy === "google"}
-              disabled={submitting || (oauthBusy != null && oauthBusy !== "google")}
-              onPress={() => void onOAuth("google")}
-            />
-            <OutlinePillButton
-              label={t("auth.continueWithApple")}
-              loading={oauthBusy === "apple"}
-              disabled={submitting || (oauthBusy != null && oauthBusy !== "apple")}
-              onPress={() => void onOAuth("apple")}
             />
           </View>
 
           <View style={styles.footer}>
-            <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular", color: colors.textSecondary }]}>
-              {t("auth.noAccount")}{" "}
-            </Text>
-            <Link href="/signup" asChild>
-              <Pressable
-                accessibilityRole="link"
-                disabled={busy}
-                hitSlop={8}>
-                <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
-                  {t("auth.signupLink")}
-                </Text>
-              </Pressable>
-            </Link>
+            <Pressable
+              accessibilityRole="link"
+              disabled={submitting}
+              hitSlop={8}
+              onPress={() => router.replace("/(auth)/login")}>
+              <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
+                {t("auth.loginCta")}
+              </Text>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -242,28 +198,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 34,
     fontWeight: "800",
-    color: ReadupColors.brand,
     letterSpacing: -1.36,
     maxWidth: 338,
-    marginBottom: 52,
+    marginBottom: 16,
+  },
+  subtitle: {
+    alignSelf: "center",
+    textAlign: "center",
+    fontSize: 14,
+    lineHeight: 20,
+    letterSpacing: -0.4,
+    maxWidth: 338,
+    marginBottom: 36,
   },
   form: {
     gap: 16,
     width: "100%",
     maxWidth: 338,
     alignSelf: "center",
-  },
-  forgotWrap: {
-    marginTop: 12,
-    width: "100%",
-    maxWidth: 338,
-    alignSelf: "center",
-    alignItems: "flex-start",
-  },
-  forgotText: {
-    fontSize: 12,
-    color: ReadupColors.brand,
-    letterSpacing: -0.48,
   },
   errorText: {
     marginTop: 12,
@@ -273,6 +225,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#8F0620",
     letterSpacing: -0.48,
+    textAlign: "center",
+  },
+  successText: {
+    marginTop: 12,
+    alignSelf: "center",
+    maxWidth: 338,
+    width: "100%",
+    fontSize: 12,
+    letterSpacing: -0.48,
+    textAlign: "center",
   },
   ctaColumn: {
     gap: 12,
@@ -285,16 +247,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   footer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
     marginTop: 28,
-    paddingHorizontal: 8,
-  },
-  footerMuted: {
-    fontSize: 14,
-    color: "#000000",
+    alignItems: "center",
   },
   footerLink: {
     fontSize: 14,

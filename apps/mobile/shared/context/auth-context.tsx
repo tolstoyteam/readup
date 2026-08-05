@@ -12,10 +12,15 @@ import {
 } from "react";
 
 import {
+  isAlreadyRegisteredError,
+  isDuplicateSignupUser,
+} from "@/features/auth/lib/auth-errors";
+import {
   type EmailOtpPurpose,
   isEmailNotConfirmedError,
   verifyOtpTypeForPurpose,
 } from "@/features/auth/lib/otp-errors";
+import { normalizeEmail } from "@/features/auth/lib/password-validation";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { supabase } from "@/shared/lib/supabase";
 
@@ -27,6 +32,7 @@ export type SignUpResult = {
   error: AuthError | null;
   session: Session | null;
   needsEmailVerification: boolean;
+  alreadyRegistered: boolean;
 };
 
 type AuthContextValue = {
@@ -40,7 +46,7 @@ type AuthContextValue = {
     options?: { fullName?: string },
   ) => Promise<SignUpResult>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: AuthError | null }>;
-  signInWithEmailOtp: (email: string) => Promise<{ error: AuthError | null }>;
+  requestPasswordReset: (email: string) => Promise<{ error: AuthError | null }>;
   verifyEmailOtp: (params: {
     email: string;
     token: string;
@@ -59,6 +65,29 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function alreadyRegisteredAuthError(): AuthError {
+  return {
+    name: "AuthApiError",
+    message: "User already registered",
+    status: 422,
+    code: "user_already_registered",
+  } as AuthError;
+}
+
+function requestFailedAuthError(message: string): AuthError {
+  return {
+    name: "AuthApiError",
+    message,
+    status: 0,
+    code: "request_failed",
+  } as AuthError;
+}
+
+type CheckEmailAvailableResponse = {
+  exists?: boolean;
+  error?: string;
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -88,43 +117,108 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: normalizeEmail(email),
+      password,
+    });
     return { error };
   }, []);
 
   const signUp = useCallback(
     async (email: string, password: string, options?: { fullName?: string }) => {
       const fullName = options?.fullName?.trim();
+      const normalized = normalizeEmail(email);
+
+      // Server-side existence check BEFORE signUp so Auth never sends a signup OTP
+      // for an email that already belongs to an account (verified or unverified).
+      const { data: checkData, error: checkError } =
+        await supabase.functions.invoke<CheckEmailAvailableResponse>(
+          "check-email-available",
+          { body: { email: normalized } },
+        );
+
+      if (checkError) {
+        return {
+          error: requestFailedAuthError(
+            checkError.message || "Could not verify email availability",
+          ),
+          session: null,
+          needsEmailVerification: false,
+          alreadyRegistered: false,
+        };
+      }
+
+      if (checkData?.error != null || typeof checkData?.exists !== "boolean") {
+        return {
+          error: requestFailedAuthError(
+            checkData?.error ?? "Could not verify email availability",
+          ),
+          session: null,
+          needsEmailVerification: false,
+          alreadyRegistered: false,
+        };
+      }
+
+      if (checkData.exists) {
+        const duplicateError = alreadyRegisteredAuthError();
+        return {
+          error: duplicateError,
+          session: null,
+          needsEmailVerification: false,
+          alreadyRegistered: true,
+        };
+      }
+
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: normalized,
         password,
         options:
           fullName != null && fullName.length > 0
             ? { data: { full_name: fullName } }
             : undefined,
       });
+
+      if (error) {
+        const alreadyRegistered = isAlreadyRegisteredError(error);
+        return {
+          error,
+          session: null,
+          needsEmailVerification: false,
+          alreadyRegistered,
+        };
+      }
+
+      // Defense-in-depth: obfuscated signup response for confirmed duplicates.
+      if (isDuplicateSignupUser(data.user)) {
+        const duplicateError = alreadyRegisteredAuthError();
+        return {
+          error: duplicateError,
+          session: null,
+          needsEmailVerification: false,
+          alreadyRegistered: true,
+        };
+      }
+
       const nextSession = data.session ?? null;
       return {
-        error,
+        error: null,
         session: nextSession,
-        needsEmailVerification: error == null && nextSession == null,
+        needsEmailVerification: nextSession == null,
+        alreadyRegistered: false,
       };
     },
     [],
   );
 
-  const signInWithEmailOtp = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
-    });
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email));
     return { error };
   }, []);
 
   const verifyEmailOtp = useCallback(
     async (params: { email: string; token: string; purpose: EmailOtpPurpose }) => {
       const { error } = await supabase.auth.verifyOtp({
-        email: params.email,
+        email: normalizeEmail(params.email),
         token: params.token,
         type: verifyOtpTypeForPurpose(params.purpose),
       });
@@ -135,25 +229,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resendEmailOtp = useCallback(
     async (params: { email: string; purpose: EmailOtpPurpose }) => {
-      if (params.purpose === "login") {
-        const { error } = await supabase.auth.signInWithOtp({
-          email: params.email,
-          options: { shouldCreateUser: false },
-        });
+      const email = normalizeEmail(params.email);
+
+      if (params.purpose === "recovery") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
         return { error };
       }
 
       if (params.purpose === "email_change") {
         const { error } = await supabase.auth.resend({
           type: "email_change",
-          email: params.email,
+          email,
         });
         return { error };
       }
 
       const { error } = await supabase.auth.resend({
         type: "signup",
-        email: params.email,
+        email,
       });
       return { error };
     },
@@ -234,7 +327,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateEmail = useCallback(async (newEmail: string) => {
-    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    const { error } = await supabase.auth.updateUser({ email: normalizeEmail(newEmail) });
     return { error };
   }, []);
 
@@ -251,7 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signInWithOAuth,
-      signInWithEmailOtp,
+      requestPasswordReset,
       verifyEmailOtp,
       resendEmailOtp,
       isEmailNotConfirmedError,
@@ -267,7 +360,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signInWithOAuth,
-      signInWithEmailOtp,
+      requestPasswordReset,
       verifyEmailOtp,
       resendEmailOtp,
       signOut,
