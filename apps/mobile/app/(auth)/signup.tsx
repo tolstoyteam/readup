@@ -28,7 +28,7 @@ import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 const PRIVACY_POLICY_URL =
-  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://readup.app/privacy";
+  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://readup.kz/privacy";
 
 export default function SignupScreen() {
   const colors = useReadupColors();

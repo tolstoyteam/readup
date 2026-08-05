@@ -3,6 +3,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === "/privacy") {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({ request });
   const { url, key } = getSupabasePublicEnv();
 
