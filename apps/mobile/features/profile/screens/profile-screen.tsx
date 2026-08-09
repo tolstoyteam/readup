@@ -35,6 +35,7 @@ import {
 } from "@/features/books/components/book-card";
 import { AchievementIcon } from "@/features/achievements/components/achievement-icon";
 import { useAchievements } from "@/features/achievements/hooks/use-achievements";
+import { useSubscription } from "@/features/subscription";
 import {
   ensureProfile,
   fetchProfile,
@@ -87,6 +88,7 @@ export default function ProfileScreen() {
   const colors = useReadupColors();
   const { language, t } = useInterfaceLanguage();
   const { user, updateFullName } = useAuth();
+  const { isPremium } = useSubscription();
   const { savedBooks, loading: libraryLoading } = useLibrary();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -408,15 +410,13 @@ export default function ProfileScreen() {
                 className="text-[15px] font-semibold tracking-[-0.6px] text-[#1A2420] dark:text-[#F3F4EE]"
                 style={{ fontFamily: "Inter_600SemiBold" }}
               >
-                {profile.is_premium
-                  ? "Readup Premium"
-                  : t("profile.premiumCta")}
+                {isPremium ? "Readup Premium" : t("profile.premiumCta")}
               </Text>
               <Text
                 className="text-[13px] tracking-[-0.52px] text-[#4A5550] dark:text-[#B8C1BB]"
                 style={{ fontFamily: "Inter_400Regular" }}
               >
-                {profile.is_premium
+                {isPremium
                   ? t("profile.allFeaturesActive")
                   : t("profile.premiumSubtitle")}
               </Text>

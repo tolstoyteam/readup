@@ -10,9 +10,11 @@ import {
   X,
   Zap,
 } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -20,12 +22,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { fetchProfile, type Profile } from "@/features/profile/api/profile";
+import { useSubscription } from "@/features/subscription";
+import {
+  packageForPlan,
+  revenueCatErrorMessage,
+} from "@/features/subscription/revenuecat";
 import {
   useReadupColors,
   statusBarStyleForScheme,
 } from "@/shared/constants/readup-theme";
-import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import type { TranslationKey } from "@/shared/i18n/translations";
@@ -37,8 +42,14 @@ type PlanCardProps = {
   badge?: string;
   highlighted?: boolean;
   selected: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 };
+
+const PRIVACY_POLICY_URL =
+  process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://readup.kz/privacy";
+const TERMS_OF_USE_URL =
+  "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
 const BENEFITS = [
   {
@@ -72,31 +83,116 @@ export default function SubscriptionScreen() {
   const { t } = useInterfaceLanguage();
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    configured,
+    loading,
+    currentOffering,
+    isPremium,
+    errorMessage,
+    purchasePlan,
+    refresh,
+    restorePurchases,
+    presentPaywall,
+    presentCustomerCenter,
+  } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">(
     "yearly",
   );
+  const [busyAction, setBusyAction] = useState<
+    null | "purchase" | "restore" | "paywall" | "manage" | "refresh"
+  >(null);
 
-  const load = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  const monthlyPackage = packageForPlan(currentOffering, "monthly");
+  const yearlyPackage = packageForPlan(currentOffering, "yearly");
+  const selectedPackage =
+    selectedPlan === "monthly" ? monthlyPackage : yearlyPackage;
+  const busy = busyAction != null;
+
+  async function handlePurchase() {
+    setBusyAction("purchase");
     try {
-      const prof = await fetchProfile(user.id);
-      setProfile(prof);
+      const outcome = await purchasePlan(selectedPlan);
+      if (outcome === "purchased") {
+        Alert.alert(
+          t("premium.purchaseSuccessTitle"),
+          t("premium.purchaseSuccessBody"),
+        );
+      } else if (outcome === "not_entitled") {
+        Alert.alert(
+          t("premium.purchasePendingTitle"),
+          t("premium.purchasePendingBody"),
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        t("premium.purchaseErrorTitle"),
+        revenueCatErrorMessage(error),
+      );
     } finally {
-      setLoading(false);
+      setBusyAction(null);
     }
-  }, [user]);
+  }
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  async function handleRestore() {
+    setBusyAction("restore");
+    try {
+      const restoredPremium = await restorePurchases();
+      Alert.alert(
+        restoredPremium
+          ? t("premium.restoreSuccessTitle")
+          : t("premium.restoreEmptyTitle"),
+        restoredPremium
+          ? t("premium.restoreSuccessBody")
+          : t("premium.restoreEmptyBody"),
+      );
+    } catch (error) {
+      Alert.alert(
+        t("premium.restoreErrorTitle"),
+        revenueCatErrorMessage(error),
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }
 
-  const isPremium = profile?.is_premium === true;
+  async function handlePaywall() {
+    setBusyAction("paywall");
+    try {
+      await presentPaywall();
+    } catch (error) {
+      Alert.alert(
+        t("premium.paywallErrorTitle"),
+        revenueCatErrorMessage(error),
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleCustomerCenter() {
+    setBusyAction("manage");
+    try {
+      await presentCustomerCenter();
+    } catch (error) {
+      Alert.alert(t("premium.manageErrorTitle"), revenueCatErrorMessage(error));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleRefresh() {
+    setBusyAction("refresh");
+    try {
+      await refresh();
+    } catch (error) {
+      Alert.alert(
+        t("premium.productsErrorTitle"),
+        revenueCatErrorMessage(error),
+      );
+    } finally {
+      setBusyAction(null);
+    }
+  }
 
   return (
     <SafeAreaView
@@ -199,45 +295,146 @@ export default function SubscriptionScreen() {
           <View className="mt-7 gap-3">
             <PlanCard
               title={t("premium.monthly")}
-              price="990 ₸"
+              price={monthlyPackage?.product.priceString ?? "—"}
               pricePeriod={t("premium.monthlyPeriod")}
               selected={selectedPlan === "monthly"}
+              disabled={busy || !monthlyPackage}
               onSelect={() => setSelectedPlan("monthly")}
             />
             <PlanCard
               title={t("premium.yearly")}
-              price="7 990 ₸"
+              price={yearlyPackage?.product.priceString ?? "—"}
               pricePeriod={t("premium.yearlyPeriod")}
               badge={t("premium.bestChoice")}
               highlighted
               selected={selectedPlan === "yearly"}
+              disabled={busy || !yearlyPackage}
               onSelect={() => setSelectedPlan("yearly")}
             />
           </View>
 
           <Pressable
             accessibilityRole="button"
-            disabled
-            className="mt-7 min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border-2 opacity-75"
+            disabled={
+              busy || !configured || (!isPremium && selectedPackage == null)
+            }
+            onPress={() =>
+              void (isPremium ? handleCustomerCenter() : handlePurchase())
+            }
+            className="mt-7 min-h-[54px] flex-row items-center justify-center gap-2 rounded-full active:opacity-85 disabled:opacity-50"
             style={{
-              backgroundColor: colors.elevated,
-              borderColor: colors.border,
+              backgroundColor: colors.brand,
             }}
           >
-            <Zap size={18} color={colors.textTertiary} strokeWidth={2.4} />
+            {busyAction === "purchase" || busyAction === "manage" ? (
+              <ActivityIndicator size="small" color="#FBFAF2" />
+            ) : (
+              <Zap size={18} color="#FBFAF2" strokeWidth={2.4} />
+            )}
             <Text
               className="text-[18px] font-medium tracking-[-0.36px]"
-              style={{ color: colors.textTertiary }}
+              style={{ color: "#FBFAF2" }}
             >
-              {isPremium ? t("premium.active") : t("premium.comingSoon")}
+              {isPremium
+                ? t("premium.manageSubscription")
+                : t("premium.subscribe")}
             </Text>
           </Pressable>
+
+          {!isPremium ? (
+            <View className="mt-4 items-center gap-3">
+              <Pressable
+                accessibilityRole="button"
+                disabled={busy || !configured || currentOffering == null}
+                onPress={() => void handlePaywall()}
+                className="active:opacity-70 disabled:opacity-40"
+              >
+                <Text
+                  className="text-[14px] font-semibold tracking-[-0.56px]"
+                  style={{ color: colors.brand }}
+                >
+                  {busyAction === "paywall"
+                    ? t("premium.openingPaywall")
+                    : t("premium.viewPaywall")}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={busy || !configured}
+                onPress={() => void handleRestore()}
+                className="active:opacity-70 disabled:opacity-40"
+              >
+                <Text
+                  className="text-[14px] tracking-[-0.56px]"
+                  style={{ color: colors.textSecondary }}
+                >
+                  {busyAction === "restore"
+                    ? t("premium.restoring")
+                    : t("premium.restorePurchases")}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {errorMessage ? (
+            <Text
+              className="mt-4 text-center text-[12px] leading-[17px] tracking-[-0.48px]"
+              style={{ color: "#DC2626" }}
+            >
+              {errorMessage}
+            </Text>
+          ) : null}
+
+          {!loading && configured && currentOffering == null ? (
+            <View className="mt-4 items-center gap-2">
+              <Text
+                className="text-center text-[12px] leading-[17px] tracking-[-0.48px]"
+                style={{ color: colors.textSecondary }}
+              >
+                {t("premium.productsUnavailable")}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={() => void handleRefresh()}
+                className="active:opacity-70 disabled:opacity-40"
+              >
+                <Text
+                  className="text-[13px] font-semibold"
+                  style={{ color: colors.brand }}
+                >
+                  {busyAction === "refresh"
+                    ? t("premium.refreshing")
+                    : t("common.retry")}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <Text
-            className="mt-3 text-center text-[12px] tracking-[-0.48px]"
+            className="mt-5 text-center text-[11px] leading-[16px] tracking-[-0.44px]"
             style={{ color: colors.textTertiary }}
           >
-            {t("premium.subscriptionUnavailable")}
+            {t("premium.autoRenewDisclosure")}
           </Text>
+          <View className="mt-3 flex-row justify-center gap-5">
+            <Pressable onPress={() => void Linking.openURL(TERMS_OF_USE_URL)}>
+              <Text
+                className="text-[12px] underline"
+                style={{ color: colors.textSecondary }}
+              >
+                {t("premium.termsOfUse")}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
+              <Text
+                className="text-[12px] underline"
+                style={{ color: colors.textSecondary }}
+              >
+                {t("premium.privacyPolicy")}
+              </Text>
+            </Pressable>
+          </View>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -251,6 +448,7 @@ function PlanCard({
   badge,
   highlighted,
   selected,
+  disabled,
   onSelect,
 }: PlanCardProps) {
   const colors = useReadupColors();
@@ -258,12 +456,14 @@ function PlanCard({
   return (
     <Pressable
       onPress={onSelect}
+      disabled={disabled}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      className="rounded-[20px] border px-5 py-4 active:opacity-90"
+      className="rounded-[20px] border px-5 py-4 active:opacity-90 disabled:opacity-50"
       style={{
         borderColor: selected ? colors.brand : colors.elevated,
-        backgroundColor: highlighted && selected ? colors.elevated : colors.surface,
+        backgroundColor:
+          highlighted && selected ? colors.elevated : colors.surface,
       }}
     >
       <View className="flex-row items-center justify-between">

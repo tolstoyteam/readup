@@ -14,6 +14,7 @@ import { ThemePreferenceProvider } from "@/shared/context/theme-preference-conte
 import { LibraryProvider } from "@/features/library";
 import { QuotesProvider } from "@/features/quotes";
 import { ReaderSettingsProvider } from "@/features/reader/settings/reader-settings-context";
+import { SubscriptionProvider } from "@/features/subscription";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import {
   ReadupColors,
@@ -64,98 +65,100 @@ export default function RootLayout() {
         >
           <InterfaceLanguageProvider>
             <AuthProvider>
-              <LibraryProvider>
-                <QuotesProvider>
-                  <ReaderSettingsProvider>
-                    <Stack>
-                      <Stack.Screen
-                        name="(onboarding)"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(tabs)"
-                        options={{
-                          headerShown: false,
-                          gestureEnabled: false,
-                        }}
-                      />
-                      <Stack.Screen
-                        name="explore"
-                        options={{
-                          headerShown: false,
-                          animation: "none",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="(auth)"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(setup)"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="settings"
-                        options={{
-                          headerShown: false,
-                          animation: "slide_from_right",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="reader/[bookId]"
-                        options={{
-                          headerShown: false,
-                          animation: "slide_from_right",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="book/[bookId]"
-                        options={{
-                          headerShown: false,
-                          animation: "slide_from_right",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="quiz/[bookId]"
-                        options={{
-                          headerShown: false,
-                          presentation: "modal",
-                          animation: "slide_from_bottom",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="streak"
-                        options={{
-                          headerShown: false,
-                          animation: "slide_from_right",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="achievements"
-                        options={{
-                          headerShown: false,
-                          animation: "slide_from_right",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="subscription"
-                        options={{
-                          headerShown: false,
-                          presentation: "modal",
-                          animation: "slide_from_bottom",
-                        }}
-                      />
-                      <Stack.Screen
-                        name="notifications"
-                        options={{
-                          headerShown: false,
-                          animation: "slide_from_right",
-                        }}
-                      />
-                    </Stack>
-                  </ReaderSettingsProvider>
-                </QuotesProvider>
-              </LibraryProvider>
+              <SubscriptionProvider>
+                <LibraryProvider>
+                  <QuotesProvider>
+                    <ReaderSettingsProvider>
+                      <Stack>
+                        <Stack.Screen
+                          name="(onboarding)"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="(tabs)"
+                          options={{
+                            headerShown: false,
+                            gestureEnabled: false,
+                          }}
+                        />
+                        <Stack.Screen
+                          name="explore"
+                          options={{
+                            headerShown: false,
+                            animation: "none",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="(auth)"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="(setup)"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="settings"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_right",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="reader/[bookId]"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_right",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="book/[bookId]"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_right",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="quiz/[bookId]"
+                          options={{
+                            headerShown: false,
+                            presentation: "modal",
+                            animation: "slide_from_bottom",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="streak"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_right",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="achievements"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_right",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="subscription"
+                          options={{
+                            headerShown: false,
+                            presentation: "modal",
+                            animation: "slide_from_bottom",
+                          }}
+                        />
+                        <Stack.Screen
+                          name="notifications"
+                          options={{
+                            headerShown: false,
+                            animation: "slide_from_right",
+                          }}
+                        />
+                      </Stack>
+                    </ReaderSettingsProvider>
+                  </QuotesProvider>
+                </LibraryProvider>
+              </SubscriptionProvider>
             </AuthProvider>
             <StatusBar style="auto" />
           </InterfaceLanguageProvider>
