@@ -10,6 +10,7 @@ import {
   Headphones,
   Layers,
   ListChecks,
+  LockKeyhole,
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -38,6 +39,7 @@ import {
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import { useSubscription } from "@/features/subscription";
 
 function formatReadingTime(
   minutes: number | null,
@@ -59,6 +61,7 @@ export default function BookDetailScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { isPremium } = useSubscription();
   const params = useLocalSearchParams<{ bookId: string }>();
   const bookId = params.bookId ? decodeURIComponent(params.bookId) : "";
 
@@ -130,16 +133,28 @@ export default function BookDetailScreen() {
 
   function openReader() {
     if (!book) return;
+    if (!isPremium) {
+      router.push("/subscription");
+      return;
+    }
     router.push(`/reader/${encodeURIComponent(book.bookId)}`);
   }
 
   function openListen() {
     if (!book) return;
+    if (!isPremium) {
+      router.push("/subscription");
+      return;
+    }
     router.push(`/reader/${encodeURIComponent(book.bookId)}?mode=listen`);
   }
 
   function openQuiz() {
     if (!book) return;
+    if (!isPremium) {
+      router.push("/subscription");
+      return;
+    }
     router.push(`/quiz/${encodeURIComponent(book.bookId)}`);
   }
 
@@ -344,11 +359,19 @@ export default function BookDetailScreen() {
                 accessibilityRole="button"
                 className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border-2 border-[#047857] dark:border-[#10B981] bg-[#059669] px-6 active:opacity-90"
               >
-                <BookOpen
-                  size={20}
-                  color={colors.textInverse}
-                  strokeWidth={2.2}
-                />
+                {isPremium ? (
+                  <BookOpen
+                    size={20}
+                    color={colors.textInverse}
+                    strokeWidth={2.2}
+                  />
+                ) : (
+                  <LockKeyhole
+                    size={19}
+                    color={colors.textInverse}
+                    strokeWidth={2.2}
+                  />
+                )}
                 <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#FBFAF2]">
                   {bookInProgress
                     ? t("bookDetail.continueReading")
@@ -362,11 +385,19 @@ export default function BookDetailScreen() {
                   accessibilityRole="button"
                   className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
                 >
-                  <Headphones
-                    size={20}
-                    color={colors.brand}
-                    strokeWidth={2.2}
-                  />
+                  {isPremium ? (
+                    <Headphones
+                      size={20}
+                      color={colors.brand}
+                      strokeWidth={2.2}
+                    />
+                  ) : (
+                    <LockKeyhole
+                      size={19}
+                      color={colors.brand}
+                      strokeWidth={2.2}
+                    />
+                  )}
                   <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
                     {t("bookDetail.listen")}
                   </Text>
@@ -379,11 +410,19 @@ export default function BookDetailScreen() {
                   accessibilityRole="button"
                   className="min-h-[54px] flex-row items-center justify-center gap-2 rounded-full border border-[#059669] dark:border-[#34D399] bg-transparent px-6 active:opacity-80"
                 >
-                  <ListChecks
-                    size={20}
-                    color={colors.brand}
-                    strokeWidth={2.2}
-                  />
+                  {isPremium ? (
+                    <ListChecks
+                      size={20}
+                      color={colors.brand}
+                      strokeWidth={2.2}
+                    />
+                  ) : (
+                    <LockKeyhole
+                      size={19}
+                      color={colors.brand}
+                      strokeWidth={2.2}
+                    />
+                  )}
                   <Text className="text-[18px] font-medium tracking-[-0.36px] text-[#059669] dark:text-[#34D399]">
                     {t("bookDetail.takeQuiz")}
                   </Text>

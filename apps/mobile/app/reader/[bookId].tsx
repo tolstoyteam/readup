@@ -36,6 +36,7 @@ import { resolvePageIndex } from "@/features/reader/lib/resolve-reading-position
 import type { ReaderLanguage } from "@/features/reader/settings/reader-settings";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { useSubscription } from "@/features/subscription";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useIsFocused } from "@react-navigation/native";
@@ -45,6 +46,7 @@ import {
   useNavigation,
   useRouter,
   useFocusEffect,
+  Redirect,
   type Href,
 } from "expo-router";
 import {
@@ -246,6 +248,7 @@ export default function ReaderScreen() {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const { user } = useAuth();
+  const { isPremium, loading: subscriptionLoading } = useSubscription();
   const { t } = useInterfaceLanguage();
   const { bookId: bookIdParam, mode: modeParam, focusQuoteId: focusQuoteIdParam } = useLocalSearchParams<{
     bookId: string;
@@ -338,11 +341,11 @@ export default function ReaderScreen() {
   }, [bookId, focusQuoteId]);
 
   useEffect(() => {
-    if (!bookId) return;
+    if (subscriptionLoading || !isPremium || !bookId) return;
     void bookHasPlayableQuiz(bookId)
       .then(setHasQuiz)
       .catch(() => setHasQuiz(false));
-  }, [bookId]);
+  }, [bookId, isPremium, subscriptionLoading]);
 
   const loadAudio = useCallback(async (targetBookId: string) => {
     setAudioState({ status: "checking", source: null, message: null });
@@ -396,8 +399,9 @@ export default function ReaderScreen() {
   }, [bookId, t]);
 
   useEffect(() => {
+    if (subscriptionLoading || !isPremium) return;
     load();
-  }, [load]);
+  }, [isPremium, load, subscriptionLoading]);
 
   useEffect(() => {
     if (!document?.book_id) return;
@@ -727,6 +731,21 @@ export default function ReaderScreen() {
     dismissSelection();
     if (pageIndex > 0) setPageIndex((i) => i - 1);
   };
+
+  if (subscriptionLoading) {
+    return (
+      <SafeAreaView
+        className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]"
+        edges={["top", "left", "right"]}
+      >
+        <ActivityIndicator size="large" color={colors.brand} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!isPremium) {
+    return <Redirect href="/subscription" />;
+  }
 
   const quoteChromeProps = {
     scrollViewRef,

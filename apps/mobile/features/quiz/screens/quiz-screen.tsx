@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   ArrowLeft,
@@ -33,12 +33,14 @@ import {
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
+import { useSubscription } from "@/features/subscription";
 
 export default function QuizScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
+  const { isPremium, loading: subscriptionLoading } = useSubscription();
   const { t } = useInterfaceLanguage();
   const params = useLocalSearchParams<{ bookId: string }>();
   const bookId = params.bookId ? decodeURIComponent(params.bookId) : "";
@@ -88,8 +90,9 @@ export default function QuizScreen() {
   }, [bookId, t, user]);
 
   useEffect(() => {
+    if (subscriptionLoading || !isPremium) return;
     load();
-  }, [load]);
+  }, [isPremium, load, subscriptionLoading]);
 
   const totalQuestions = quiz?.questions.length ?? 0;
   const allAnswered =
@@ -126,6 +129,21 @@ export default function QuizScreen() {
     setAnswers({});
     setResult(null);
     setCurrentIndex(0);
+  }
+
+  if (subscriptionLoading) {
+    return (
+      <SafeAreaView
+        className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]"
+        edges={["top"]}
+      >
+        <ActivityIndicator size="large" color={colors.brand} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!isPremium) {
+    return <Redirect href="/subscription" />;
   }
 
   if (result && quiz) {
