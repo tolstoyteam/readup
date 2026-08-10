@@ -26,6 +26,8 @@ import { supabase } from "@/shared/lib/supabase";
 
 type OAuthProvider = "google" | "apple";
 
+const NATIVE_OAUTH_REDIRECT_URL = "qitapapp://auth/callback";
+
 type AccountActionResult = { error: Error | null };
 
 export type SignUpResult = {
@@ -255,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithOAuth = useCallback(async (provider: OAuthProvider) => {
     try {
-      const redirectTo = Linking.createURL("/");
+      const redirectTo = NATIVE_OAUTH_REDIRECT_URL;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

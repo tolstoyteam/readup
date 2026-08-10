@@ -10,8 +10,8 @@ import { PURCHASES_ERROR_CODE } from "react-native-purchases";
 export const READUP_PREMIUM_ENTITLEMENT_ID = "Readup Premium";
 
 export const READUP_PRODUCT_IDS = {
-  monthly: "monthly",
-  yearly: "yearly",
+  monthly: "com.sanat.readup.premium.monthly",
+  yearly: "com.sanat.readup.premium.yearly",
 } as const;
 
 export type SubscriptionPlan = keyof typeof READUP_PRODUCT_IDS;
@@ -20,10 +20,16 @@ const TEST_STORE_API_KEY = "test_fswvCQMxGOOEPMnaVMNcUXLruxN";
 
 /**
  * RevenueCat SDK keys are public app identifiers, not secret server keys.
- * The supplied Test Store key is used until a platform-specific production key
- * is provided in the build environment.
+ * Debug builds use Test Store; Release builds require a platform production key.
  */
 export function revenueCatApiKey(): string {
+  if (__DEV__) {
+    return (
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY?.trim() ||
+      TEST_STORE_API_KEY
+    );
+  }
+
   const platformKey =
     Platform.OS === "ios"
       ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
@@ -31,11 +37,15 @@ export function revenueCatApiKey(): string {
         ? process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY
         : undefined;
 
-  return (
+  const apiKey =
     platformKey?.trim() ||
-    process.env.EXPO_PUBLIC_REVENUECAT_API_KEY?.trim() ||
-    TEST_STORE_API_KEY
-  );
+    process.env.EXPO_PUBLIC_REVENUECAT_API_KEY?.trim();
+
+  if (!apiKey) {
+    throw new Error("Missing RevenueCat production API key for this platform.");
+  }
+
+  return apiKey;
 }
 
 export function hasReadupPremium(customerInfo: CustomerInfo | null): boolean {

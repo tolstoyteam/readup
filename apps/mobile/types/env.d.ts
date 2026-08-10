@@ -11,6 +11,8 @@ declare namespace NodeJS {
     EXPO_PUBLIC_SUPABASE_STORAGE_BUCKET?: string;
     /** RevenueCat Test Store fallback or a shared public SDK key. */
     EXPO_PUBLIC_REVENUECAT_API_KEY?: string;
+    /** RevenueCat Test Store public SDK key (`test_...`) for development builds only. */
+    EXPO_PUBLIC_REVENUECAT_TEST_API_KEY?: string;
     /** RevenueCat public Apple SDK key (`appl_...`) for production iOS builds. */
     EXPO_PUBLIC_REVENUECAT_IOS_API_KEY?: string;
     /** RevenueCat public Google SDK key (`goog_...`) for production Android builds. */

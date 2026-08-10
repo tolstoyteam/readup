@@ -6,7 +6,6 @@ import {
   Headphones,
   Library,
   Sparkles,
-  Star,
   X,
   Zap,
 } from "lucide-react-native";
@@ -66,11 +65,6 @@ const BENEFITS = [
     icon: Sparkles,
     titleKey: "premium.testsTitle",
     descriptionKey: "premium.testsDescription",
-  },
-  {
-    icon: Star,
-    titleKey: "premium.noAdsTitle",
-    descriptionKey: "premium.noAdsDescription",
   },
 ] satisfies {
   icon: typeof Library;
