@@ -1,20 +1,22 @@
-import type { Metadata } from "next";
-import Link from "next/link";
 import { AdminShell } from "@/components/AdminShell";
-import { DeleteBookDialog } from "./DeleteBookDialog";
+import { BookCoverThumbnail } from "@/components/books/BookCoverThumbnail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { listBookWorks, type BookWorkListItem } from "@/lib/book-relational";
 import { languageLabel } from "@/lib/book-language";
+import { listBookWorks, type BookWorkListItem } from "@/lib/book-relational";
+import { resolveCoverDisplayUrl } from "@/lib/cover-signed-url";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { DeleteBookDialog } from "./DeleteBookDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,12 @@ export default async function BooksPage() {
   await requireAdminPage();
 
   const rows: BookWorkListItem[] = await listBookWorks();
+  const rowsWithCovers = await Promise.all(
+    rows.map(async (row) => ({
+      row,
+      coverSrc: await resolveCoverDisplayUrl(row.coverImageUrl),
+    })),
+  );
 
   return (
     <AdminShell active="books">
@@ -73,13 +81,18 @@ export default async function BooksPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row) => {
+                rowsWithCovers.map(({ row, coverSrc }) => {
                   const primaryEdition = row.editions[0];
                   return (
                     <TableRow key={row.id}>
                       <TableCell>
-                        <div className="font-medium">{row.title}</div>
-                        <div className="text-xs text-muted-foreground">{row.author}</div>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <BookCoverThumbnail src={coverSrc} />
+                          <div className="min-w-0">
+                            <div className="font-medium">{row.title}</div>
+                            <div className="text-xs text-muted-foreground">{row.author}</div>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">

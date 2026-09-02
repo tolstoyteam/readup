@@ -21,3 +21,15 @@ export async function getCoverImageSignedUrl(
     return null;
   }
 }
+
+/**
+ * Resolves a stored cover path (or legacy absolute URL) to a displayable image URL.
+ */
+export async function resolveCoverDisplayUrl(
+  path: string | null | undefined,
+): Promise<string | null> {
+  const trimmed = path?.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return getCoverImageSignedUrl(trimmed);
+}
