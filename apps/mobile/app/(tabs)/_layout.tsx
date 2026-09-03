@@ -82,10 +82,6 @@ export default function TabLayout() {
     return <Redirect href="/welcome" />;
   }
 
-  if (!user) {
-    return <Redirect href="/login" />;
-  }
-
   if (!awaitingInitialProfile && profile && !profile.interests_step_done) {
     return <Redirect href="/(setup)/interests" />;
   }

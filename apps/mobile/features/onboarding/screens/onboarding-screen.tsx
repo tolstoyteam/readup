@@ -143,7 +143,7 @@ export default function OnboardingScreen() {
       return;
     }
     await markOnboardingComplete();
-    router.replace("/signup");
+    router.replace("/");
   }, [pageIndex, router, width]);
 
   if (!fontsLoaded) {

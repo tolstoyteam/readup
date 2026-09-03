@@ -20,12 +20,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ReadupLogo } from "@/shared/components/readup-logo";
 import { isStreakActiveToday, useReadingStats } from "@/features/reading-stats";
 import { useReadupColors } from "@/shared/constants/readup-theme";
+import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 
 export default function HomeScreen() {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
+  const { user } = useAuth();
   const { profile, stats, todayKey } = useReadingStats(1);
   const {
     items,
@@ -44,6 +46,10 @@ export default function HomeScreen() {
 
   function openContinue(item: BookCardItem) {
     router.push(`/reader/${encodeURIComponent(item.bookId)}`);
+  }
+
+  function openStreak() {
+    router.push(user ? "/streak" : "/login");
   }
 
   const hasStreak = isStreakActiveToday(
@@ -76,7 +82,7 @@ export default function HomeScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("profile.streak")}
-              onPress={() => router.push("/streak")}
+              onPress={openStreak}
               hitSlop={10}
               className="h-8 flex-row items-center gap-1.5 rounded-full border px-2.5 active:opacity-80"
               style={{
