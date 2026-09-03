@@ -20,16 +20,10 @@ const TEST_STORE_API_KEY = "test_fswvCQMxGOOEPMnaVMNcUXLruxN";
 
 /**
  * RevenueCat SDK keys are public app identifiers, not secret server keys.
- * Debug builds use Test Store; Release builds require a platform production key.
+ * Development builds can use App Store / Play Store sandbox when a platform key
+ * is configured; otherwise they fall back to RevenueCat Test Store.
  */
 export function revenueCatApiKey(): string {
-  if (__DEV__) {
-    return (
-      process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY?.trim() ||
-      TEST_STORE_API_KEY
-    );
-  }
-
   const platformKey =
     Platform.OS === "ios"
       ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
@@ -40,6 +34,14 @@ export function revenueCatApiKey(): string {
   const apiKey =
     platformKey?.trim() ||
     process.env.EXPO_PUBLIC_REVENUECAT_API_KEY?.trim();
+
+  if (__DEV__) {
+    return (
+      apiKey ||
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY?.trim() ||
+      TEST_STORE_API_KEY
+    );
+  }
 
   if (!apiKey) {
     throw new Error("Missing RevenueCat production API key for this platform.");
