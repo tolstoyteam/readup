@@ -49,6 +49,8 @@ const PRIVACY_POLICY_URL =
   process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL ?? "https://readup.kz/privacy";
 const TERMS_OF_USE_URL =
   "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+const APPLE_SUBSCRIPTIONS_URL =
+  "https://apps.apple.com/account/subscriptions";
 
 const BENEFITS = [
   {
@@ -87,13 +89,17 @@ export default function SubscriptionScreen() {
     refresh,
     restorePurchases,
     presentPaywall,
-    presentCustomerCenter,
   } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">(
     "yearly",
   );
   const [busyAction, setBusyAction] = useState<
-    null | "purchase" | "restore" | "paywall" | "manage" | "refresh"
+    | null
+    | "purchase"
+    | "restore"
+    | "paywall"
+    | "manage"
+    | "refresh"
   >(null);
 
   const monthlyPackage = packageForPlan(currentOffering, "monthly");
@@ -166,7 +172,7 @@ export default function SubscriptionScreen() {
   async function handleCustomerCenter() {
     setBusyAction("manage");
     try {
-      await presentCustomerCenter();
+      await Linking.openURL(APPLE_SUBSCRIPTIONS_URL);
     } catch (error) {
       Alert.alert(t("premium.manageErrorTitle"), revenueCatErrorMessage(error));
     } finally {
