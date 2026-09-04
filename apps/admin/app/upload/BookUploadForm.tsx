@@ -233,8 +233,14 @@ export function BookUploadForm({
   const [genrePick, setGenrePick] = useState<BookGenre | "">("");
   const [keywordDraft, setKeywordDraft] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(initialCoverFile ?? null);
-  const [coverRemoved, setCoverRemoved] = useState(false);
+  const [savedCoverPath, setSavedCoverPath] = useState<string | null>(
+    () => editContext?.initial.coverImageUrl ?? initialDraft?.cover_image_url ?? null,
+  );
   const [coverHint, setCoverHint] = useState<string | null>(null);
+  const [coverStatus, setCoverStatus] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [isUpdatingCover, setIsUpdatingCover] = useState(false);
+  const [isRemovingCover, setIsRemovingCover] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -308,7 +314,11 @@ export function BookUploadForm({
 
     const payload = {
       ...rawValues,
-      cover_image_url: coverRemoved ? null : rawValues.cover_image_url,
+      // Edit: cover is managed by Update cover / Remove cover — preserve saved path.
+      // Create: include selected file via multipart below; otherwise use form path.
+      cover_image_url: editContext
+        ? (savedCoverPath ?? undefined)
+        : (rawValues.cover_image_url ?? undefined),
       quiz: quizEnabled ? rawValues.quiz : undefined,
     };
     const parsed = parseBookContentInput(payload);
@@ -322,7 +332,8 @@ export function BookUploadForm({
       const url = editContext ? `/api/books/${editContext.recordId}` : "/api/books";
       const method = editContext ? "PATCH" : "POST";
       let response: Response;
-      if (coverFile) {
+      // Only attach cover on create; edit cover updates use PATCH /cover.
+      if (!editContext && coverFile) {
         const formData = new FormData();
         formData.append("book", JSON.stringify(parsed.data));
         formData.append("cover", coverFile);
@@ -341,8 +352,12 @@ export function BookUploadForm({
       }
 
       setStatus(editContext ? "Book updated." : "Book created.");
-      setCoverFile(null);
-      setCoverRemoved(false);
+      if (!editContext) {
+        setCoverFile(null);
+        if (typeof data.cover_image_url === "string") {
+          setSavedCoverPath(data.cover_image_url);
+        }
+      }
       router.refresh();
       if (!editContext && typeof data.id === "number") {
         router.push(`/books/${data.id}/edit`);
@@ -351,6 +366,65 @@ export function BookUploadForm({
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const updateCover = async () => {
+    if (!editContext || !coverFile || isUpdatingCover) return;
+    setCoverStatus(null);
+    setCoverError(null);
+    setCoverHint(null);
+    setIsUpdatingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("cover", coverFile);
+      const response = await fetch(`/api/books/${editContext.recordId}/cover`, {
+        method: "PATCH",
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) {
+        throw new Error(
+          typeof data?.error === "string" ? data.error : "Cover update failed",
+        );
+      }
+      const newPath =
+        typeof data.cover_image_url === "string" ? data.cover_image_url : null;
+      setSavedCoverPath(newPath);
+      form.setValue("cover_image_url", newPath, { shouldDirty: false });
+      setCoverFile(null);
+      setCoverStatus("Cover updated successfully.");
+    } catch (e) {
+      setCoverError(e instanceof Error ? e.message : "Cover update failed");
+    } finally {
+      setIsUpdatingCover(false);
+    }
+  };
+
+  const removeCover = async () => {
+    if (!editContext || !savedCoverPath || isRemovingCover) return;
+    setCoverStatus(null);
+    setCoverError(null);
+    setCoverHint(null);
+    setIsRemovingCover(true);
+    try {
+      const response = await fetch(`/api/books/${editContext.recordId}/cover`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) {
+        throw new Error(
+          typeof data?.error === "string" ? data.error : "Cover removal failed",
+        );
+      }
+      setSavedCoverPath(null);
+      form.setValue("cover_image_url", null, { shouldDirty: false });
+      setCoverFile(null);
+      setCoverStatus("Cover removed successfully.");
+    } catch (e) {
+      setCoverError(e instanceof Error ? e.message : "Cover removal failed");
+    } finally {
+      setIsRemovingCover(false);
     }
   };
 
@@ -475,6 +549,8 @@ export function BookUploadForm({
                   onChange={async (event) => {
                     const file = event.target.files?.[0] ?? null;
                     setCoverHint(null);
+                    setCoverStatus(null);
+                    setCoverError(null);
                     if (!file) {
                       setCoverFile(null);
                       return;
@@ -487,12 +563,15 @@ export function BookUploadForm({
                       return;
                     }
                     setCoverFile(file);
-                    setCoverRemoved(false);
                   }}
                 />
                 {coverFile ? (
                   <p className="text-xs text-muted-foreground">
                     Selected: {coverFile.name}
+                  </p>
+                ) : savedCoverPath ? (
+                  <p className="text-xs text-muted-foreground">
+                    Current cover saved.
                   </p>
                 ) : null}
                 </Field>
@@ -502,19 +581,38 @@ export function BookUploadForm({
                 <AlertDescription>{coverHint}</AlertDescription>
               </Alert>
             ) : null}
-            {editContext?.initial.coverImageUrl && !coverRemoved ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  setCoverRemoved(true);
-                  form.setValue("cover_image_url", null, { shouldDirty: true });
-                }}
-                className="mt-4"
-              >
-                Remove existing cover
-              </Button>
+            {coverError ? (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>{coverError}</AlertDescription>
+              </Alert>
+            ) : null}
+            {coverStatus ? (
+              <Alert className="mt-4">
+                <AlertDescription>{coverStatus}</AlertDescription>
+              </Alert>
+            ) : null}
+            {editContext ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={updateCover}
+                  disabled={!coverFile || isUpdatingCover || isRemovingCover}
+                >
+                  {isUpdatingCover ? "Updating cover..." : "Update cover"}
+                </Button>
+                {savedCoverPath ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={removeCover}
+                    disabled={isUpdatingCover || isRemovingCover}
+                  >
+                    {isRemovingCover ? "Removing cover..." : "Remove existing cover"}
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
             </CardContent>
           </Card>
@@ -716,7 +814,7 @@ export function BookUploadForm({
               type="submit"
               disabled={isSaving}
             >
-              {isSaving ? "Saving..." : editContext ? "Save changes" : "Create book"}
+              {isSaving ? "Saving..." : editContext ? "Save content changes" : "Create book"}
             </Button>
             <details className="min-w-full">
               <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-primary">

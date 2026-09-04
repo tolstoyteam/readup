@@ -1,7 +1,5 @@
 import { parseBookContentInput } from "@/lib/book-content";
 import { requireAdminApi } from "@/lib/admin-auth";
-import { validateCoverBytes } from "@/lib/cover-image";
-import { removeCoverFromStorage } from "@/lib/cover-storage";
 import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
 import {
   deleteEditionById,
@@ -9,9 +7,6 @@ import {
   replaceBookContent,
   type BookWithContent,
 } from "@/lib/book-relational";
-import { getBookCoversBucket, getSupabaseAdmin } from "@/lib/supabase-storage";
-
-const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
 function parseId(param: string): number | null {
   const id = Number(param);
@@ -92,15 +87,10 @@ async function patchJson(request: Request, id: number, previous: BookWithContent
     return Response.json({ error: parsed.message }, { status: 400 });
   }
 
-  const hasCoverField = body && typeof body === "object" && "cover_image_url" in body;
-  const input = hasCoverField
-    ? parsed.data
-    : { ...parsed.data, cover_image_url: previous.coverImageUrl ?? undefined };
-  const oldCover = previous.coverImageUrl;
-  const newCover = input.cover_image_url;
-  if (oldCover && oldCover !== newCover) {
-    await removeCoverFromStorage(oldCover);
-  }
+  const input = {
+    ...parsed.data,
+    cover_image_url: previous.coverImageUrl ?? undefined,
+  };
 
   const book = await replaceBookContent(id, input);
   if (!book) return Response.json({ error: "Not found" }, { status: 404 });
@@ -136,86 +126,16 @@ async function patchMultipart(request: Request, id: number, previous: BookWithCo
     return Response.json({ error: parsed.message }, { status: 400 });
   }
 
-  const coverField = form.get("cover");
-  const cover = await validateCoverField(coverField);
-  if (!cover.ok) {
-    return Response.json({ error: cover.message }, { status: cover.status });
-  }
-
-  const hasCoverField = body && typeof body === "object" && "cover_image_url" in body;
-  let input = hasCoverField
-    ? parsed.data
-    : { ...parsed.data, cover_image_url: previous.coverImageUrl ?? undefined };
-  if (cover.cover) {
-    const uploaded = await uploadCover(previous.workId, cover.cover);
-    if (!uploaded.ok) {
-      return Response.json({ error: uploaded.message }, { status: uploaded.status });
-    }
-    if (previous.coverImageUrl && previous.coverImageUrl !== uploaded.path) {
-      await removeCoverFromStorage(previous.coverImageUrl);
-    }
-    input = { ...input, cover_image_url: uploaded.path };
-  }
+  // Cover uploads belong on PATCH /api/books/[id]/cover — ignore any cover file here.
+  const input = {
+    ...parsed.data,
+    cover_image_url: previous.coverImageUrl ?? undefined,
+  };
 
   const book = await replaceBookContent(id, input);
   if (!book) return Response.json({ error: "Not found" }, { status: 404 });
 
   return successResponse(book, await finalizeBookTtsForBook(book));
-}
-
-type ValidCover =
-  | { ok: true; cover?: { buffer: Buffer; mime: string; extension: string } }
-  | { ok: false; message: string; status: number };
-
-async function validateCoverField(field: FormDataEntryValue | null): Promise<ValidCover> {
-  if (!(field instanceof File) || field.size <= 0) return { ok: true };
-  if (field.size > MAX_COVER_BYTES) {
-    return { ok: false, message: "Cover file is too large (max 8 MB).", status: 400 };
-  }
-
-  const buffer = Buffer.from(await field.arrayBuffer());
-  const validated = validateCoverBytes(buffer, field.type);
-  if (!validated.ok) {
-    return { ok: false, message: validated.message, status: 400 };
-  }
-
-  return {
-    ok: true,
-    cover: { buffer, mime: validated.mime, extension: validated.extension },
-  };
-}
-
-async function uploadCover(
-  workId: string,
-  cover: { buffer: Buffer; mime: string; extension: string },
-): Promise<{ ok: true; path: string } | { ok: false; message: string; status: number }> {
-  const objectPath = `works/${workId}/cover.${cover.extension}`;
-
-  try {
-    const supabase = getSupabaseAdmin();
-    const bucket = getBookCoversBucket();
-    const { error } = await supabase.storage.from(bucket).upload(objectPath, cover.buffer, {
-      contentType: cover.mime,
-      upsert: true,
-    });
-    if (error) {
-      console.error("Supabase storage upload:", error);
-      return {
-        ok: false,
-        message: "Failed to upload cover to storage. Check bucket name and service role permissions.",
-        status: 502,
-      };
-    }
-  } catch (e) {
-    console.error(e);
-    return {
-      ok: false,
-      message: e instanceof Error ? e.message : "Storage configuration error",
-      status: 500,
-    };
-  }
-
-  return { ok: true, path: objectPath };
 }
 
 export async function DELETE(
