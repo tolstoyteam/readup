@@ -231,6 +231,16 @@ export async function createEditionForWork(args: {
   sourceEditionId?: number | null;
   generationMetadata?: BookGenerationMetadata | null;
 }): Promise<BookWithContent> {
+  const [workRow] = await db
+    .select({ coverImageUrl: bookWorksTable.coverImageUrl })
+    .from(bookWorksTable)
+    .where(eq(bookWorksTable.id, args.workId))
+    .limit(1);
+
+  const workCover = workRow?.coverImageUrl?.trim() || null;
+  const inputCover = args.input.cover_image_url?.trim() || null;
+  const editionCover = workCover ?? inputCover;
+
   const [created] = await db.transaction(async (tx) => {
     const [book] = await tx
       .insert(booksTable)
@@ -242,7 +252,7 @@ export async function createEditionForWork(args: {
         status: args.status ?? "draft",
         sourceEditionId: args.sourceEditionId ?? null,
         publishedAt: args.status === "published" ? new Date() : null,
-        coverImageUrl: args.input.cover_image_url ?? null,
+        coverImageUrl: editionCover,
         keywords: args.input.keywords,
         generationMetadata: args.generationMetadata ?? null,
       })
@@ -256,6 +266,11 @@ export async function createEditionForWork(args: {
     return [book];
   });
 
+  // Input provided a cover but the work had none — promote to work-level so siblings match.
+  if (!workCover && inputCover) {
+    await updateWorkCover(args.workId, inputCover);
+  }
+
   return getBookWithContent(created.id).then((book) => {
     if (!book) throw new Error("Created book was not found");
     return book;
@@ -263,12 +278,17 @@ export async function createEditionForWork(args: {
 }
 
 export async function createBookWithContent(input: BookContentInput): Promise<BookWithContent> {
-  const work = await createBookWork({ coverImageUrl: input.cover_image_url ?? null });
-  return createEditionForWork({
+  const coverPath = input.cover_image_url?.trim() || null;
+  const work = await createBookWork({ coverImageUrl: coverPath });
+  const book = await createEditionForWork({
     workId: work.id,
     input,
     status: "published",
   });
+  if (coverPath) {
+    await updateWorkCover(work.id, coverPath);
+  }
+  return book;
 }
 
 export async function replaceBookContent(
@@ -282,7 +302,7 @@ export async function replaceBookContent(
         title: input.title,
         author: input.author,
         language: input.language,
-        coverImageUrl: input.cover_image_url ?? null,
+        // Cover is work-scoped; managed only via updateWorkCover / cover API.
         keywords: input.keywords,
         ttsAudio: null,
         ttsError: null,

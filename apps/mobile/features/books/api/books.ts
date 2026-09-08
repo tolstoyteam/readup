@@ -26,8 +26,8 @@ export type FetchBooksResult = {
 };
 
 type BookWorkJoin =
-  | { created_at?: string | null }
-  | { created_at?: string | null }[]
+  | { created_at?: string | null; cover_image_url?: string | null }
+  | { created_at?: string | null; cover_image_url?: string | null }[]
   | null;
 
 type RelationalBookRow = {
@@ -47,12 +47,30 @@ type RelationalBookRow = {
 };
 
 const BOOK_LIST_SELECT =
-  "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name)), book_works(created_at)";
+  "id, work_id, status, title, author, language, cover_image_url, keywords, data, book_genres(genre:genres(name_ru,name)), book_works(cover_image_url, created_at)";
 
 function workCreatedAtFromJoin(bookWorks: BookWorkJoin): string | null {
   const work = Array.isArray(bookWorks) ? bookWorks[0] : bookWorks;
   const createdAt = work?.created_at;
   return typeof createdAt === "string" && createdAt.length > 0 ? createdAt : null;
+}
+
+function workCoverFromJoin(bookWorks: BookWorkJoin | undefined): string | undefined {
+  const work = Array.isArray(bookWorks) ? bookWorks[0] : bookWorks;
+  const cover = work?.cover_image_url?.trim();
+  return cover || undefined;
+}
+
+function resolveCoverImagePath(
+  row: Pick<RelationalBookRow, "cover_image_url" | "book_works">,
+  legacyPath?: string,
+): string | undefined {
+  return (
+    workCoverFromJoin(row.book_works) ||
+    row.cover_image_url?.trim() ||
+    legacyPath?.trim() ||
+    undefined
+  );
 }
 
 export function extractGenresFromJoin(
@@ -81,7 +99,7 @@ export function documentFromRelationalRow(row: RelationalBookRow): BookDocument 
     author: row.author ?? "",
     language: row.language ?? "",
     genres: extractGenresFromJoin(row.book_genres),
-    cover_image_path: row.cover_image_url ?? undefined,
+    cover_image_path: resolveCoverImagePath(row),
     difficulty:
       typeof legacy?.difficulty === "string" ? legacy.difficulty : undefined,
     reading_time_minutes:
@@ -345,8 +363,7 @@ export async function fetchBookByBookId(
               ...match,
               pages,
               total_pages: Math.max(pages.length, 1),
-              cover_image_path:
-                row.cover_image_url?.trim() || match.cover_image_path,
+              cover_image_path: resolveCoverImagePath(row, match.cover_image_path),
             },
           };
         }

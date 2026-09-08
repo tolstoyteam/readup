@@ -393,7 +393,7 @@ export function BookUploadForm({
       setSavedCoverPath(newPath);
       form.setValue("cover_image_url", newPath, { shouldDirty: false });
       setCoverFile(null);
-      setCoverStatus("Cover updated successfully.");
+      setCoverStatus("Cover updated for all language versions of this book.");
     } catch (e) {
       setCoverError(e instanceof Error ? e.message : "Cover update failed");
     } finally {
@@ -420,7 +420,7 @@ export function BookUploadForm({
       setSavedCoverPath(null);
       form.setValue("cover_image_url", null, { shouldDirty: false });
       setCoverFile(null);
-      setCoverStatus("Cover removed successfully.");
+      setCoverStatus("Cover removed from all language versions of this book.");
     } catch (e) {
       setCoverError(e instanceof Error ? e.message : "Cover removal failed");
     } finally {
@@ -512,7 +512,10 @@ export function BookUploadForm({
           <Card>
             <CardHeader>
               <CardTitle>Book information</CardTitle>
-              <CardDescription>Core metadata and cover image for this edition.</CardDescription>
+              <CardDescription>
+                Core metadata for this edition. Cover is shared across all language versions of
+                this book.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <FieldGroup className="grid gap-4 sm:grid-cols-2">
