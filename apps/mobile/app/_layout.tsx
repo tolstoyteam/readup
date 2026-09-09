@@ -12,6 +12,7 @@ import { AuthProvider } from "@/shared/context/auth-context";
 import { InterfaceLanguageProvider } from "@/shared/context/interface-language-context";
 import { ThemePreferenceProvider } from "@/shared/context/theme-preference-context";
 import { LibraryProvider } from "@/features/library";
+import { PushNotificationsRegistrar } from "@/features/notifications/components/push-notifications-registrar";
 import { QuotesProvider } from "@/features/quotes";
 import { ReaderSettingsProvider } from "@/features/reader/settings/reader-settings-context";
 import { SubscriptionProvider } from "@/features/subscription";
@@ -65,6 +66,7 @@ export default function RootLayout() {
         >
           <InterfaceLanguageProvider>
             <AuthProvider>
+              <PushNotificationsRegistrar />
               <SubscriptionProvider>
                 <LibraryProvider>
                   <QuotesProvider>

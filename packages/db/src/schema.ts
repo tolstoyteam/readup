@@ -173,6 +173,9 @@ export type NotificationPreferences = {
   achievements?: boolean;
 };
 
+export const PUSH_TOKEN_PLATFORMS = ["ios", "android"] as const;
+export type PushTokenPlatform = (typeof PUSH_TOKEN_PLATFORMS)[number];
+
 export const bookWorksTable = pgTable(
   "book_works",
   {
@@ -588,6 +591,33 @@ export const userNotificationsTable = pgTable(
   ],
 );
 
+export const userPushTokensTable = pgTable(
+  "user_push_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsersTable.id, { onDelete: "cascade" }),
+    expoPushToken: text("expo_push_token").notNull(),
+    platform: text("platform").$type<PushTokenPlatform>().notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    lastRegisteredAt: timestamp("last_registered_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_push_tokens_user_token_unique").on(
+      table.userId,
+      table.expoPushToken,
+    ),
+    index("user_push_tokens_user_enabled_idx").on(table.userId, table.enabled),
+    check("user_push_tokens_platform_check", sql`${table.platform} in ('ios', 'android')`),
+  ],
+);
+
 export const readingDailyLogTable = pgTable(
   "reading_daily_log",
   {
@@ -647,5 +677,6 @@ export type UserQuizAttemptRecord = typeof userQuizAttemptsTable.$inferSelect;
 export type AchievementRecord = typeof achievementsTable.$inferSelect;
 export type UserAchievementRecord = typeof userAchievementsTable.$inferSelect;
 export type UserNotificationRecord = typeof userNotificationsTable.$inferSelect;
+export type UserPushTokenRecord = typeof userPushTokensTable.$inferSelect;
 export type ReadingDailyLogRecord = typeof readingDailyLogTable.$inferSelect;
 export type GenerationJobRecord = typeof generationJobsTable.$inferSelect;

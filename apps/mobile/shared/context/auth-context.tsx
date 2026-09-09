@@ -21,6 +21,7 @@ import {
   verifyOtpTypeForPurpose,
 } from "@/features/auth/lib/otp-errors";
 import { normalizeEmail } from "@/features/auth/lib/password-validation";
+import { disableCurrentPushToken } from "@/features/notifications/api/push-notifications";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { supabase } from "@/shared/lib/supabase";
 
@@ -304,9 +305,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [t]);
 
   const signOut = useCallback(async () => {
+    const userId = session?.user.id;
+    if (userId) {
+      await disableCurrentPushToken(userId).catch(() => undefined);
+    }
     const { error } = await supabase.auth.signOut();
     return { error };
-  }, []);
+  }, [session]);
 
   const deleteAccount = useCallback(async (): Promise<AccountActionResult> => {
     const { data, error } = await supabase.functions.invoke<{ deleted?: boolean }>(

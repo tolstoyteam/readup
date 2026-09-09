@@ -9,12 +9,26 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const hasExpoAudio = plugins.some(
     (p) => p === "expo-audio" || (Array.isArray(p) && p[0] === "expo-audio"),
   );
+  const hasExpoNotifications = plugins.some(
+    (p) =>
+      p === "expo-notifications" ||
+      (Array.isArray(p) && p[0] === "expo-notifications"),
+  );
   if (!hasExpoAudio) {
     plugins.push([
       "expo-audio",
       {
         enableBackgroundPlayback: true,
         recordAudioAndroid: false,
+      },
+    ]);
+  }
+  if (!hasExpoNotifications) {
+    plugins.push([
+      "expo-notifications",
+      {
+        color: "#2F7D5B",
+        defaultChannel: "default",
       },
     ]);
   }

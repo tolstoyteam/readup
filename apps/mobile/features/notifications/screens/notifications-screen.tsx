@@ -25,6 +25,7 @@ import {
   type AppNotification,
   type NotificationType,
 } from "@/features/notifications/api/notifications";
+import { registerForPushNotifications } from "@/features/notifications/api/push-notifications";
 import {
   fetchProfile,
   saveNotificationPreferences,
@@ -125,6 +126,9 @@ export default function NotificationsScreen() {
     };
     setProfile({ ...profile, notification_preferences: next });
     try {
+      if (value) {
+        await registerForPushNotifications(user.id, { requestPermissions: true });
+      }
       const saved = await saveNotificationPreferences(user.id, next);
       setProfile(saved);
     } catch {
