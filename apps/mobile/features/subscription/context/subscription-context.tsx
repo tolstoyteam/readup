@@ -48,6 +48,13 @@ const SubscriptionContext = createContext<SubscriptionContextValue | null>(
   null,
 );
 
+function requireAuthenticatedCustomer(userId: string | null): string {
+  if (!userId) {
+    throw new Error("Sign in before purchasing Readup Premium.");
+  }
+  return userId;
+}
+
 function isAnonymousRevenueCatUser(appUserId: string): boolean {
   return appUserId.startsWith("$RCAnonymousID:");
 }
@@ -158,6 +165,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const purchasePlan = useCallback(
     async (plan: SubscriptionPlan): Promise<PurchaseOutcome> => {
+      requireAuthenticatedCustomer(userId);
       const selectedPackage = packageForPlan(currentOffering, plan);
       if (!selectedPackage) {
         throw new Error(
@@ -177,10 +185,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [currentOffering],
+    [currentOffering, userId],
   );
 
   const restorePurchases = useCallback(async () => {
+    requireAuthenticatedCustomer(userId);
     try {
       const info = await Purchases.restorePurchases();
       setCustomerInfo(info);
@@ -190,9 +199,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setErrorMessage(revenueCatErrorMessage(error));
       throw error;
     }
-  }, []);
+  }, [userId]);
 
   const presentPaywall = useCallback(async () => {
+    requireAuthenticatedCustomer(userId);
     try {
       const result = await RevenueCatUI.presentPaywall({
         offering: currentOffering ?? undefined,
@@ -209,7 +219,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setErrorMessage(revenueCatErrorMessage(error));
       throw error;
     }
-  }, [currentOffering, refresh]);
+  }, [currentOffering, refresh, userId]);
 
   const presentCustomerCenter = useCallback(async () => {
     try {

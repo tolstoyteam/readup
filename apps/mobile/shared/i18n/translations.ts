@@ -104,6 +104,7 @@ const baseTranslations = {
     "premium.audioTitle": "Аудио-версии",
     "premium.bestChoice": "Лучший выбор",
     "premium.comingSoon": "Оплата скоро",
+    "premium.createAccountToSubscribe": "Создать аккаунт",
     "premium.fullLibraryDescription": "Все книги без ограничений",
     "premium.fullLibraryTitle": "Полная библиотека",
     "premium.monthly": "Ежемесячно",
@@ -134,6 +135,10 @@ const baseTranslations = {
     "premium.restoreSuccessTitle": "Покупки восстановлены",
     "premium.refreshing": "Обновляем...",
     "premium.restoring": "Восстанавливаем...",
+    "premium.signInRequiredBody":
+      "Войдите или создайте аккаунт, чтобы подписка была привязана к вашему профилю.",
+    "premium.signInRequiredTitle": "Сначала войдите в аккаунт",
+    "premium.signInToSubscribe": "Войти и оформить подписку",
     "premium.subscribe": "Оформить подписку",
     "premium.subscriptionUnavailable":
       "Подписки пока недоступны — функция активируется позже.",
@@ -462,6 +467,7 @@ const baseTranslations = {
     "premium.audioTitle": "Audio versions",
     "premium.bestChoice": "Best choice",
     "premium.comingSoon": "Payment soon",
+    "premium.createAccountToSubscribe": "Create account",
     "premium.fullLibraryDescription": "All books without limits",
     "premium.fullLibraryTitle": "Full library",
     "premium.monthly": "Monthly",
@@ -492,6 +498,10 @@ const baseTranslations = {
     "premium.restoreSuccessTitle": "Purchases restored",
     "premium.refreshing": "Refreshing...",
     "premium.restoring": "Restoring...",
+    "premium.signInRequiredBody":
+      "Sign in or create an account so your subscription is linked to your Readup profile.",
+    "premium.signInRequiredTitle": "Sign in before subscribing",
+    "premium.signInToSubscribe": "Sign in to subscribe",
     "premium.subscribe": "Subscribe",
     "premium.subscriptionUnavailable":
       "Subscriptions are unavailable for now — this feature will be enabled later.",
@@ -825,6 +835,7 @@ export const spanishTranslations: Partial<Record<TranslationKey, string>> = {
   "premium.audioTitle": "Versiones de audio",
   "premium.bestChoice": "Mejor opción",
   "premium.comingSoon": "Pago próximamente",
+  "premium.createAccountToSubscribe": "Crear cuenta",
   "premium.fullLibraryDescription": "Todos los libros sin límites",
   "premium.fullLibraryTitle": "Biblioteca completa",
   "premium.monthly": "Mensual",
@@ -856,6 +867,10 @@ export const spanishTranslations: Partial<Record<TranslationKey, string>> = {
   "premium.restoreSuccessTitle": "Compras restauradas",
   "premium.refreshing": "Actualizando...",
   "premium.restoring": "Restaurando...",
+  "premium.signInRequiredBody":
+    "Inicia sesión o crea una cuenta para vincular la suscripción a tu perfil de Readup.",
+  "premium.signInRequiredTitle": "Inicia sesión antes de suscribirte",
+  "premium.signInToSubscribe": "Iniciar sesión y suscribirse",
   "premium.subscribe": "Suscribirse",
   "premium.subscriptionUnavailable":
     "Las suscripciones no están disponibles por ahora; esta función se activará más tarde.",

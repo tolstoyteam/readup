@@ -4,8 +4,8 @@ import {
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
-import { Link, router } from "expo-router";
-import { useRef, useState } from "react";
+import { Link, router, useLocalSearchParams } from "expo-router";
+import { useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +19,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OutlinePillButton } from "@/features/auth/components/outline-pill-button";
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
+import {
+  authReturnToParams,
+  parseAuthReturnTo,
+} from "@/features/auth/lib/auth-return-route";
 import { authErrorToTranslationKey } from "@/features/auth/lib/auth-errors";
 import { normalizeEmail } from "@/features/auth/lib/password-validation";
 import { PrimaryButton } from "@/shared/components/primary-button";
@@ -31,6 +35,11 @@ export default function LoginScreen() {
   const colors = useReadupColors();
   const { signIn, signInWithOAuth, isEmailNotConfirmedError } = useAuth();
   const { t } = useInterfaceLanguage();
+  const params = useLocalSearchParams<{ returnTo?: string }>();
+  const returnTo = useMemo(
+    () => parseAuthReturnTo(params.returnTo),
+    [params.returnTo],
+  );
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -49,6 +58,7 @@ export default function LoginScreen() {
       params: {
         email: normalizeEmail(email),
         purpose: "signup",
+        ...authReturnToParams(returnTo),
         ...(options?.cooldown != null ? { cooldown: options.cooldown } : {}),
       },
     });
@@ -69,7 +79,7 @@ export default function LoginScreen() {
         setErrorMessage(t(authErrorToTranslationKey(error, "login")));
         return;
       }
-      router.replace("/");
+      router.replace(returnTo ?? "/");
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -85,7 +95,7 @@ export default function LoginScreen() {
         setErrorMessage(error.message);
         return;
       }
-      router.replace("/");
+      router.replace(returnTo ?? "/");
     } finally {
       setOauthBusy(null);
     }
@@ -100,14 +110,17 @@ export default function LoginScreen() {
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background }]}
-      edges={["top", "bottom"]}>
+      edges={["top", "bottom"]}
+    >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.logoRow}>
             <ReadupLogo width={66} height={18} />
           </View>
@@ -116,7 +129,8 @@ export default function LoginScreen() {
             style={[
               styles.headline,
               { fontFamily: "Inter_800ExtraBold", color: colors.brand },
-            ]}>
+            ]}
+          >
             {t("auth.loginHeadline")}
           </Text>
 
@@ -158,11 +172,20 @@ export default function LoginScreen() {
                 router.push({
                   pathname: "/(auth)/forgot-password",
                   params: email.trim()
-                    ? { email: normalizeEmail(email) }
-                    : undefined,
+                    ? {
+                        email: normalizeEmail(email),
+                        ...authReturnToParams(returnTo),
+                      }
+                    : authReturnToParams(returnTo),
                 });
-              }}>
-              <Text style={[styles.forgotText, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
+              }}
+            >
+              <Text
+                style={[
+                  styles.forgotText,
+                  { fontFamily: "Inter_400Regular", color: colors.brand },
+                ]}
+              >
                 {t("auth.forgotPassword")}
               </Text>
             </Pressable>
@@ -171,7 +194,8 @@ export default function LoginScreen() {
           {errorMessage ? (
             <Text
               style={[styles.errorText, { fontFamily: "Inter_400Regular" }]}
-              numberOfLines={3}>
+              numberOfLines={3}
+            >
               {errorMessage}
             </Text>
           ) : null}
@@ -187,27 +211,44 @@ export default function LoginScreen() {
             <OutlinePillButton
               label={t("auth.continueWithGoogle")}
               loading={oauthBusy === "google"}
-              disabled={submitting || (oauthBusy != null && oauthBusy !== "google")}
+              disabled={
+                submitting || (oauthBusy != null && oauthBusy !== "google")
+              }
               onPress={() => void onOAuth("google")}
             />
             <OutlinePillButton
               label={t("auth.continueWithApple")}
               loading={oauthBusy === "apple"}
-              disabled={submitting || (oauthBusy != null && oauthBusy !== "apple")}
+              disabled={
+                submitting || (oauthBusy != null && oauthBusy !== "apple")
+              }
               onPress={() => void onOAuth("apple")}
             />
           </View>
 
           <View style={styles.footer}>
-            <Text style={[styles.footerMuted, { fontFamily: "Inter_400Regular", color: colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.footerMuted,
+                { fontFamily: "Inter_400Regular", color: colors.textSecondary },
+              ]}
+            >
               {t("auth.noAccount")}{" "}
             </Text>
-            <Link href="/signup" asChild>
-              <Pressable
-                accessibilityRole="link"
-                disabled={busy}
-                hitSlop={8}>
-                <Text style={[styles.footerLink, { fontFamily: "Inter_400Regular", color: colors.brand }]}>
+            <Link
+              href={{
+                pathname: "/signup",
+                params: authReturnToParams(returnTo),
+              }}
+              asChild
+            >
+              <Pressable accessibilityRole="link" disabled={busy} hitSlop={8}>
+                <Text
+                  style={[
+                    styles.footerLink,
+                    { fontFamily: "Inter_400Regular", color: colors.brand },
+                  ]}
+                >
                   {t("auth.signupLink")}
                 </Text>
               </Pressable>

@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OtpInput } from "@/features/auth/components/otp-input";
+import { parseAuthReturnTo } from "@/features/auth/lib/auth-return-route";
 import {
   type EmailOtpPurpose,
   otpErrorToTranslationKey,
@@ -51,11 +52,18 @@ export default function VerifyEmailScreen() {
     email?: string;
     purpose?: string;
     cooldown?: string;
+    returnTo?: string;
   }>();
   const email = useMemo(() => parseEmail(params.email), [params.email]);
   const purpose = useMemo(() => parsePurpose(params.purpose), [params.purpose]);
+  const returnTo = useMemo(
+    () => parseAuthReturnTo(params.returnTo),
+    [params.returnTo],
+  );
   const initialCooldown = useMemo(() => {
-    const raw = Array.isArray(params.cooldown) ? params.cooldown[0] : params.cooldown;
+    const raw = Array.isArray(params.cooldown)
+      ? params.cooldown[0]
+      : params.cooldown;
     if (raw === "0") return 0;
     return RESEND_COOLDOWN_SECONDS;
   }, [params.cooldown]);
@@ -100,8 +108,8 @@ export default function VerifyEmailScreen() {
       router.replace("/");
       return;
     }
-    router.replace("/(setup)/interests");
-  }, [purpose]);
+    router.replace(returnTo ?? "/(setup)/interests");
+  }, [purpose, returnTo]);
 
   const onVerify = useCallback(
     async (tokenOverride?: string) => {
@@ -160,14 +168,17 @@ export default function VerifyEmailScreen() {
   return (
     <SafeAreaView
       style={[styles.safe, { backgroundColor: colors.background }]}
-      edges={["top", "bottom"]}>
+      edges={["top", "bottom"]}
+    >
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.logoRow}>
             <ReadupLogo width={66} height={18} />
           </View>
@@ -176,7 +187,8 @@ export default function VerifyEmailScreen() {
             style={[
               styles.headline,
               { fontFamily: "Inter_800ExtraBold", color: colors.brand },
-            ]}>
+            ]}
+          >
             {t("auth.otpTitle")}
           </Text>
 
@@ -184,7 +196,8 @@ export default function VerifyEmailScreen() {
             style={[
               styles.subtitle,
               { fontFamily: "Inter_400Regular", color: colors.textSecondary },
-            ]}>
+            ]}
+          >
             {subtitle}
           </Text>
 
@@ -208,7 +221,8 @@ export default function VerifyEmailScreen() {
             <Text
               style={[styles.errorText, { fontFamily: "Inter_400Regular" }]}
               accessibilityLiveRegion="polite"
-              numberOfLines={4}>
+              numberOfLines={4}
+            >
               {errorMessage}
             </Text>
           ) : null}
@@ -220,7 +234,8 @@ export default function VerifyEmailScreen() {
                 { fontFamily: "Inter_400Regular", color: colors.brand },
               ]}
               accessibilityLiveRegion="polite"
-              numberOfLines={3}>
+              numberOfLines={3}
+            >
               {successMessage}
             </Text>
           ) : null}
@@ -240,7 +255,8 @@ export default function VerifyEmailScreen() {
               style={[
                 styles.resendHint,
                 { fontFamily: "Inter_400Regular", color: colors.textSecondary },
-              ]}>
+              ]}
+            >
               {t("auth.otpDidNotReceive")}
             </Text>
             {canResend ? (
@@ -249,7 +265,8 @@ export default function VerifyEmailScreen() {
                 disabled={!canResend}
                 hitSlop={8}
                 onPress={() => void onResend()}
-                style={styles.resendButton}>
+                style={styles.resendButton}
+              >
                 {resending ? (
                   <ActivityIndicator color={colors.brand} />
                 ) : (
@@ -257,7 +274,8 @@ export default function VerifyEmailScreen() {
                     style={[
                       styles.resendAction,
                       { fontFamily: "Inter_500Medium", color: colors.brand },
-                    ]}>
+                    ]}
+                  >
                     {t("auth.otpResend")}
                   </Text>
                 )}
@@ -266,8 +284,12 @@ export default function VerifyEmailScreen() {
               <Text
                 style={[
                   styles.resendCooldown,
-                  { fontFamily: "Inter_400Regular", color: colors.textTertiary },
-                ]}>
+                  {
+                    fontFamily: "Inter_400Regular",
+                    color: colors.textTertiary,
+                  },
+                ]}
+              >
                 {resending
                   ? t("auth.otpResend")
                   : t("auth.otpResendIn", { seconds: secondsLeft })}
