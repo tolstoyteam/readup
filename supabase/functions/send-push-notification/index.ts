@@ -8,6 +8,8 @@ type NotificationType =
   | "achievement"
   | "daily_reading";
 
+type ApnsEnvironment = "sandbox" | "production";
+
 type NotificationRecord = {
   id: string;
   user_id: string;
@@ -19,13 +21,12 @@ type NotificationRecord = {
 
 type PushTokenRecord = {
   id: string;
-  expo_push_token: string;
+  push_token: string;
+  apns_environment: ApnsEnvironment;
 };
 
-type ExpoTicket = {
-  status?: string;
-  message?: string;
-  details?: { error?: string };
+type ApnsErrorResponse = {
+  reason?: string;
 };
 
 const jsonHeaders = {
@@ -75,16 +76,111 @@ function extractNotification(body: unknown): NotificationRecord | null {
   };
 }
 
-function chunks<T>(items: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    result.push(items.slice(i, i + size));
+function base64Url(bytes: ArrayBuffer | Uint8Array): string {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let binary = "";
+  for (const byte of data) {
+    binary += String.fromCharCode(byte);
   }
-  return result;
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-function looksLikeExpoPushToken(token: string): boolean {
-  return /^(ExponentPushToken|ExpoPushToken)\[.+\]$/.test(token);
+function utf8(value: string): Uint8Array {
+  return new TextEncoder().encode(value);
+}
+
+function pemToPkcs8(privateKey: string): Uint8Array {
+  const normalized = privateKey.replace(/\\n/g, "\n");
+  const base64 = normalized
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s/g, "");
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function createApnsJwt(params: {
+  teamId: string;
+  keyId: string;
+  privateKey: string;
+}): Promise<string> {
+  const header = base64Url(utf8(JSON.stringify({ alg: "ES256", kid: params.keyId })));
+  const claims = base64Url(
+    utf8(
+      JSON.stringify({
+        iss: params.teamId,
+        iat: Math.floor(Date.now() / 1000),
+      }),
+    ),
+  );
+  const signingInput = `${header}.${claims}`;
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToPkcs8(params.privateKey),
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    utf8(signingInput),
+  );
+
+  return `${signingInput}.${base64Url(signature)}`;
+}
+
+function apnsHost(environment: ApnsEnvironment): string {
+  return environment === "sandbox"
+    ? "https://api.sandbox.push.apple.com"
+    : "https://api.push.apple.com";
+}
+
+async function sendApnsNotification(params: {
+  jwt: string;
+  bundleId: string;
+  token: string;
+  environment: ApnsEnvironment;
+  notification: NotificationRecord;
+}): Promise<{ ok: true } | { ok: false; status: number; reason: string }> {
+  const response = await fetch(
+    `${apnsHost(params.environment)}/3/device/${params.token}`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `bearer ${params.jwt}`,
+        "apns-topic": params.bundleId,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        aps: {
+          alert: {
+            title: params.notification.title,
+            body: params.notification.body,
+          },
+          sound: "default",
+        },
+        notificationId: params.notification.id,
+        type: params.notification.type,
+        payload: params.notification.payload ?? {},
+      }),
+    },
+  );
+
+  if (response.ok) return { ok: true };
+
+  const body = (await response.json().catch(() => null)) as ApnsErrorResponse | null;
+  return {
+    ok: false,
+    status: response.status,
+    reason: body?.reason ?? `APNs returned HTTP ${response.status}`,
+  };
 }
 
 Deno.serve(async (request: Request) => {
@@ -99,7 +195,6 @@ Deno.serve(async (request: Request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey =
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SECRET_KEY");
-  const expoAccessToken = Deno.env.get("EXPO_ACCESS_TOKEN");
   const bearer = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
 
   if (!supabaseUrl || !serviceRoleKey) {
@@ -109,6 +204,16 @@ Deno.serve(async (request: Request) => {
 
   if (bearer !== serviceRoleKey) {
     return json({ error: "Unauthorized" }, 401);
+  }
+
+  const apnsKeyId = Deno.env.get("APNS_KEY_ID");
+  const apnsTeamId = Deno.env.get("APNS_TEAM_ID");
+  const apnsPrivateKey = Deno.env.get("APNS_PRIVATE_KEY");
+  const apnsBundleId = Deno.env.get("APNS_BUNDLE_ID") ?? "com.sanat.readup";
+
+  if (!apnsKeyId || !apnsTeamId || !apnsPrivateKey || !apnsBundleId) {
+    console.error("send-push-notification is missing APNs credentials");
+    return json({ error: "APNs credentials are not configured" }, 503);
   }
 
   let payload: unknown;
@@ -148,8 +253,10 @@ Deno.serve(async (request: Request) => {
 
   const { data: tokens, error: tokensError } = await adminClient
     .from("user_push_tokens")
-    .select("id, expo_push_token")
+    .select("id, push_token, apns_environment")
     .eq("user_id", notification.user_id)
+    .eq("provider", "apns")
+    .eq("platform", "ios")
     .eq("enabled", true);
 
   if (tokensError) {
@@ -157,84 +264,57 @@ Deno.serve(async (request: Request) => {
     return json({ error: "Could not load push tokens" }, 500);
   }
 
-  const pushTokens = ((tokens ?? []) as PushTokenRecord[]).filter((token) =>
-    looksLikeExpoPushToken(token.expo_push_token),
+  const pushTokens = ((tokens ?? []) as PushTokenRecord[]).filter(
+    (token) => token.push_token.length > 0,
   );
   if (pushTokens.length === 0) {
     return json({ sent: 0, skipped: "no_tokens" }, 200);
   }
 
+  const apnsJwt = await createApnsJwt({
+    keyId: apnsKeyId,
+    teamId: apnsTeamId,
+    privateKey: apnsPrivateKey,
+  });
+
   let sent = 0;
   let disabled = 0;
   const errors: string[] = [];
 
-  for (const batch of chunks(pushTokens, 100)) {
-    const response = await fetch("https://exp.host/--/api/v2/push/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(expoAccessToken ? { Authorization: `Bearer ${expoAccessToken}` } : {}),
-      },
-      body: JSON.stringify(
-        batch.map((token) => ({
-          to: token.expo_push_token,
-          sound: "default",
-          title: notification.title,
-          body: notification.body,
-          data: {
-            ...(notification.payload ?? {}),
-            notificationId: notification.id,
-            type: notification.type,
-          },
-        })),
-      ),
-    });
+  await Promise.all(
+    pushTokens.map(async (token) => {
+      const result = await sendApnsNotification({
+        jwt: apnsJwt,
+        bundleId: apnsBundleId,
+        token: token.push_token,
+        environment: token.apns_environment,
+        notification,
+      });
 
-    const result = await response.json().catch(() => null);
-    if (!response.ok) {
-      errors.push(
-        isRecord(result) && typeof result.message === "string"
-          ? result.message
-          : `Expo push send failed with HTTP ${response.status}`,
-      );
-      continue;
-    }
+      if (result.ok) {
+        sent += 1;
+        return;
+      }
 
-    const tickets = Array.isArray(result?.data)
-      ? (result.data as ExpoTicket[])
-      : ([result?.data].filter(Boolean) as ExpoTicket[]);
-    if (tickets.length === 0) {
-      errors.push("Expo push send returned no tickets");
-      continue;
-    }
+      errors.push(`${result.status}: ${result.reason}`);
 
-    await Promise.all(
-      tickets.map(async (ticket, index) => {
-        const token = batch[index];
-        if (!token) return;
-
-        if (ticket.status === "ok") {
-          sent += 1;
-          return;
-        }
-
-        const message = ticket.message ?? "Expo push send failed";
-        errors.push(message);
-
-        if (ticket.details?.error === "DeviceNotRegistered") {
-          disabled += 1;
-          await adminClient
-            .from("user_push_tokens")
-            .update({
-              enabled: false,
-              last_error: message,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", token.id);
-        }
-      }),
-    );
-  }
+      if (
+        result.status === 410 ||
+        result.reason === "BadDeviceToken" ||
+        result.reason === "Unregistered"
+      ) {
+        disabled += 1;
+        await adminClient
+          .from("user_push_tokens")
+          .update({
+            enabled: false,
+            last_error: result.reason,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", token.id);
+      }
+    }),
+  );
 
   return json({ sent, disabled, errors }, errors.length > 0 ? 207 : 200);
 });

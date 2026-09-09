@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
@@ -9,10 +8,10 @@ type PushPlatform = "ios" | "android";
 
 type PushRegistrationResult = {
   token: string | null;
-  status: Notifications.PermissionStatus | "unsupported" | "missing-project-id";
+  status: Notifications.PermissionStatus | "unsupported";
 };
 
-const LOCAL_PUSH_TOKEN_KEY = "readup.expoPushToken";
+const LOCAL_PUSH_TOKEN_KEY = "readup.nativePushToken";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -22,23 +21,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
-function getExpoProjectId(): string | null {
-  const easProjectId = Constants.easConfig?.projectId;
-  if (typeof easProjectId === "string" && easProjectId.length > 0) {
-    return easProjectId;
-  }
-
-  const extra = Constants.expoConfig?.extra;
-  if (extra && typeof extra === "object" && "eas" in extra) {
-    const eas = (extra as { eas?: { projectId?: unknown } }).eas;
-    if (typeof eas?.projectId === "string" && eas.projectId.length > 0) {
-      return eas.projectId;
-    }
-  }
-
-  return null;
-}
 
 async function ensureAndroidChannel() {
   if (Platform.OS !== "android") return;
@@ -52,7 +34,7 @@ export async function registerForPushNotifications(
   userId: string,
   options: { requestPermissions?: boolean } = {},
 ): Promise<PushRegistrationResult> {
-  if (Platform.OS !== "ios" && Platform.OS !== "android") {
+  if (Platform.OS !== "ios") {
     return { token: null, status: "unsupported" };
   }
 
@@ -74,27 +56,27 @@ export async function registerForPushNotifications(
     return { token: null, status };
   }
 
-  const projectId = getExpoProjectId();
-  if (!projectId) {
-    if (__DEV__) console.warn("[push] Missing Expo projectId");
-    return { token: null, status: "missing-project-id" };
-  }
-
-  const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  const devicePushToken = await Notifications.getDevicePushTokenAsync();
+  const token =
+    typeof devicePushToken.data === "string"
+      ? devicePushToken.data
+      : String(devicePushToken.data);
   const now = new Date().toISOString();
   const platform = Platform.OS as PushPlatform;
 
   const { error } = await supabase.from("user_push_tokens").upsert(
     {
       user_id: userId,
-      expo_push_token: token,
+      push_token: token,
       platform,
+      provider: "apns",
+      apns_environment: __DEV__ ? "sandbox" : "production",
       enabled: true,
       last_error: null,
       last_registered_at: now,
       updated_at: now,
     },
-    { onConflict: "user_id,expo_push_token" },
+    { onConflict: "user_id,push_token" },
   );
 
   if (error) throw error;
@@ -114,7 +96,7 @@ export async function disableCurrentPushToken(userId: string): Promise<void> {
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", userId)
-    .eq("expo_push_token", token);
+    .eq("push_token", token);
 
   await AsyncStorage.removeItem(LOCAL_PUSH_TOKEN_KEY);
 }

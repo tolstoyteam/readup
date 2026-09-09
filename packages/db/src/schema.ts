@@ -175,6 +175,10 @@ export type NotificationPreferences = {
 
 export const PUSH_TOKEN_PLATFORMS = ["ios", "android"] as const;
 export type PushTokenPlatform = (typeof PUSH_TOKEN_PLATFORMS)[number];
+export const PUSH_TOKEN_PROVIDERS = ["apns"] as const;
+export type PushTokenProvider = (typeof PUSH_TOKEN_PROVIDERS)[number];
+export const APNS_ENVIRONMENTS = ["sandbox", "production"] as const;
+export type ApnsEnvironment = (typeof APNS_ENVIRONMENTS)[number];
 
 export const bookWorksTable = pgTable(
   "book_works",
@@ -598,8 +602,13 @@ export const userPushTokensTable = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => authUsersTable.id, { onDelete: "cascade" }),
-    expoPushToken: text("expo_push_token").notNull(),
+    pushToken: text("push_token").notNull(),
     platform: text("platform").$type<PushTokenPlatform>().notNull(),
+    provider: text("provider").$type<PushTokenProvider>().notNull().default("apns"),
+    apnsEnvironment: text("apns_environment")
+      .$type<ApnsEnvironment>()
+      .notNull()
+      .default("production"),
     enabled: boolean("enabled").notNull().default(true),
     lastRegisteredAt: timestamp("last_registered_at", { withTimezone: true })
       .notNull()
@@ -611,10 +620,15 @@ export const userPushTokensTable = pgTable(
   (table) => [
     uniqueIndex("user_push_tokens_user_token_unique").on(
       table.userId,
-      table.expoPushToken,
+      table.pushToken,
     ),
     index("user_push_tokens_user_enabled_idx").on(table.userId, table.enabled),
     check("user_push_tokens_platform_check", sql`${table.platform} in ('ios', 'android')`),
+    check("user_push_tokens_provider_check", sql`${table.provider} in ('apns')`),
+    check(
+      "user_push_tokens_apns_environment_check",
+      sql`${table.apnsEnvironment} in ('sandbox', 'production')`,
+    ),
   ],
 );
 
