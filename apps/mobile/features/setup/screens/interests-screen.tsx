@@ -91,7 +91,7 @@ export default function InterestsScreen() {
   }
 
   if (!user) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/(auth)/login" />;
   }
 
   return (

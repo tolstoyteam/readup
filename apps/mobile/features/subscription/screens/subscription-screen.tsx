@@ -106,8 +106,8 @@ export default function SubscriptionScreen() {
   const isSignedIn = user != null;
 
   function goToAuth(route: "/login" | "/signup") {
-    router.replace({
-      pathname: route,
+    router.push({
+      pathname: route === "/login" ? "/(auth)/login" : "/(auth)/signup",
       params: { returnTo: "/subscription" },
     });
   }
@@ -339,18 +339,6 @@ export default function SubscriptionScreen() {
                   style={{ color: "#FBFAF2" }}
                 >
                   {t("premium.signInToSubscribe")}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => goToAuth("/signup")}
-                className="mt-4 active:opacity-70"
-              >
-                <Text
-                  className="text-[14px] font-semibold tracking-[-0.56px]"
-                  style={{ color: colors.brand }}
-                >
-                  {t("premium.createAccountToSubscribe")}
                 </Text>
               </Pressable>
             </View>

@@ -8,6 +8,7 @@ import { Link, router, useLocalSearchParams } from "expo-router";
 import * as Linking from "expo-linking";
 import { useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,6 +21,7 @@ import { Check } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OutlinePillButton } from "@/features/auth/components/outline-pill-button";
+import { AuthSheetCloseButton } from "@/features/auth/components/auth-sheet-close-button";
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import {
   authReturnToParams,
@@ -177,7 +179,14 @@ export default function SignupScreen() {
   }
 
   if (!fontsLoaded) {
-    return null;
+    return (
+      <SafeAreaView
+        style={[styles.safe, styles.loading, { backgroundColor: colors.background }]}
+        edges={["top", "bottom"]}
+      >
+        <ActivityIndicator color={colors.brand} size="large" />
+      </SafeAreaView>
+    );
   }
 
   const busy = submitting || oauthBusy != null;
@@ -198,6 +207,7 @@ export default function SignupScreen() {
         >
           <View style={styles.logoRow}>
             <ReadupLogo width={66} height={18} />
+            <AuthSheetCloseButton />
           </View>
 
           <Text
@@ -376,7 +386,7 @@ export default function SignupScreen() {
             </Text>
             <Link
               href={{
-                pathname: "/login",
+                pathname: "/(auth)/login",
                 params: authReturnToParams(returnTo),
               }}
               asChild
@@ -404,6 +414,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: ReadupColors.background,
   },
+  loading: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   flex: {
     flex: 1,
   },
@@ -414,8 +428,13 @@ const styles = StyleSheet.create({
   },
   logoRow: {
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingTop: 8,
-    marginBottom: 28,
+    marginBottom: 20,
+    width: "100%",
+    maxWidth: 338,
+    alignSelf: "center",
   },
   headline: {
     alignSelf: "center",
@@ -425,7 +444,7 @@ const styles = StyleSheet.create({
     color: ReadupColors.brand,
     letterSpacing: -1.36,
     maxWidth: 338,
-    marginBottom: 52,
+    marginBottom: 36,
   },
   form: {
     gap: 16,

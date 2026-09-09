@@ -1,4 +1,4 @@
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, useRouter } from "expo-router";
 import { BookMarked, House, Search, UserRound } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
@@ -14,6 +14,7 @@ export default function TabLayout() {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
   const { user, loading } = useAuth();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const userId = user?.id;
   const [onboardingReady, setOnboardingReady] = useState(false);
@@ -145,6 +146,13 @@ export default function TabLayout() {
               />
             ),
           }}
+          listeners={{
+            tabPress: (event) => {
+              if (user) return;
+              event.preventDefault();
+              router.push("/(auth)/login");
+            },
+          }}
         />
         <Tabs.Screen
           name="search"
@@ -172,6 +180,13 @@ export default function TabLayout() {
                 strokeWidth={focused ? 2.5 : 2}
               />
             ),
+          }}
+          listeners={{
+            tabPress: (event) => {
+              if (user) return;
+              event.preventDefault();
+              router.push("/(auth)/login");
+            },
           }}
         />
       </Tabs>

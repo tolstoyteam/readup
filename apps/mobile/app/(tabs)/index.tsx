@@ -49,7 +49,7 @@ export default function HomeScreen() {
   }
 
   function openStreak() {
-    router.push(user ? "/streak" : "/login");
+    router.push(user ? "/streak" : "/(auth)/login");
   }
 
   const hasStreak = isStreakActiveToday(

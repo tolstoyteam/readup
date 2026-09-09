@@ -143,7 +143,7 @@ export default function SettingsScreen() {
       Alert.alert(t("settings.signOutFailed"), error.message);
       return;
     }
-    router.replace("/login");
+    router.replace("/(auth)/login");
   }
 
   async function deleteAccountPermanently() {
@@ -154,7 +154,7 @@ export default function SettingsScreen() {
         Alert.alert(t("settings.deleteFailedTitle"), t("settings.deleteFailedBody"));
         return;
       }
-      router.replace("/login");
+      router.replace("/(auth)/login");
     } finally {
       setDeletingAccount(false);
     }

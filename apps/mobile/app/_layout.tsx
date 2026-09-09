@@ -90,7 +90,20 @@ export default function RootLayout() {
                         />
                         <Stack.Screen
                           name="(auth)"
-                          options={{ headerShown: false }}
+                          options={{
+                            headerShown: false,
+                            presentation: "formSheet",
+                            sheetAllowedDetents: [0.9, 1],
+                            sheetInitialDetentIndex: 0,
+                            sheetGrabberVisible: true,
+                            sheetCornerRadius: 28,
+                            contentStyle: {
+                              backgroundColor:
+                                colorScheme === "dark"
+                                  ? ReadupDarkColors.background
+                                  : ReadupColors.background,
+                            },
+                          }}
                         />
                         <Stack.Screen
                           name="(setup)"
@@ -121,8 +134,17 @@ export default function RootLayout() {
                           name="quiz/[bookId]"
                           options={{
                             headerShown: false,
-                            presentation: "modal",
-                            animation: "slide_from_bottom",
+                            presentation: "formSheet",
+                            sheetAllowedDetents: [0.92, 1],
+                            sheetInitialDetentIndex: 0,
+                            sheetGrabberVisible: true,
+                            sheetCornerRadius: 28,
+                            contentStyle: {
+                              backgroundColor:
+                                colorScheme === "dark"
+                                  ? ReadupDarkColors.background
+                                  : ReadupColors.background,
+                            },
                           }}
                         />
                         <Stack.Screen
@@ -143,8 +165,17 @@ export default function RootLayout() {
                           name="subscription"
                           options={{
                             headerShown: false,
-                            presentation: "modal",
-                            animation: "slide_from_bottom",
+                            presentation: "formSheet",
+                            sheetAllowedDetents: [0.9, 1],
+                            sheetInitialDetentIndex: 0,
+                            sheetGrabberVisible: true,
+                            sheetCornerRadius: 28,
+                            contentStyle: {
+                              backgroundColor:
+                                colorScheme === "dark"
+                                  ? ReadupDarkColors.background
+                                  : ReadupColors.background,
+                            },
                           }}
                         />
                         <Stack.Screen

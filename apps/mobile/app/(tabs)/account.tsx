@@ -7,7 +7,7 @@ export default function AccountTab() {
   const { user, loading } = useAuth();
 
   if (loading) return null;
-  if (!user) return <Redirect href="/login" />;
+  if (!user) return <Redirect href="/(auth)/login" />;
 
   return <ProfileScreen />;
 }

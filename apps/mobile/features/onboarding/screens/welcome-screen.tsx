@@ -83,7 +83,7 @@ export default function WelcomeScreen() {
 
   const onLogin = useCallback(async () => {
     await markOnboardingComplete();
-    router.replace("/login");
+    router.push("/(auth)/login");
   }, [router]);
 
   if (!fontsLoaded) {
@@ -206,28 +206,33 @@ export default function WelcomeScreen() {
 
             <Pressable
               onPress={onLogin}
-              accessibilityRole="link"
+              accessibilityRole="button"
               accessibilityLabel={t("auth.loginCta")}
-              hitSlop={12}
               style={({ pressed }) => [
-                styles.accountPromptHit,
-                pressed && styles.textActionPressed,
+                styles.primaryCtaHit,
+                pressed && styles.primaryCtaPressed,
               ]}
             >
-              <Text
-                style={{
-                  color: colors.text,
-                  fontFamily: "Inter_400Regular",
-                  fontSize: 15,
-                  lineHeight: 21,
-                  textAlign: "center",
-                }}
+              <View
+                style={[
+                  styles.ctaChrome,
+                  {
+                    backgroundColor: "transparent",
+                    borderColor: colors.brand,
+                  },
+                ]}
               >
-                {t("auth.alreadyHaveAccount")}{" "}
-                <Text style={{ color: colors.brand }}>
+                <Text
+                  style={{
+                    color: colors.brand,
+                    fontFamily: "Inter_500Medium",
+                    fontSize: 18,
+                    letterSpacing: -0.72,
+                  }}
+                >
                   {t("auth.loginCta")}
                 </Text>
-              </Text>
+              </View>
             </Pressable>
           </View>
         </View>
@@ -270,15 +275,6 @@ const styles = StyleSheet.create({
   },
   accountPromptSpacer: {
     height: 12,
-  },
-  accountPromptHit: {
-    minHeight: 44,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    zIndex: 20,
-    elevation: 20,
   },
   textActionPressed: {
     opacity: 0.62,
