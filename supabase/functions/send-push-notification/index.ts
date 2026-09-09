@@ -89,6 +89,23 @@ function utf8(value: string): Uint8Array {
   return new TextEncoder().encode(value);
 }
 
+function base64UrlJson(value: string): Record<string, unknown> | null {
+  try {
+    const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function jwtRole(token: string | undefined): string | null {
+  const payload = token?.split(".")[1];
+  if (!payload) return null;
+  const claims = base64UrlJson(payload);
+  return typeof claims?.role === "string" ? claims.role : null;
+}
+
 function pemToPkcs8(privateKey: string): Uint8Array {
   const normalized = privateKey.replace(/\\n/g, "\n");
   const base64 = normalized
@@ -202,7 +219,7 @@ Deno.serve(async (request: Request) => {
     return json({ error: "Push delivery is temporarily unavailable" }, 503);
   }
 
-  if (bearer !== serviceRoleKey) {
+  if (jwtRole(bearer) !== "service_role") {
     return json({ error: "Unauthorized" }, 401);
   }
 
