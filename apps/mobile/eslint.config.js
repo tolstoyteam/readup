@@ -23,6 +23,12 @@ module.exports = defineConfig([
     },
     rules: {
       'import/no-unresolved': 'off',
+      // eslint-config-expo 57 enables React Compiler lint rules that flag
+      // established patterns in this app. Keep them off during the SDK 57
+      // upgrade so we do not change reader/auth behavior mid-migration.
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
     },
   },
 ]);

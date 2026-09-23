@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
   },
