@@ -1,5 +1,4 @@
 import type { BookDataColumn, BookDocument, BookPage } from "@readup/db/shared";
-import { genreRuLabel, isBookGenre } from "@readup/db/shared";
 import { embedKeywordsInLastChapter } from "@/features/books/lib/embed-book-keywords";
 import { assignLegacyStableIds } from "@/features/books/lib/legacy-stable-ids";
 import { pickEdition } from "@/features/books/lib/pick-edition";
@@ -81,10 +80,10 @@ export function extractGenresFromJoin(
       if (!row.genre) return [];
       if (Array.isArray(row.genre)) {
         return row.genre
-          .map((g) => (g.name_ru ?? g.name ?? "").trim())
+          .map((g) => (g.name ?? g.name_ru ?? "").trim())
           .filter(Boolean);
       }
-      return [(row.genre.name_ru ?? row.genre.name ?? "").trim()].filter(Boolean);
+      return [(row.genre.name ?? row.genre.name_ru ?? "").trim()].filter(Boolean);
     })
     .filter((name): name is string => !!name);
 }
@@ -193,7 +192,6 @@ function normalizeOneBook(obj: Record<string, unknown>): BookDocument | null {
         .filter((g): g is string => typeof g === "string")
         .map((g) => g.trim())
         .filter(Boolean)
-        .map((g) => (isBookGenre(g) ? genreRuLabel(g) : g))
     : [];
 
   const cover_image_path =
