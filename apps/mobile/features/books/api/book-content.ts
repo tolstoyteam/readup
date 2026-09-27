@@ -135,10 +135,10 @@ export async function fetchBookContent(
       if (!row.genre) return [];
       if (Array.isArray(row.genre)) {
         return row.genre
-          .map((g) => (g.name_ru ?? g.name ?? "").trim())
+          .map((g) => (g.name ?? g.name_ru ?? "").trim())
           .filter(Boolean);
       }
-      return [(row.genre.name_ru ?? row.genre.name ?? "").trim()].filter(Boolean);
+      return [(row.genre.name ?? row.genre.name_ru ?? "").trim()].filter(Boolean);
     })
     .filter((name): name is string => !!name);
 

@@ -68,6 +68,53 @@ export function normalizeGenreKey(value: string): string {
   return value.trim().toLowerCase();
 }
 
+/** Resolve a slug or localized genre label to the canonical BookGenre id. */
+export function resolveBookGenre(raw: string): BookGenre | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (isBookGenre(trimmed)) return trimmed;
+
+  const key = normalizeGenreKey(trimmed);
+  if (isBookGenre(key)) return key;
+
+  for (const bookGenre of BOOK_GENRES) {
+    if (normalizeGenreKey(genreRuLabel(bookGenre)) === key) return bookGenre;
+    if (normalizeGenreKey(BOOK_GENRE_EN_LABELS[bookGenre]) === key) {
+      return bookGenre;
+    }
+    if (normalizeGenreKey(BOOK_GENRE_ES_LABELS[bookGenre]) === key) {
+      return bookGenre;
+    }
+  }
+  return null;
+}
+
+export function genreOptionFromRaw(raw: string): GenreOption {
+  const trimmed = raw.trim();
+  const resolved = resolveBookGenre(trimmed);
+  if (resolved) {
+    return { slug: resolved, labelRu: genreRuLabel(resolved) };
+  }
+  return {
+    slug: normalizeGenreKey(trimmed) || trimmed,
+    labelRu: trimmed,
+  };
+}
+
+/** Localized display label for a raw book genre string (slug or any known label). */
+export function bookGenreDisplayLabel(
+  raw: string,
+  language: InterfaceLanguage,
+): string {
+  const trimmed = raw.trim();
+  const resolved = resolveBookGenre(trimmed);
+  if (!resolved) return trimmed;
+  return genreDisplayLabel(
+    { slug: resolved, labelRu: genreRuLabel(resolved) },
+    language,
+  );
+}
+
 /** Stable keys for matching a book's genre strings against catalog options. */
 export function bookGenreKeys(book: BookWithGenres): Set<string> {
   const keys = new Set<string>();
@@ -75,9 +122,12 @@ export function bookGenreKeys(book: BookWithGenres): Set<string> {
     const trimmed = raw.trim();
     if (!trimmed) continue;
     keys.add(normalizeGenreKey(trimmed));
-    if (isBookGenre(trimmed)) {
-      keys.add(normalizeGenreKey(genreRuLabel(trimmed)));
-      keys.add(normalizeGenreKey(trimmed));
+    const resolved = resolveBookGenre(trimmed);
+    if (resolved) {
+      keys.add(normalizeGenreKey(resolved));
+      keys.add(normalizeGenreKey(genreRuLabel(resolved)));
+      keys.add(normalizeGenreKey(BOOK_GENRE_EN_LABELS[resolved]));
+      keys.add(normalizeGenreKey(BOOK_GENRE_ES_LABELS[resolved]));
     }
   }
   return keys;
@@ -121,9 +171,9 @@ export function sortGenresByLabel(genres: GenreOption[]): GenreOption[] {
 }
 
 function bookGenreFromOption(genre: GenreOption): BookGenre | null {
-  if (isBookGenre(genre.slug)) return genre.slug;
   return (
-    BOOK_GENRES.find((bookGenre) => genreRuLabel(bookGenre) === genre.labelRu) ??
+    resolveBookGenre(genre.slug) ??
+    resolveBookGenre(genre.labelRu) ??
     null
   );
 }
@@ -191,11 +241,10 @@ export function genresFromBooks(books: BookWithGenres[]): GenreOption[] {
     for (const raw of book.genres) {
       const label = raw.trim();
       if (!label) continue;
-      const slug = isBookGenre(label) ? label : normalizeGenreKey(label);
-      const labelRu = isBookGenre(label) ? genreRuLabel(label) : label;
-      const key = normalizeGenreKey(slug);
+      const option = genreOptionFromRaw(label);
+      const key = normalizeGenreKey(option.slug);
       if (!byKey.has(key)) {
-        byKey.set(key, { slug, labelRu });
+        byKey.set(key, option);
       }
     }
   }

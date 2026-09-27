@@ -26,6 +26,7 @@ import {
   fetchBookDetail,
   type BookDetail,
 } from "@/features/books/api/book-detail";
+import { bookGenreDisplayLabel } from "@/features/books/lib/genre-filters";
 import {
   isInProgress,
   progressPercentage,
@@ -57,7 +58,7 @@ function formatReadingTime(
 
 export default function BookDetailScreen() {
   const colors = useReadupColors();
-  const { t } = useInterfaceLanguage();
+  const { language, t } = useInterfaceLanguage();
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { user } = useAuth();
@@ -274,7 +275,7 @@ export default function BookDetailScreen() {
                     className="rounded-full border border-[#059669] dark:border-[#34D399] px-3 py-1"
                   >
                     <Text className="text-[12px] tracking-[-0.48px] text-[#059669] dark:text-[#34D399]">
-                      {genre}
+                      {bookGenreDisplayLabel(genre, language)}
                     </Text>
                   </View>
                 ))}
