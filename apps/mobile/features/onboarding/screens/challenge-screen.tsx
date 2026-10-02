@@ -1,5 +1,6 @@
 import { Inter_500Medium, Inter_700Bold } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
@@ -31,7 +32,7 @@ export default function ChallengeScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
-  const [selected, setSelected] = useState<Choice | null>(null);
+  const router = useRouter();
   const [pressedChoice, setPressedChoice] = useState<Choice | null>(null);
   const [fontsLoaded] = useFonts({ Inter_500Medium, Inter_700Bold });
 
@@ -115,14 +116,16 @@ export default function ChallengeScreen() {
 
         <View style={{ gap: 14 }}>
           {CHOICES.map((choice) => {
-            const isSelected = selected === choice.id;
-
             return (
               <Pressable
                 key={choice.id}
                 accessibilityRole="button"
-                accessibilityState={{ selected: isSelected }}
-                onPress={() => setSelected(choice.id)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/onboarding/goals",
+                    params: { challenge: choice.id },
+                  })
+                }
                 onPressIn={() => setPressedChoice(choice.id)}
                 onPressOut={() => setPressedChoice(null)}
               >
@@ -132,7 +135,7 @@ export default function ChallengeScreen() {
                     width: "100%",
                     borderRadius: 20,
                     borderWidth: 2,
-                    borderColor: isSelected ? colors.brand : colors.border,
+                    borderColor: colors.border,
                     backgroundColor: colors.elevated,
                     paddingHorizontal: 20,
                     alignItems: "center",
@@ -142,7 +145,7 @@ export default function ChallengeScreen() {
                 >
                   <Text
                     style={{
-                      color: isSelected ? colors.brand : colors.text,
+                      color: colors.text,
                       fontFamily: "Inter_500Medium",
                       fontSize: 20,
                       lineHeight: 28,
