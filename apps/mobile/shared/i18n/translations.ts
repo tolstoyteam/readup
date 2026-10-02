@@ -575,7 +575,7 @@ const baseTranslations = {
       "Read or listen to summaries anytime, with personalized recommendations",
     "onboarding.page3":
       "Reinforce knowledge with quick quizzes and grow every day",
-    "onboarding.start": "Start",
+    "onboarding.start": "Continue",
     "onboarding.welcomeTitle": "Read less.\nKnow more",
     "quotes.couldNotDelete": "Could not delete quote",
     "quotes.delete": "Delete",

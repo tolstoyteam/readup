@@ -24,7 +24,6 @@ import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
-import { markOnboardingComplete } from "@/shared/lib/onboarding-storage";
 
 /** Tokens from Figma `readup. design` welcome frame (node 10:100). */
 
@@ -79,11 +78,6 @@ export default function WelcomeScreen() {
 
   const onStart = useCallback(() => {
     router.push("/onboarding");
-  }, [router]);
-
-  const onLogin = useCallback(async () => {
-    await markOnboardingComplete();
-    router.push("/(auth)/login");
   }, [router]);
 
   if (!fontsLoaded) {
@@ -201,39 +195,6 @@ export default function WelcomeScreen() {
                 </Text>
               </View>
             </Pressable>
-
-            <View pointerEvents="none" style={styles.accountPromptSpacer} />
-
-            <Pressable
-              onPress={onLogin}
-              accessibilityRole="button"
-              accessibilityLabel={t("auth.loginCta")}
-              style={({ pressed }) => [
-                styles.primaryCtaHit,
-                pressed && styles.primaryCtaPressed,
-              ]}
-            >
-              <View
-                style={[
-                  styles.ctaChrome,
-                  {
-                    backgroundColor: "transparent",
-                    borderColor: colors.brand,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: colors.brand,
-                    fontFamily: "Inter_500Medium",
-                    fontSize: 18,
-                    letterSpacing: -0.72,
-                  }}
-                >
-                  {t("auth.loginCta")}
-                </Text>
-              </View>
-            </Pressable>
           </View>
         </View>
       </View>
@@ -272,9 +233,6 @@ const styles = StyleSheet.create({
   },
   primaryCtaPressed: {
     opacity: 0.92,
-  },
-  accountPromptSpacer: {
-    height: 12,
   },
   textActionPressed: {
     opacity: 0.62,
