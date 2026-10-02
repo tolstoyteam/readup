@@ -3,7 +3,6 @@ import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Flame, Trophy } from "lucide-react-native";
-import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,6 +10,8 @@ import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import { useOnboarding } from "../context/onboarding-context";
+import { OnboardingDismissButton } from "../components/onboarding-dismiss-button";
 
 const STREAK_OPTIONS = [
   { days: 7, labelKey: "onboarding.streakPromising" },
@@ -24,7 +25,8 @@ export default function StreakGoalScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const [selectedDays, setSelectedDays] = useState(14);
+  const { draft, updateAnswer } = useOnboarding();
+  const selectedDays = draft?.streakGoal ?? 14;
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_700Bold });
 
   if (!fontsLoaded) {
@@ -45,7 +47,7 @@ export default function StreakGoalScreen() {
           {STREAK_OPTIONS.map(({ days, labelKey }) => {
             const selected = selectedDays === days;
             return (
-              <Pressable key={days} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => setSelectedDays(days)}>
+              <Pressable key={days} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => updateAnswer("streakGoal", days)}>
                 <View style={{ minHeight: 88, borderRadius: 16, borderWidth: 1.5, borderColor: selected ? colors.brand : colors.border, backgroundColor: selected ? colors.surface : colors.elevated, paddingHorizontal: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <Text style={{ color: colors.text, fontFamily: "Inter_500Medium", fontSize: 18, lineHeight: 24 }}>{t("onboarding.streakDays", { count: days })}</Text>
                   <Text style={{ color: selected ? colors.brand : colors.textTertiary, fontFamily: "Inter_400Regular", fontSize: 16, lineHeight: 22 }}>{t(labelKey)}</Text>
@@ -67,11 +69,12 @@ export default function StreakGoalScreen() {
         </View>
       </ScrollView>
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
-        <Pressable accessibilityRole="button" onPress={() => router.push("/onboarding/reading-time")}>
+        <Pressable accessibilityRole="button" onPress={() => { updateAnswer("streakGoal", selectedDays); router.push("/onboarding/reading-time"); }}>
           <View style={{ minHeight: 64, borderRadius: 14, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: colors.textInverse, fontFamily: "Inter_500Medium", fontSize: 18, lineHeight: 24 }}>{t("common.continue")}</Text>
           </View>
         </Pressable>
+        <OnboardingDismissButton />
       </View>
     </SafeAreaView>
   );

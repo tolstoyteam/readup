@@ -1,5 +1,4 @@
 import { Inter_400Regular, Inter_500Medium, Inter_700Bold } from "@expo-google-fonts/inter";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Host, Picker } from "@expo/ui";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
@@ -12,18 +11,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import { useOnboarding } from "../context/onboarding-context";
+import { OnboardingDismissButton } from "../components/onboarding-dismiss-button";
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index);
 const MINUTES = Array.from({ length: 60 }, (_, index) => index);
-const REMINDER_TIME_KEY = "readup.onboarding.reminderTime";
 
 export default function ReminderTimeScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const [hour, setHour] = useState(21);
-  const [minute, setMinute] = useState(0);
+  const { draft, updateAnswer, complete } = useOnboarding();
+  const [hour, minute] = (draft?.reminderTime ?? "21:00").split(":").map(Number);
   const [saving, setSaving] = useState(false);
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_700Bold });
 
@@ -32,7 +32,7 @@ export default function ReminderTimeScreen() {
     setSaving(true);
     try {
       const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-      await AsyncStorage.setItem(REMINDER_TIME_KEY, time);
+      await complete(time);
       router.replace("/");
     } finally {
       setSaving(false);
@@ -67,13 +67,13 @@ export default function ReminderTimeScreen() {
         </View>
         <View style={{ flexGrow: 1, minHeight: 290, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <Host style={{ width: 100, height: 250 }}>
-            <Picker<number> appearance="wheel" selectedValue={hour} onValueChange={setHour}>
+            <Picker<number> appearance="wheel" selectedValue={hour} onValueChange={(value) => updateAnswer("reminderTime", `${String(value).padStart(2, "0")}:${String(minute).padStart(2, "0")}`)}>
               {HOURS.map((value) => <Picker.Item key={value} label={String(value).padStart(2, "0")} value={value} />)}
             </Picker>
           </Host>
           <Text style={{ color: colors.text, fontFamily: "Inter_500Medium", fontSize: 24 }}>:</Text>
           <Host style={{ width: 100, height: 250 }}>
-            <Picker<number> appearance="wheel" selectedValue={minute} onValueChange={setMinute}>
+            <Picker<number> appearance="wheel" selectedValue={minute} onValueChange={(value) => updateAnswer("reminderTime", `${String(hour).padStart(2, "0")}:${String(value).padStart(2, "0")}`)}>
               {MINUTES.map((value) => <Picker.Item key={value} label={String(value).padStart(2, "0")} value={value} />)}
             </Picker>
           </Host>
@@ -85,6 +85,7 @@ export default function ReminderTimeScreen() {
             <Text style={{ color: colors.textInverse, fontFamily: "Inter_500Medium", fontSize: 18, lineHeight: 24 }}>{t("common.continue")}</Text>
           </View>
         </Pressable>
+        <OnboardingDismissButton />
       </View>
     </SafeAreaView>
   );

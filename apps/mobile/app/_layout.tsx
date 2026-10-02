@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { AuthProvider } from "@/shared/context/auth-context";
+import { OnboardingProvider } from "@/features/onboarding/context/onboarding-context";
 import { InterfaceLanguageProvider } from "@/shared/context/interface-language-context";
 import { ThemePreferenceProvider } from "@/shared/context/theme-preference-context";
 import { LibraryProvider } from "@/features/library";
@@ -66,6 +67,7 @@ export default function RootLayout() {
         >
           <InterfaceLanguageProvider>
             <AuthProvider>
+              <OnboardingProvider>
               <PushNotificationsRegistrar />
               <SubscriptionProvider>
                 <LibraryProvider>
@@ -196,6 +198,7 @@ export default function RootLayout() {
                   </QuotesProvider>
                 </LibraryProvider>
               </SubscriptionProvider>
+              </OnboardingProvider>
             </AuthProvider>
             <StatusBar style="auto" />
           </InterfaceLanguageProvider>

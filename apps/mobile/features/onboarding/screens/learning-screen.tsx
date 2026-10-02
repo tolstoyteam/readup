@@ -23,6 +23,8 @@ import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import { useOnboarding } from "../context/onboarding-context";
+import { OnboardingDismissButton } from "../components/onboarding-dismiss-button";
 
 const OPTIONS = [
   { id: "reading", labelKey: "onboarding.learningReading", icon: BookOpen },
@@ -41,16 +43,15 @@ export default function LearningScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const [selected, setSelected] = useState<LearningOption[]>([]);
+  const { draft, updateAnswer } = useOnboarding();
+  const selected = (draft?.learningFormats ?? []) as LearningOption[];
   const [pressedOption, setPressedOption] = useState<LearningOption | null>(null);
   const [fontsLoaded] = useFonts({ Inter_500Medium, Inter_700Bold });
 
   function toggleOption(id: LearningOption) {
-    setSelected((current) =>
-      current.includes(id)
-        ? current.filter((option) => option !== id)
-        : [...current, id],
-    );
+    updateAnswer("learningFormats", selected.includes(id)
+      ? selected.filter((option) => option !== id)
+      : [...selected, id]);
   }
 
   if (!fontsLoaded) {
@@ -223,6 +224,7 @@ export default function LearningScreen() {
             </Text>
           </View>
         </Pressable>
+        <OnboardingDismissButton />
       </View>
     </SafeAreaView>
   );

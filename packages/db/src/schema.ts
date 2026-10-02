@@ -342,6 +342,21 @@ export const adminUsersTable = pgTable("admin_users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const userOnboardingTable = pgTable("user_onboarding", {
+  userId: uuid("user_id").primaryKey().references(() => authUsersTable.id, { onDelete: "cascade" }),
+  state: text("state").$type<"in_progress" | "completed" | "legacy">().notNull().default("in_progress"),
+  challenge: text("challenge"),
+  goals: text("goals").array().notNull().default(sql`'{}'::text[]`),
+  learningFormats: text("learning_formats").array().notNull().default(sql`'{}'::text[]`),
+  monthlyGoal: integer("monthly_goal"),
+  streakGoal: integer("streak_goal"),
+  readingTime: text("reading_time"),
+  reminderTime: text("reminder_time"),
+  revision: integer("revision").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const profilesTable = pgTable("profiles", {
   id: uuid("id")
     .primaryKey()

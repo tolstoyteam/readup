@@ -92,12 +92,12 @@ export default function LoginScreen() {
     setErrorMessage(null);
     setOauthBusy(provider);
     try {
-      const { error } = await signInWithOAuth(provider);
+      const { error, authenticated } = await signInWithOAuth(provider);
       if (error) {
         setErrorMessage(error.message);
         return;
       }
-      router.replace(returnTo ?? "/");
+      if (authenticated) router.replace(returnTo ?? "/");
     } finally {
       setOauthBusy(null);
     }

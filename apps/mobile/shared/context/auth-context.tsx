@@ -48,7 +48,7 @@ type AuthContextValue = {
     password: string,
     options?: { fullName?: string },
   ) => Promise<SignUpResult>;
-  signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: AuthError | null }>;
+  signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: AuthError | null; authenticated: boolean }>;
   requestPasswordReset: (email: string) => Promise<{ error: AuthError | null }>;
   verifyEmailOtp: (params: {
     email: string;
@@ -100,12 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    void supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (mounted) {
-        setSession(s);
-        setLoading(false);
-      }
-    });
+    void supabase.auth.getSession()
+      .then(({ data: { session: s } }) => { if (mounted) setSession(s); })
+      .catch(() => undefined)
+      .finally(() => { if (mounted) setLoading(false); });
 
     const {
       data: { subscription },
@@ -266,16 +264,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           skipBrowserRedirect: true,
         },
       });
-      if (error) return { error };
+      if (error) return { error, authenticated: false };
       const oauthUrl = data.url;
       if (!oauthUrl) {
         return {
           error: { message: t("auth.oauthOpenFailed"), status: 0 } as AuthError,
+          authenticated: false,
         };
       }
       const result = await WebBrowser.openAuthSessionAsync(oauthUrl, redirectTo);
       if (result.type !== "success" || !result.url) {
-        return { error: null };
+        return { error: null, authenticated: false };
       }
       const callbackUrl = result.url;
       const hash = callbackUrl.includes("#") ? callbackUrl.split("#")[1] : "";
@@ -283,24 +282,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const access_token = fragmentParams.get("access_token");
       const refresh_token = fragmentParams.get("refresh_token");
       if (access_token && refresh_token) {
-        await supabase.auth.setSession({ access_token, refresh_token });
-        return { error: null };
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token });
+        return { error: sessionError, authenticated: !!sessionData.session && !sessionError };
       }
       try {
         const { queryParams } = Linking.parse(callbackUrl);
         const rawCode = queryParams?.code;
         const code = Array.isArray(rawCode) ? rawCode[0] : rawCode;
         if (typeof code === "string" && code.length > 0) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          return { error: exchangeError };
+          const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          return { error: exchangeError, authenticated: !!exchanged.session && !exchangeError };
         }
       } catch {
         /* ignore malformed callback URL */
       }
-      return { error: null };
+      return { error: null, authenticated: false };
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : t("auth.oauthFailed");
-      return { error: { message, status: 0 } as AuthError };
+      return { error: { message, status: 0 } as AuthError, authenticated: false };
     }
   }, [t]);
 

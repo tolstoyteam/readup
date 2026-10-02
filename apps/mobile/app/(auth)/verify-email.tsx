@@ -108,7 +108,7 @@ export default function VerifyEmailScreen() {
       router.replace("/");
       return;
     }
-    router.replace(returnTo ?? "/(setup)/interests");
+    router.replace(returnTo ?? "/");
   }, [purpose, returnTo]);
 
   const onVerify = useCallback(

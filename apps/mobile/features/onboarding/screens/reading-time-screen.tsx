@@ -3,7 +3,6 @@ import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { CarFront, Clock3, Coffee, Moon, Pizza, type LucideIcon } from "lucide-react-native";
-import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,6 +10,8 @@ import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import { useOnboarding } from "../context/onboarding-context";
+import { OnboardingDismissButton } from "../components/onboarding-dismiss-button";
 
 const TIMES = [
   { id: "coffee", labelKey: "onboarding.timeCoffee", icon: Coffee },
@@ -27,7 +28,8 @@ export default function ReadingTimeScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const [selected, setSelected] = useState<ReadingTime | null>(null);
+  const { draft, updateAnswer } = useOnboarding();
+  const selected = draft?.readingTime as ReadingTime | null ?? null;
   const [fontsLoaded] = useFonts({ Inter_500Medium, Inter_700Bold });
 
   if (!fontsLoaded) {
@@ -48,7 +50,7 @@ export default function ReadingTimeScreen() {
           {TIMES.map(({ id, labelKey, icon: Icon }) => {
             const isSelected = selected === id;
             return (
-              <Pressable key={id} accessibilityRole="radio" accessibilityState={{ checked: isSelected }} onPress={() => setSelected(id)}>
+              <Pressable key={id} accessibilityRole="radio" accessibilityState={{ checked: isSelected }} onPress={() => updateAnswer("readingTime", id)}>
                 <View style={{ minHeight: 92, borderRadius: 14, borderWidth: 1.5, borderColor: isSelected ? colors.brand : colors.border, backgroundColor: isSelected ? colors.surface : colors.elevated, paddingHorizontal: 22, flexDirection: "row", alignItems: "center", gap: 20 }}>
                   <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
                     <Icon size={26} color={colors.brand} strokeWidth={2.2} />
@@ -66,6 +68,7 @@ export default function ReadingTimeScreen() {
             <Text style={{ color: colors.textInverse, fontFamily: "Inter_500Medium", fontSize: 18, lineHeight: 24 }}>{t("common.continue")}</Text>
           </View>
         </Pressable>
+        <OnboardingDismissButton />
       </View>
     </SafeAreaView>
   );

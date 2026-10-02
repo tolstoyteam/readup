@@ -3,13 +3,14 @@ import { Host, Picker } from "@expo/ui";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+import { useOnboarding } from "../context/onboarding-context";
+import { OnboardingDismissButton } from "../components/onboarding-dismiss-button";
 
 const MONTHLY_GOALS = Array.from({ length: 50 }, (_, index) => index + 1);
 
@@ -18,7 +19,8 @@ export default function MonthlyGoalScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const [monthlyGoal, setMonthlyGoal] = useState(4);
+  const { draft, updateAnswer } = useOnboarding();
+  const monthlyGoal = draft?.monthlyGoal ?? 4;
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -113,7 +115,7 @@ export default function MonthlyGoalScreen() {
             <Picker<number>
               appearance="wheel"
               selectedValue={monthlyGoal}
-              onValueChange={setMonthlyGoal}
+              onValueChange={(value) => updateAnswer("monthlyGoal", value)}
             >
               {MONTHLY_GOALS.map((value) => (
                 <Picker.Item key={value} label={String(value)} value={value} />
@@ -138,7 +140,7 @@ export default function MonthlyGoalScreen() {
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push("/onboarding/streak-goal")}
+          onPress={() => { updateAnswer("monthlyGoal", monthlyGoal); router.push("/onboarding/streak-goal"); }}
         >
           <View
             style={{
@@ -161,6 +163,7 @@ export default function MonthlyGoalScreen() {
             </Text>
           </View>
         </Pressable>
+        <OnboardingDismissButton />
       </View>
     </SafeAreaView>
   );

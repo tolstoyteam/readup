@@ -16,6 +16,8 @@ import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import { useOnboarding } from "../context/onboarding-context";
+import { OnboardingDismissButton } from "../components/onboarding-dismiss-button";
 
 const CHOICES = [
   { id: "consistency", labelKey: "onboarding.consistency" },
@@ -33,6 +35,7 @@ export default function ChallengeScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
+  const { draft, updateAnswer } = useOnboarding();
   const [pressedChoice, setPressedChoice] = useState<Choice | null>(null);
   const [fontsLoaded] = useFonts({ Inter_500Medium, Inter_700Bold });
 
@@ -120,12 +123,13 @@ export default function ChallengeScreen() {
               <Pressable
                 key={choice.id}
                 accessibilityRole="button"
-                onPress={() =>
+                accessibilityState={{ selected: draft?.challenge === choice.id }}
+                onPress={() => {
+                  updateAnswer("challenge", choice.id);
                   router.push({
                     pathname: "/onboarding/goals",
-                    params: { challenge: choice.id },
-                  })
-                }
+                  });
+                }}
                 onPressIn={() => setPressedChoice(choice.id)}
                 onPressOut={() => setPressedChoice(null)}
               >
@@ -135,7 +139,7 @@ export default function ChallengeScreen() {
                     width: "100%",
                     borderRadius: 20,
                     borderWidth: 2,
-                    borderColor: colors.border,
+                    borderColor: draft?.challenge === choice.id ? colors.brand : colors.border,
                     backgroundColor: colors.elevated,
                     paddingHorizontal: 20,
                     alignItems: "center",
@@ -161,6 +165,7 @@ export default function ChallengeScreen() {
             );
           })}
         </View>
+        <OnboardingDismissButton />
       </ScrollView>
     </SafeAreaView>
   );

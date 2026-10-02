@@ -152,7 +152,7 @@ export default function SignupScreen() {
         });
         return;
       }
-      router.replace(returnTo ?? "/(setup)/interests");
+      router.replace(returnTo ?? "/");
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -163,12 +163,12 @@ export default function SignupScreen() {
     setErrorMessage(null);
     setOauthBusy(provider);
     try {
-      const { error } = await signInWithOAuth(provider);
+      const { error, authenticated } = await signInWithOAuth(provider);
       if (error) {
         setErrorMessage(error.message);
         return;
       }
-      router.replace(returnTo ?? "/(setup)/interests");
+      if (authenticated) router.replace(returnTo ?? "/");
     } finally {
       setOauthBusy(null);
     }

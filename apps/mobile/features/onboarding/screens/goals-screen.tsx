@@ -4,7 +4,7 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   Award,
@@ -31,6 +31,8 @@ import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import type { TranslationKey } from "@/shared/i18n/translations";
+import { useOnboarding } from "../context/onboarding-context";
+import { OnboardingDismissButton } from "../components/onboarding-dismiss-button";
 
 const GOALS = [
   { id: "productivity", labelKey: "onboarding.goalProductivity", icon: Timer },
@@ -53,8 +55,8 @@ export default function GoalsScreen() {
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const { challenge } = useLocalSearchParams<{ challenge?: string }>();
-  const [selectedGoals, setSelectedGoals] = useState<GoalId[]>([]);
+  const { draft, updateAnswer } = useOnboarding();
+  const selectedGoals = (draft?.goals ?? []) as GoalId[];
   const [pressedGoal, setPressedGoal] = useState<GoalId | null>(null);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -63,10 +65,9 @@ export default function GoalsScreen() {
   });
 
   function toggleGoal(id: GoalId) {
-    setSelectedGoals((current) => {
-      if (current.includes(id)) return current.filter((goal) => goal !== id);
-      return current.length < 3 ? [...current, id] : current;
-    });
+    updateAnswer("goals", selectedGoals.includes(id)
+      ? selectedGoals.filter((goal) => goal !== id)
+      : selectedGoals.length < 3 ? [...selectedGoals, id] : selectedGoals);
   }
 
   if (!fontsLoaded) {
@@ -225,15 +226,8 @@ export default function GoalsScreen() {
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
         <Pressable
           accessibilityRole="button"
-          onPress={() =>
-            router.push({
-              pathname: "/onboarding/learning",
-              params: {
-                challenge: challenge ?? "",
-                goals: selectedGoals.join(","),
-              },
-            })
-          }
+          disabled={selectedGoals.length === 0}
+          onPress={() => router.push("/onboarding/learning")}
         >
           <View
             style={{
@@ -256,6 +250,7 @@ export default function GoalsScreen() {
             </Text>
           </View>
         </Pressable>
+        <OnboardingDismissButton />
       </View>
     </SafeAreaView>
   );

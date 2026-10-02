@@ -130,9 +130,9 @@ export default function InformationScreen() {
     [pageIndex, width],
   );
 
-  const goToTabs = useCallback(async () => {
+  const skipInformation = useCallback(async () => {
     await markInformationComplete();
-    router.replace("/");
+    router.replace("/onboarding");
   }, [router]);
 
   const handleNext = useCallback(async () => {
@@ -293,7 +293,7 @@ export default function InformationScreen() {
           collapsable={false}
         >
           <Pressable
-            onPress={goToTabs}
+            onPress={skipInformation}
             accessibilityRole="button"
             accessibilityLabel={t("common.skip")}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}

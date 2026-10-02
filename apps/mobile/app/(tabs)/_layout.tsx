@@ -9,11 +9,13 @@ import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { getInformationComplete } from "@/shared/lib/information-storage";
+import { useOnboarding } from "@/features/onboarding/context/onboarding-context";
 
 export default function TabLayout() {
   const colors = useReadupColors();
   const { t } = useInterfaceLanguage();
   const { user, loading } = useAuth();
+  const { ready: onboardingReady, hasAccountRecord, hasLocalDraft, launchRoute } = useOnboarding();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const userId = user?.id;
@@ -25,11 +27,10 @@ export default function TabLayout() {
 
   useEffect(() => {
     let mounted = true;
-    void getInformationComplete().then((complete) => {
-      if (!mounted) return;
-      setInformationComplete(complete);
-      setInformationReady(true);
-    });
+    void getInformationComplete()
+      .then((complete) => { if (mounted) setInformationComplete(complete); })
+      .catch(() => undefined)
+      .finally(() => { if (mounted) setInformationReady(true); });
     return () => {
       mounted = false;
     };
@@ -71,7 +72,7 @@ export default function TabLayout() {
 
   const awaitingInitialProfile = profile === null && profileLoading;
 
-  if (!informationReady || loading) {
+  if (!informationReady || loading || !onboardingReady) {
     return (
       <View className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]">
         <ActivityIndicator size="large" color={colors.brand} />
@@ -79,16 +80,12 @@ export default function TabLayout() {
     );
   }
 
-  if (!informationComplete) {
+  if (!informationComplete && !hasLocalDraft && !hasAccountRecord) {
     return <Redirect href="/welcome" />;
   }
 
-  if (!awaitingInitialProfile && profile && !profile.interests_step_done) {
-    return <Redirect href="/(setup)/interests" />;
-  }
-
-  if (!awaitingInitialProfile && profile && !profile.goal_step_done) {
-    return <Redirect href="/(setup)/goal" />;
+  if (launchRoute) {
+    return <Redirect href={launchRoute as "/onboarding"} />;
   }
 
   const showProfileOverlay =
