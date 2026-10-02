@@ -143,7 +143,7 @@ export default function InformationScreen() {
       return;
     }
     await markInformationComplete();
-    router.replace("/");
+    router.replace("/onboarding");
   }, [pageIndex, router, width]);
 
   if (!fontsLoaded) {
