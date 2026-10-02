@@ -1,20 +1,12 @@
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
+import { Inter_500Medium, Inter_700Bold } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
-  Award,
   BookOpen,
-  BriefcaseBusiness,
   Check,
-  HandHeart,
-  Scale,
-  Timer,
-  UsersRound,
+  Headphones,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react-native";
 import { useState } from "react";
@@ -32,41 +24,33 @@ import { useInterfaceLanguage } from "@/shared/context/interface-language-contex
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 import type { TranslationKey } from "@/shared/i18n/translations";
 
-const GOALS = [
-  { id: "productivity", labelKey: "onboarding.goalProductivity", icon: Timer },
-  { id: "career", labelKey: "onboarding.goalCareer", icon: BriefcaseBusiness },
-  { id: "faith", labelKey: "onboarding.goalFaith", icon: HandHeart },
-  { id: "parent", labelKey: "onboarding.goalParent", icon: UsersRound },
-  { id: "confidence", labelKey: "onboarding.goalConfidence", icon: Award },
-  { id: "balance", labelKey: "onboarding.goalBalance", icon: Scale },
-  { id: "reading", labelKey: "onboarding.goalReading", icon: BookOpen },
+const OPTIONS = [
+  { id: "reading", labelKey: "onboarding.learningReading", icon: BookOpen },
+  { id: "listening", labelKey: "onboarding.learningListening", icon: Headphones },
+  { id: "interactive", labelKey: "onboarding.learningInteractive", icon: Sparkles },
 ] as const satisfies readonly {
   id: string;
   labelKey: TranslationKey;
   icon: LucideIcon;
 }[];
 
-type GoalId = (typeof GOALS)[number]["id"];
+type LearningOption = (typeof OPTIONS)[number]["id"];
 
-export default function GoalsScreen() {
+export default function LearningScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
   const router = useRouter();
-  const { challenge } = useLocalSearchParams<{ challenge?: string }>();
-  const [selectedGoals, setSelectedGoals] = useState<GoalId[]>([]);
-  const [pressedGoal, setPressedGoal] = useState<GoalId | null>(null);
-  const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_700Bold,
-  });
+  const [selected, setSelected] = useState<LearningOption[]>([]);
+  const [pressedOption, setPressedOption] = useState<LearningOption | null>(null);
+  const [fontsLoaded] = useFonts({ Inter_500Medium, Inter_700Bold });
 
-  function toggleGoal(id: GoalId) {
-    setSelectedGoals((current) => {
-      if (current.includes(id)) return current.filter((goal) => goal !== id);
-      return current.length < 3 ? [...current, id] : current;
-    });
+  function toggleOption(id: LearningOption) {
+    setSelected((current) =>
+      current.includes(id)
+        ? current.filter((option) => option !== id)
+        : [...current, id],
+    );
   }
 
   if (!fontsLoaded) {
@@ -90,36 +74,39 @@ export default function GoalsScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{
+          flexGrow: 1,
           paddingHorizontal: 16,
           paddingTop: 20,
           paddingBottom: 24,
+          justifyContent: "space-between",
+          gap: 40,
         }}
       >
-        <View
-          accessibilityRole="progressbar"
-          accessibilityLabel={t("onboarding.goalsProgress")}
-          accessibilityValue={{ min: 0, max: 8, now: 2 }}
-          style={{
-            height: 8,
-            borderRadius: 999,
-            backgroundColor: colors.elevated,
-            overflow: "hidden",
-          }}
-        >
+        <View>
           <View
+            accessibilityRole="progressbar"
+            accessibilityLabel={t("onboarding.learningProgress")}
+            accessibilityValue={{ min: 0, max: 8, now: 3 }}
             style={{
-              width: "25%",
-              height: "100%",
+              height: 8,
               borderRadius: 999,
-              backgroundColor: colors.brand,
+              backgroundColor: colors.elevated,
+              overflow: "hidden",
             }}
-          />
-        </View>
-
-        <View style={{ marginTop: 48, alignItems: "center", gap: 8 }}>
+          >
+            <View
+              style={{
+                width: "37.5%",
+                height: "100%",
+                borderRadius: 999,
+                backgroundColor: colors.brand,
+              }}
+            />
+          </View>
           <Text
             accessibilityRole="header"
             style={{
+              marginTop: 48,
               color: colors.text,
               fontFamily: "Inter_700Bold",
               fontSize: 28,
@@ -127,41 +114,27 @@ export default function GoalsScreen() {
               textAlign: "center",
             }}
           >
-            {t("onboarding.goalsTitle")}
-          </Text>
-          <Text
-            style={{
-              maxWidth: 340,
-              color: colors.textSecondary,
-              fontFamily: "Inter_400Regular",
-              fontSize: 16,
-              lineHeight: 24,
-              textAlign: "center",
-            }}
-          >
-            {t("onboarding.goalsSubtitle")}
+            {t("onboarding.learningTitle")}
           </Text>
         </View>
 
-        <View style={{ marginTop: 40, gap: 12 }}>
-          {GOALS.map((goal) => {
-            const isSelected = selectedGoals.includes(goal.id);
-            const isDisabled = selectedGoals.length === 3 && !isSelected;
-            const Icon = goal.icon;
+        <View style={{ gap: 12 }}>
+          {OPTIONS.map((option) => {
+            const isSelected = selected.includes(option.id);
+            const Icon = option.icon;
 
             return (
               <Pressable
-                key={goal.id}
+                key={option.id}
                 accessibilityRole="checkbox"
-                accessibilityState={{ checked: isSelected, disabled: isDisabled }}
-                disabled={isDisabled}
-                onPress={() => toggleGoal(goal.id)}
-                onPressIn={() => setPressedGoal(goal.id)}
-                onPressOut={() => setPressedGoal(null)}
+                accessibilityState={{ checked: isSelected }}
+                onPress={() => toggleOption(option.id)}
+                onPressIn={() => setPressedOption(option.id)}
+                onPressOut={() => setPressedOption(null)}
               >
                 <View
                   style={{
-                    minHeight: 94,
+                    minHeight: 100,
                     borderRadius: 14,
                     borderWidth: 1.5,
                     borderColor: isSelected ? colors.brand : colors.border,
@@ -171,7 +144,7 @@ export default function GoalsScreen() {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 16,
-                    opacity: isDisabled ? 0.5 : pressedGoal === goal.id ? 0.7 : 1,
+                    opacity: pressedOption === option.id ? 0.7 : 1,
                   }}
                 >
                   <View
@@ -192,11 +165,11 @@ export default function GoalsScreen() {
                       flex: 1,
                       color: colors.text,
                       fontFamily: "Inter_500Medium",
-                      fontSize: 16,
-                      lineHeight: 22,
+                      fontSize: 18,
+                      lineHeight: 24,
                     }}
                   >
-                    {t(goal.labelKey)}
+                    {t(option.labelKey)}
                   </Text>
                   <View
                     pointerEvents="none"
@@ -225,21 +198,15 @@ export default function GoalsScreen() {
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
         <Pressable
           accessibilityRole="button"
-          onPress={() =>
-            router.push({
-              pathname: "/onboarding/learning",
-              params: {
-                challenge: challenge ?? "",
-                goals: selectedGoals.join(","),
-              },
-            })
-          }
+          disabled={selected.length === 0}
+          onPress={() => router.replace("/")}
         >
           <View
             style={{
               minHeight: 64,
               borderRadius: 14,
               backgroundColor: colors.brand,
+              opacity: selected.length > 0 ? 1 : 0.5,
               alignItems: "center",
               justifyContent: "center",
             }}
