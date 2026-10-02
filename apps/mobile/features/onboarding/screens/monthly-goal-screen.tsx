@@ -138,7 +138,7 @@ export default function MonthlyGoalScreen() {
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.replace("/")}
+          onPress={() => router.push("/onboarding/streak-goal")}
         >
           <View
             style={{
