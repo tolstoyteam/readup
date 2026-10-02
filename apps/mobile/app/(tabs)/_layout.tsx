@@ -8,7 +8,7 @@ import { fetchProfile, type Profile } from "@/features/profile/api/profile";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useAuth } from "@/shared/context/auth-context";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
-import { getOnboardingComplete } from "@/shared/lib/onboarding-storage";
+import { getInformationComplete } from "@/shared/lib/information-storage";
 
 export default function TabLayout() {
   const colors = useReadupColors();
@@ -17,18 +17,18 @@ export default function TabLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const userId = user?.id;
-  const [onboardingReady, setOnboardingReady] = useState(false);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [informationReady, setInformationReady] = useState(false);
+  const [informationComplete, setInformationComplete] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    void getOnboardingComplete().then((complete) => {
+    void getInformationComplete().then((complete) => {
       if (!mounted) return;
-      setOnboardingComplete(complete);
-      setOnboardingReady(true);
+      setInformationComplete(complete);
+      setInformationReady(true);
     });
     return () => {
       mounted = false;
@@ -71,7 +71,7 @@ export default function TabLayout() {
 
   const awaitingInitialProfile = profile === null && profileLoading;
 
-  if (!onboardingReady || loading) {
+  if (!informationReady || loading) {
     return (
       <View className="flex-1 items-center justify-center bg-[#FBFAF2] dark:bg-[#101512]">
         <ActivityIndicator size="large" color={colors.brand} />
@@ -79,7 +79,7 @@ export default function TabLayout() {
     );
   }
 
-  if (!onboardingComplete) {
+  if (!informationComplete) {
     return <Redirect href="/welcome" />;
   }
 

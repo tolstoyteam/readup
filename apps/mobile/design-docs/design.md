@@ -296,47 +296,6 @@ The full row must be tappable.
 
 ---
 
-## Book Cover
-
-Preferred aspect ratio:
-
-`2:3`
-
-```text
-radius: 8–10px
-fallback background: surface
-```
-
-Do not distort covers to match fixed dimensions.
-
----
-
-## Book Card
-
-Hierarchy:
-
-```text
-cover
-title
-author
-optional metadata
-```
-
-Text:
-
-```text
-title: textPrimary
-author: textSecondary
-metadata: textTertiary
-```
-
-Horizontal shelf cover width:
-
-`132–140px`
-
-Use available width when rendering grids.
-
----
 
 ## Continue Reading Card
 
@@ -474,17 +433,6 @@ active controls: accent
 text: textPrimary / textSecondary / textTertiary
 ```
 
-Reader implementation files:
-
-- `app/reader/[bookId].tsx`
-- `features/reader/components/page-elements.tsx`
-- `features/reader/components/reader-bottom-reading-progress.tsx`
-- `features/reader/components/reader-bottom-now-playing.tsx`
-- `features/reader/components/book-listen-player.tsx`
-
-Reader content uses `font-reader`.
-
-Reader controls use Inter.
 
 ---
 
@@ -605,18 +553,3 @@ bigRadius
 ```
 
 ---
-
-# New UI Checklist
-
-Before finishing a new screen or component, verify:
-
-- colors use semantic tokens
-- typography uses defined roles
-- spacing follows the shared scale
-- repeated UI uses shared components
-- required states exist
-- touch targets are large enough
-- safe areas are handled
-- long text does not break layout
-- loading/error/empty states exist where applicable
-- arbitrary values are minimized

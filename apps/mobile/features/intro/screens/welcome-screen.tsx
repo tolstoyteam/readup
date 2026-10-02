@@ -77,7 +77,7 @@ export default function WelcomeScreen() {
   const footerBottomPad = FOOTER_BOTTOM_INSET + insets.bottom;
 
   const onStart = useCallback(() => {
-    router.push("/onboarding");
+    router.push("/information");
   }, [router]);
 
   if (!fontsLoaded) {
@@ -138,7 +138,7 @@ export default function WelcomeScreen() {
                 marginTop: 48,
               }}
             >
-              {t("onboarding.welcomeTitle")}
+              {t("welcome.title")}
             </Text>
           </View>
 
@@ -167,7 +167,7 @@ export default function WelcomeScreen() {
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t("onboarding.start")}
+              accessibilityLabel={t("welcome.start")}
               onPress={onStart}
               style={({ pressed }) => [
                 styles.primaryCtaHit,
@@ -191,7 +191,7 @@ export default function WelcomeScreen() {
                     letterSpacing: -0.72,
                   }}
                 >
-                  {t("onboarding.start")}
+                  {t("welcome.start")}
                 </Text>
               </View>
             </Pressable>

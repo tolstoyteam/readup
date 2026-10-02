@@ -207,14 +207,14 @@ const baseTranslations = {
     "notifications.settings": "Настройки",
     "notifications.streakAlerts": "Серия чтения",
     "notifications.title": "Уведомления",
-    "onboarding.next": "Дальше",
-    "onboarding.page1": "Получай ключевые идеи из книг всего за 10-15 минут",
-    "onboarding.page2":
+    "information.next": "Дальше",
+    "information.page1": "Получай ключевые идеи из книг всего за 10-15 минут",
+    "information.page2":
       "Читай или слушай саммари в любое время - с персональными рекомендациями",
-    "onboarding.page3":
+    "information.page3":
       "Закрепляй знания с помощью быстрых тестов и развивайся каждый день",
-    "onboarding.start": "Начать",
-    "onboarding.welcomeTitle": "Читай меньше.\nЗнай больше",
+    "welcome.start": "Начать",
+    "welcome.title": "Читай меньше.\nЗнай больше",
     "quotes.couldNotDelete": "Не удалось удалить цитату",
     "quotes.delete": "Удалить",
     "quotes.deleteBody": "Цитата и выделение будут удалены.",
@@ -569,14 +569,14 @@ const baseTranslations = {
     "notifications.settings": "Settings",
     "notifications.streakAlerts": "Reading streak",
     "notifications.title": "Notifications",
-    "onboarding.next": "Next",
-    "onboarding.page1": "Get key ideas from books in just 10-15 minutes",
-    "onboarding.page2":
+    "information.next": "Next",
+    "information.page1": "Get key ideas from books in just 10-15 minutes",
+    "information.page2":
       "Read or listen to summaries anytime, with personalized recommendations",
-    "onboarding.page3":
+    "information.page3":
       "Reinforce knowledge with quick quizzes and grow every day",
-    "onboarding.start": "Continue",
-    "onboarding.welcomeTitle": "Read less.\nKnow more",
+    "welcome.start": "Continue",
+    "welcome.title": "Read less.\nKnow more",
     "quotes.couldNotDelete": "Could not delete quote",
     "quotes.delete": "Delete",
     "quotes.deleteBody": "This will remove the quote and its highlight.",
@@ -938,14 +938,14 @@ export const spanishTranslations: Partial<Record<TranslationKey, string>> = {
   "notifications.settings": "Configuración",
   "notifications.streakAlerts": "Racha de lectura",
   "notifications.title": "Notificaciones",
-  "onboarding.next": "Siguiente",
-  "onboarding.page1": "Obtén ideas clave de libros en solo 10-15 minutos",
-  "onboarding.page2":
+  "information.next": "Siguiente",
+  "information.page1": "Obtén ideas clave de libros en solo 10-15 minutos",
+  "information.page2":
     "Lee o escucha resúmenes cuando quieras, con recomendaciones personalizadas",
-  "onboarding.page3":
+  "information.page3":
     "Refuerza lo aprendido con pruebas rápidas y mejora cada día",
-  "onboarding.start": "Empezar",
-  "onboarding.welcomeTitle": "Lee menos.\nSabe más",
+  "welcome.start": "Empezar",
+  "welcome.title": "Lee menos.\nSabe más",
   "quotes.couldNotDelete": "No se pudo eliminar la cita",
   "quotes.delete": "Eliminar",
   "quotes.deleteBody": "Se eliminarán la cita y su resaltado.",

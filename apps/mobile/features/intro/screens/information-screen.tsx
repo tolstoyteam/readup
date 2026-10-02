@@ -26,7 +26,7 @@ import { ReadupLogo } from "@/shared/components/readup-logo";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 import { useInterfaceLanguage } from "@/shared/context/interface-language-context";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
-import { markOnboardingComplete } from "@/shared/lib/onboarding-storage";
+import { markInformationComplete } from "@/shared/lib/information-storage";
 import type { TranslationKey } from "@/shared/i18n/translations";
 
 /** Tokens from Figma `readup. design` onboarding-info section (node 55:237). */
@@ -48,7 +48,7 @@ const BG_ANCHOR_X_BY_PAGE = [
 /** Bottom padding for skip/next row vs Figma frame bottom (Figma px). */
 const FIGMA_NAV_BOTTOM_INSET = 28;
 
-type OnboardingPage = {
+type InformationPage = {
   id: string;
   titleKey: TranslationKey;
   illustration: number | ImageSource;
@@ -59,10 +59,10 @@ type OnboardingPage = {
   topOffset: number;
 };
 
-const PAGES: OnboardingPage[] = [
+const PAGES: InformationPage[] = [
   {
     id: "page-1",
-    titleKey: "onboarding.page1",
+    titleKey: "information.page1",
     illustration: require("@/assets/images/onboarding/page-1-clock.png"),
     imgW: 282,
     imgH: 389,
@@ -70,7 +70,7 @@ const PAGES: OnboardingPage[] = [
   },
   {
     id: "page-2",
-    titleKey: "onboarding.page2",
+    titleKey: "information.page2",
     illustration: require("@/assets/images/onboarding/page-2-headphones.png"),
     imgW: 295,
     imgH: 395,
@@ -78,7 +78,7 @@ const PAGES: OnboardingPage[] = [
   },
   {
     id: "page-3",
-    titleKey: "onboarding.page3",
+    titleKey: "information.page3",
     illustration: require("@/assets/images/onboarding/page-3-book-head.png"),
     imgW: 328,
     imgH: 440,
@@ -88,7 +88,7 @@ const PAGES: OnboardingPage[] = [
 
 const watermarkAsset = require("@/assets/images/onboarding/readup-logo.png");
 
-export default function OnboardingScreen() {
+export default function InformationScreen() {
   const colors = useReadupColors();
   const colorScheme = useColorScheme();
   const { t } = useInterfaceLanguage();
@@ -131,7 +131,7 @@ export default function OnboardingScreen() {
   );
 
   const goToTabs = useCallback(async () => {
-    await markOnboardingComplete();
+    await markInformationComplete();
     router.replace("/");
   }, [router]);
 
@@ -142,7 +142,7 @@ export default function OnboardingScreen() {
       setPageIndex(nextIndex);
       return;
     }
-    await markOnboardingComplete();
+    await markInformationComplete();
     router.replace("/");
   }, [pageIndex, router, width]);
 
@@ -332,7 +332,7 @@ export default function OnboardingScreen() {
           <Pressable
             onPress={handleNext}
             accessibilityRole="button"
-            accessibilityLabel={t("onboarding.next")}
+            accessibilityLabel={t("information.next")}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={({ pressed }) => [
               styles.footerAction,
@@ -346,7 +346,7 @@ export default function OnboardingScreen() {
                     fontSize: 14,
               }}
             >
-              {t("onboarding.next")}
+              {t("information.next")}
             </Text>
           </Pressable>
         </View>

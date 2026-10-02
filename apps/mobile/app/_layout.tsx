@@ -73,7 +73,7 @@ export default function RootLayout() {
                     <ReaderSettingsProvider>
                       <Stack>
                         <Stack.Screen
-                          name="(onboarding)"
+                          name="(intro)"
                           options={{ headerShown: false }}
                         />
                         <Stack.Screen
