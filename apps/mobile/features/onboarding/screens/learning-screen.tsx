@@ -199,7 +199,7 @@ export default function LearningScreen() {
         <Pressable
           accessibilityRole="button"
           disabled={selected.length === 0}
-          onPress={() => router.replace("/")}
+          onPress={() => router.push("/onboarding/monthly-goal")}
         >
           <View
             style={{

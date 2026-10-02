@@ -6,6 +6,7 @@ export default function OnboardingLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="goals" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="learning" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="monthly-goal" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
