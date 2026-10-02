@@ -1,80 +1,478 @@
 # Readup Design System
 
-This file documents the current mobile UI style used for the Readup onboarding, setup, Home, Search, and Library screens. The Figma file is the visual reference; the app implements the system in React Native with Expo Router and NativeWind classes where existing code already uses them.
+This file defines the reusable mobile UI system for Readup.
 
-Product UI uses `ReadupColors` in [`shared/constants/readup-theme.ts`](shared/constants/readup-theme.ts) and NativeWind utility classes. Legacy Expo starter components (`ThemedText`, `ThemedView`, Explore tab, modal route) have been removed.
+The Figma file is the visual reference. The app implements the system in React Native with Expo Router and NativeWind.
+
+Shared design tokens should live in:
+
+`shared/constants/readup-theme.ts`
+
+Avoid redefining repeated colors, spacing, typography, and component styles inside individual screens.
+
+---
 
 ## Colors
 
-| Role | Hex | Usage |
-| --- | --- | --- |
-| Brand primary | `#059669` | Primary buttons, headings, selected chips, active emphasis |
-| Brand primary dark | `#047857` | Primary button border and pressed accents |
-| Background default | `#FBFAF2` | Full-screen background |
-| Surface | `#F2F0E6` | Cards, tab bar, inputs, segmented controls |
-| Elevated / input border | `#E8E6D8` | Subtle input and menu borders |
-| Text primary | `#1A2420` | Main content text |
-| Text secondary | `#4A5550` | Labels, book titles, inactive navigation |
-| Text tertiary | `#7A7868` | Placeholders, secondary links, quiet metadata |
-| Text inverse | `#FBFAF2` | Text on brand primary |
-| Border default | `#C8C6B2` | Tab bar top border |
+### Base palette
+
+| Token | Hex |
+| --- | --- |
+| `green600` | `#059669` |
+| `green700` | `#047857` |
+| `cream50` | `#FBFAF2` |
+| `cream100` | `#F2F0E6` |
+| `cream200` | `#E8E6D8` |
+| `cream300` | `#C8C6B2` |
+| `ink900` | `#1A2420` |
+| `ink700` | `#4A5550` |
+| `ink500` | `#7A7868` |
+
+### Semantic colors
+
+```ts
+export const ReadupColors = {
+  background: "#FBFAF2",
+
+  surface: "#F2F0E6",
+  surfaceElevated: "#E8E6D8",
+
+  textPrimary: "#1A2420",
+  textSecondary: "#4A5550",
+  textTertiary: "#7A7868",
+  textInverse: "#FBFAF2",
+
+  accent: "#059669",
+  accentPressed: "#047857",
+
+  borderSubtle: "#E8E6D8",
+  borderDefault: "#C8C6B2",
+
+  selectionBackground: "#059669",
+  progressActive: "#059669",
+} as const;
+```
+
+### Usage
+
+- `textPrimary`: page titles, section headings, book titles, important content
+- `textSecondary`: authors, descriptions, secondary labels
+- `textTertiary`: placeholders, helper text, low-emphasis metadata
+- `accent`: primary actions, selected controls, progress, interactive emphasis
+
+Do not use green as the default heading color.
+
+---
 
 ## Typography
 
-Use Inter for brand screens and content UI.
+Use Inter for interface UI.
 
-| Style | Size | Weight | Tracking | Usage |
-| --- | --- | --- | --- | --- |
-| Display | 34 | Extra Bold / 800 | `-1.36px` | Setup screen questions |
-| Heading 2 | 22 | Semi Bold / 600 | `-0.88px` | Home/Search/Library section titles |
-| Heading 3 | 18 | Medium / 500 | `-0.72px` | Category headings, card titles, primary button labels |
-| Body | 14 | Regular / 400 | `-0.56px` | Chips, inputs, book labels |
-| Body Small | 12 | Regular / 400 | `-0.48px` | Skip links and small helper text |
+| Token | Size | Weight | Line Height | Tracking |
+| --- | ---: | ---: | ---: | ---: |
+| `display` | 34 | 800 | 40 | `-1px` |
+| `titleLarge` | 28 | 700 | 34 | `-0.6px` |
+| `titleMedium` | 22 | 600 | 28 | `-0.3px` |
+| `titleSmall` | 18 | 600 | 24 | `-0.2px` |
+| `bodyLarge` | 16 | 400 | 24 | `0` |
+| `body` | 14 | 400 | 21 | `0` |
+| `label` | 14 | 500 | 20 | `0` |
+| `bodySmall` | 12 | 400 | 18 | `0` |
 
-## Components
+Negative tracking should only be used for larger typography.
 
-### Primary Button
+Interactive text should generally be at least 14px.
 
-Primary buttons are full-width capsule buttons with a 54px minimum height, `#059669` fill, 2px `#047857` border, and `#FBFAF2` 18px medium text. Use this for the main step action, such as `Продолжить`, `Завершить`, and high-emphasis retries.
+---
 
-### Secondary Link
+## Reader Typography
 
-Secondary actions are text-only buttons using `#7A7868`, 12px body-small text, and centered alignment. Use them for skip or low-emphasis actions.
+Reader content uses `font-reader`.
 
-### Chips
+| Token | Size | Weight | Line Height |
+| --- | ---: | ---: | ---: |
+| `readerTitle` | 30 | 600 | 38 |
+| `readerHeading` | 22 | 600 | 30 |
+| `readerBody` | 18 | 400 | 29 |
+| `readerQuote` | 18 | 400 | 29 |
+| `readerCaption` | 13 | 400 | 19 |
 
-Interest and filter chips are pill-shaped with `999px` radius, 1px `#059669` border, horizontal padding of 12px, and 13-14px text. Unselected chips are transparent with `#1A2420` text. Selected chips use `#059669` fill and `#FBFAF2` text.
+Reader UI chrome continues to use Inter.
 
-### Inputs And Selects
+Recommended reader horizontal padding:
 
-Inputs use a soft capsule surface: `#F2F0E6` background, `#E8E6D8` border, 48px height, 30px radius, and 16px horizontal padding. Placeholder text uses `#7A7868`; entered text uses `#1A2420`. Dropdowns include a right chevron in tertiary text color.
+`20–24px`
 
-### Book Card
+Recommended paragraph spacing:
 
-Book cards use a 136px-wide cover, 10px radius, `#F2F0E6` fallback background, and a 14px medium title label in `#4A5550`. Covers should come from Supabase Storage paths via the books database.
+`16–20px`
 
-### Continue Reading Card
+---
 
-The Home hero card uses `#F2F0E6`, 20px radius, and a compact cover preview on the right. The title uses 18px medium `#1A2420`; the action text `продолжить читать` uses 14px `#059669`.
+## Spacing
 
-### Tab Bar
+Use a 4px-based spacing scale.
 
-The tab bar uses `#F2F0E6` background, a 1px `#C8C6B2` top border, and four tabs: Home, Library, Search, Profile. Active labels/icons use `#1A2420`; inactive labels/icons use `#4A5550`.
+```ts
+export const ReadupSpacing = {
+  1: 4,
+  2: 8,
+  3: 12,
+  4: 16,
+  5: 20,
+  6: 24,
+  8: 32,
+  10: 40,
+  12: 48,
+  16: 64,
+} as const;
+```
 
-### Reader
+Default screen horizontal padding:
 
-Reader chrome follows the same light system as the rest of the app:
+`20px`
 
-- Background default: `#FBFAF2`
-- Elevated surfaces (header controls, bottom cards, segmented wrappers): `#F2F0E6`
-- Primary accent (active progress, selected actions): `#059669`
-- Borders and separators: `#E8E6D8` / `#C8C6B2`
-- Text hierarchy: primary `#1A2420`, secondary `#4A5550`, tertiary `#7A7868`
+Minimum on compact screens:
 
-Typography is split by purpose:
+`16px`
 
-- Reader chrome (header, segmented controls, progress labels, listen controls, modal labels) uses Inter roles from this document.
-- Long-form reading content keeps `font-reader` (serif stack) for chapter titles, paragraphs, and quotes.
+Typical spacing:
+
+- page title → content: `24px`
+- section → section: `32px`
+- section heading → content: `16px`
+- card → card: `12–16px`
+- label → field: `8px`
+
+Avoid arbitrary spacing values unless visually necessary.
+
+---
+
+## Radius
+
+```ts
+export const ReadupRadius = {
+  small: 8,
+  medium: 12,
+  large: 16,
+  xl: 20,
+  pill: 999,
+} as const;
+```
+
+Recommended usage:
+
+| Component | Radius |
+| --- | ---: |
+| Book cover | `8–10px` |
+| Input | `16px` |
+| Button | `16px` |
+| Card | `16–20px` |
+| Bottom sheet | `24px` top corners |
+| Chip | Pill |
+
+Do not make every component capsule-shaped.
+
+---
+
+# Components
+
+## Primary Button
+
+```text
+height: 54px
+background: accent
+pressed background: accentPressed
+radius: 16px
+text: textInverse
+typography: label
+border: none
+```
+
+States:
+
+- default
+- pressed
+- disabled
+- loading
+
+Preserve button dimensions while loading.
+
+---
+
+## Secondary Button
+
+```text
+height: 48–54px
+background: surface
+border: 1px borderSubtle
+radius: 16px
+text: textPrimary
+```
+
+---
+
+## Text Button
+
+Use for low-emphasis actions.
+
+```text
+text: textTertiary or accent
+typography: label
+minimum touch target: 44x44px
+```
+
+---
+
+## Chips
+
+```text
+radius: pill
+border: 1px accent
+horizontal padding: 12px
+vertical padding: 8px
+typography: body / label
+```
+
+Unselected:
+
+```text
+background: transparent
+text: textPrimary
+```
+
+Selected:
+
+```text
+background: accent
+text: textInverse
+```
+
+Support:
+
+- default
+- pressed
+- selected
+- disabled
+
+---
+
+## Inputs
+
+```text
+height: 48–52px
+background: surface
+border: 1px borderSubtle
+radius: 16px
+horizontal padding: 16px
+text: textPrimary
+placeholder: textTertiary
+```
+
+States:
+
+- default
+- focused
+- filled
+- error
+- disabled
+
+Focused inputs should use an accent border or equivalent visible focus treatment.
+
+---
+
+## Select
+
+Uses input styling.
+
+Right chevron:
+
+```text
+size: 18–20px
+color: textTertiary
+```
+
+The full row must be tappable.
+
+---
+
+## Book Cover
+
+Preferred aspect ratio:
+
+`2:3`
+
+```text
+radius: 8–10px
+fallback background: surface
+```
+
+Do not distort covers to match fixed dimensions.
+
+---
+
+## Book Card
+
+Hierarchy:
+
+```text
+cover
+title
+author
+optional metadata
+```
+
+Text:
+
+```text
+title: textPrimary
+author: textSecondary
+metadata: textTertiary
+```
+
+Horizontal shelf cover width:
+
+`132–140px`
+
+Use available width when rendering grids.
+
+---
+
+## Continue Reading Card
+
+```text
+background: surface
+radius: 20px
+padding: 16–20px
+```
+
+Title:
+
+```text
+titleSmall
+textPrimary
+```
+
+Action/progress:
+
+```text
+label
+accent
+```
+
+---
+
+## Tab Bar
+
+Tabs:
+
+- Home
+- Library
+- Search
+- Profile
+
+```text
+background: surface
+top border: 1px borderDefault
+```
+
+Active state:
+
+```text
+text/icon: textPrimary or accent
+```
+
+Inactive state:
+
+```text
+text/icon: textSecondary
+```
+
+Choose one active-state approach and use it consistently.
+
+Account for the device bottom safe area.
+
+---
+
+## Icons
+
+Use one icon library consistently.
+
+Recommended sizes:
+
+```text
+compact: 16px
+default: 20px
+navigation: 22–24px
+```
+
+Icon-only buttons must have:
+
+- minimum 44x44px touch target
+- accessibility label
+- pressed state
+
+---
+
+## Segmented Control
+
+```text
+wrapper:
+  background: surface
+  radius: 16px
+  padding: 4px
+
+selected:
+  background: background
+  text: textPrimary
+```
+
+---
+
+## Bottom Sheet
+
+```text
+background: background
+top radius: 24px
+horizontal padding: 20px
+```
+
+Use for contextual mobile actions where appropriate.
+
+---
+
+# Surfaces
+
+Use tonal hierarchy instead of shadows by default.
+
+```text
+app background → background
+standard card → surface
+elevated/floating surface → surfaceElevated
+```
+
+Standard cards should not require shadows.
+
+Use shadows only for genuinely floating UI such as:
+
+- menus
+- sheets
+- floating player controls
+- overlays
+
+---
+
+# Reader
+
+Reader colors:
+
+```text
+background: background
+chrome: surface
+borders: borderSubtle
+active controls: accent
+text: textPrimary / textSecondary / textTertiary
+```
 
 Reader implementation files:
 
@@ -83,3 +481,142 @@ Reader implementation files:
 - `features/reader/components/reader-bottom-reading-progress.tsx`
 - `features/reader/components/reader-bottom-now-playing.tsx`
 - `features/reader/components/book-listen-player.tsx`
+
+Reader content uses `font-reader`.
+
+Reader controls use Inter.
+
+---
+
+# Interaction States
+
+Reusable interactive components should define relevant states.
+
+Consider:
+
+```text
+default
+pressed
+focused
+selected
+disabled
+loading
+error
+```
+
+Not every component needs every state.
+
+Do not implement only the static Figma state.
+
+---
+
+# Accessibility
+
+Minimum effective touch target:
+
+`44x44px`
+
+Requirements:
+
+- icon-only actions have accessibility labels
+- meaning is not communicated by color alone
+- important text can wrap
+- layouts should tolerate system font scaling
+- safe areas must be respected
+- reduced-motion settings should be respected where possible
+
+Recommended truncation:
+
+```text
+Book cards: title up to 2 lines
+Compact rows: 1–2 lines
+Authors may truncate before titles
+```
+
+---
+
+# Motion
+
+Recommended durations:
+
+```text
+fast: 120–160ms
+standard: 180–240ms
+slow: 280–360ms
+```
+
+Use motion for:
+
+- pressed feedback
+- selections
+- sheets
+- navigation
+- progress
+- player expansion
+
+Avoid decorative motion that delays interaction.
+
+---
+
+# Implementation Rules
+
+Prefer reusable components and semantic tokens over repeated inline styling.
+
+Prefer:
+
+```tsx
+<Button variant="primary" />
+```
+
+over:
+
+```tsx
+<View className="h-[54px] rounded-[16px] bg-[#059669]" />
+```
+
+NativeWind is appropriate for layout utilities:
+
+```tsx
+<View className="flex-row items-center gap-3" />
+```
+
+Repeated product styling should be extracted into shared components or tokens.
+
+Avoid hard-coded brand colors inside feature components.
+
+Use semantic names such as:
+
+```text
+textPrimary
+surface
+accent
+space4
+radiusLarge
+readerBody
+```
+
+rather than:
+
+```text
+darkGreen
+lightCream
+grayText
+bigRadius
+```
+
+---
+
+# New UI Checklist
+
+Before finishing a new screen or component, verify:
+
+- colors use semantic tokens
+- typography uses defined roles
+- spacing follows the shared scale
+- repeated UI uses shared components
+- required states exist
+- touch targets are large enough
+- safe areas are handled
+- long text does not break layout
+- loading/error/empty states exist where applicable
+- arbitrary values are minimized
