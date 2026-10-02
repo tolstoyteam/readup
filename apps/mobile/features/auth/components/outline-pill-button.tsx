@@ -2,21 +2,24 @@ import {
   ActivityIndicator,
   Pressable,
   Text,
+  View,
   type PressableProps,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-
+import { SocialProviderIcon } from "@/features/auth/components/social-provider-icon";
 import { useReadupColors } from "@/shared/constants/readup-theme";
 
 type OutlinePillButtonProps = Omit<PressableProps, "style"> & {
   label: string;
+  provider?: "apple" | "google";
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 export function OutlinePillButton({
   label,
+  provider,
   loading = false,
   disabled,
   style,
@@ -31,12 +34,13 @@ export function OutlinePillButton({
       disabled={isDisabled}
       style={[
         {
-          minHeight: 54,
+          minHeight: 50,
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 100,
-          borderWidth: 2,
-          borderColor: colors.brand,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
           opacity: isDisabled ? 0.62 : 1,
           width: "100%",
         },
@@ -47,16 +51,16 @@ export function OutlinePillButton({
       {loading ? (
         <ActivityIndicator color={colors.text} />
       ) : (
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: "500",
-            color: colors.text,
-            letterSpacing: -0.72,
-          }}
-        >
-          {label}
-        </Text>
+        <>
+          {provider === "apple" ? (
+            <View style={{ position: "absolute", left: 18 }}><SocialProviderIcon provider="apple" /></View>
+          ) : provider === "google" ? (
+            <View style={{ position: "absolute", left: 18 }}><SocialProviderIcon provider="google" /></View>
+          ) : null}
+          <Text style={{ fontSize: 15, fontWeight: "600", color: colors.text }}>
+            {label}
+          </Text>
+        </>
       )}
     </Pressable>
   );

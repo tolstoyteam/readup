@@ -21,6 +21,7 @@ import { Check } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { OutlinePillButton } from "@/features/auth/components/outline-pill-button";
+import { AuthDivider } from "@/features/auth/components/auth-divider";
 import { AuthSheetCloseButton } from "@/features/auth/components/auth-sheet-close-button";
 import { ReadupTextField } from "@/features/auth/components/readup-text-field";
 import {
@@ -201,6 +202,7 @@ export default function SignupScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
+          style={styles.flex}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -213,10 +215,13 @@ export default function SignupScreen() {
           <Text
             style={[
               styles.headline,
-              { fontFamily: "Inter_800ExtraBold", color: colors.brand },
+              { fontFamily: "Inter_800ExtraBold", color: colors.text },
             ]}
           >
             {t("auth.createAccount")}
+          </Text>
+          <Text style={[styles.subtitle, { fontFamily: "Inter_400Regular", color: colors.textSecondary }]}>
+            {t("auth.signupSubtitle")}
           </Text>
 
           <View style={styles.form}>
@@ -357,8 +362,10 @@ export default function SignupScreen() {
               onPress={onSubmit}
               style={styles.primaryBtn}
             />
+            <AuthDivider />
             <OutlinePillButton
               label={t("auth.continueWithGoogle")}
+              provider="google"
               loading={oauthBusy === "google"}
               disabled={
                 submitting || (oauthBusy != null && oauthBusy !== "google")
@@ -367,6 +374,7 @@ export default function SignupScreen() {
             />
             <OutlinePillButton
               label={t("auth.continueWithApple")}
+              provider="apple"
               loading={oauthBusy === "apple"}
               disabled={
                 submitting || (oauthBusy != null && oauthBusy !== "apple")
@@ -375,7 +383,8 @@ export default function SignupScreen() {
             />
           </View>
 
-          <View style={styles.footer}>
+        </ScrollView>
+          <View style={[styles.footer, { backgroundColor: colors.background }]}>
             <Text
               style={[
                 styles.footerMuted,
@@ -403,7 +412,6 @@ export default function SignupScreen() {
               </Pressable>
             </Link>
           </View>
-        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -422,34 +430,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 32,
-    paddingBottom: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
   },
   logoRow: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingTop: 8,
-    marginBottom: 20,
+    paddingTop: 16,
+    marginBottom: 30,
     width: "100%",
-    maxWidth: 338,
+    maxWidth: 420,
     alignSelf: "center",
   },
   headline: {
     alignSelf: "center",
-    textAlign: "center",
-    fontSize: 34,
+    textAlign: "left",
+    fontSize: 32,
     fontWeight: "800",
-    color: ReadupColors.brand,
-    letterSpacing: -1.36,
-    maxWidth: 338,
-    marginBottom: 36,
+    color: ReadupColors.text,
+    letterSpacing: -1.1,
+    lineHeight: 39,
+    width: "100%",
+    maxWidth: 420,
+  },
+  subtitle: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 420,
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 8,
+    marginBottom: 28,
   },
   form: {
-    gap: 16,
+    gap: 14,
     width: "100%",
-    maxWidth: 338,
+    maxWidth: 420,
     alignSelf: "center",
   },
   hintText: {
@@ -463,7 +480,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     alignSelf: "center",
-    maxWidth: 338,
+    maxWidth: 420,
     width: "100%",
     paddingRight: 8,
   },
@@ -484,9 +501,8 @@ const styles = StyleSheet.create({
   consentText: {
     flex: 1,
     flexWrap: "wrap",
-    fontSize: 12,
-    letterSpacing: -0.48,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 19,
   },
   consentLink: {
     letterSpacing: -0.48,
@@ -494,7 +510,7 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
     alignSelf: "center",
-    maxWidth: 338,
+    maxWidth: 420,
     width: "100%",
     fontSize: 12,
     color: "#8F0620",
@@ -502,21 +518,23 @@ const styles = StyleSheet.create({
   },
   ctaColumn: {
     gap: 12,
-    marginTop: 28,
+    marginTop: 24,
     width: "100%",
-    maxWidth: 338,
+    maxWidth: 420,
     alignSelf: "center",
   },
   primaryBtn: {
     width: "100%",
+    borderRadius: 14,
   },
   footer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 28,
-    paddingHorizontal: 8,
+    paddingTop: 14,
+    paddingBottom: 18,
+    paddingHorizontal: 24,
   },
   footerMuted: {
     fontSize: 14,

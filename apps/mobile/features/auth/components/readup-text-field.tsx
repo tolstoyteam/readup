@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Eye, EyeOff } from "lucide-react-native";
 
-import { ReadupRadii, useReadupColors } from "@/shared/constants/readup-theme";
+import { useReadupColors } from "@/shared/constants/readup-theme";
 
 type ReadupTextFieldProps = {
   label: string;
@@ -41,8 +41,8 @@ export function ReadupTextField({
   const borderColor = error
     ? ERROR_BORDER
     : focused
-      ? colors.info
-      : colors.elevated;
+      ? colors.brand
+      : colors.border;
 
   return (
     <View style={styles.wrap}>
@@ -108,7 +108,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    letterSpacing: -0.56,
   },
   inputRow: {
     position: "relative",
@@ -116,11 +115,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   input: {
-    borderRadius: ReadupRadii.input,
+    borderRadius: 14,
+    minHeight: 52,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 14,
-    letterSpacing: -0.56,
+    fontSize: 16,
   },
   inputWithToggle: {
     paddingRight: 44,
