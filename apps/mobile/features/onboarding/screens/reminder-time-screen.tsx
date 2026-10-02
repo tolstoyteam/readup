@@ -47,8 +47,8 @@ export default function ReminderTimeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24 }}>
-        <View accessibilityRole="progressbar" accessibilityLabel={t("onboarding.reminderProgress")} accessibilityValue={{ min: 0, max: 8, now: 7 }} style={{ height: 8, borderRadius: 999, backgroundColor: colors.elevated, overflow: "hidden" }}>
-          <View style={{ width: "87.5%", height: "100%", borderRadius: 999, backgroundColor: colors.brand }} />
+        <View accessibilityRole="progressbar" accessibilityLabel={t("onboarding.reminderProgress")} accessibilityValue={{ min: 0, max: 7, now: 7 }} style={{ height: 8, borderRadius: 999, backgroundColor: colors.elevated, overflow: "hidden" }}>
+          <View style={{ width: "100%", height: "100%", borderRadius: 999, backgroundColor: colors.brand }} />
         </View>
         <View style={{ alignItems: "center", marginTop: 54 }}>
           <View style={{ width: 116, height: 150, alignItems: "center", justifyContent: "center" }}>

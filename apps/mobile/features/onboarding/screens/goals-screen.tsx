@@ -98,7 +98,7 @@ export default function GoalsScreen() {
         <View
           accessibilityRole="progressbar"
           accessibilityLabel={t("onboarding.goalsProgress")}
-          accessibilityValue={{ min: 0, max: 8, now: 2 }}
+          accessibilityValue={{ min: 0, max: 7, now: 2 }}
           style={{
             height: 8,
             borderRadius: 999,
@@ -108,7 +108,7 @@ export default function GoalsScreen() {
         >
           <View
             style={{
-              width: "25%",
+              width: "28.5714%",
               height: "100%",
               borderRadius: 999,
               backgroundColor: colors.brand,

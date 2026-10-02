@@ -76,12 +76,12 @@ export default function ChallengeScreen() {
                 lineHeight: 20,
               }}
             >
-              1 / 8
+              1 / 7
             </Text>
             <View
               accessibilityRole="progressbar"
               accessibilityLabel={t("onboarding.progress")}
-              accessibilityValue={{ min: 0, max: 8, now: 1 }}
+              accessibilityValue={{ min: 0, max: 7, now: 1 }}
               style={{
                 height: 8,
                 borderRadius: 999,
@@ -91,7 +91,7 @@ export default function ChallengeScreen() {
             >
               <View
                 style={{
-                  width: "12.5%",
+                  width: "14.2857%",
                   height: "100%",
                   borderRadius: 999,
                   backgroundColor: colors.brand,

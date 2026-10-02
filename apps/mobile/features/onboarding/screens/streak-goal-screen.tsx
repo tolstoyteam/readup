@@ -35,8 +35,8 @@ export default function StreakGoalScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24 }}>
-        <View accessibilityRole="progressbar" accessibilityLabel={t("onboarding.streakProgress")} accessibilityValue={{ min: 0, max: 8, now: 5 }} style={{ height: 8, borderRadius: 999, backgroundColor: colors.elevated, overflow: "hidden" }}>
-          <View style={{ width: "62.5%", height: "100%", borderRadius: 999, backgroundColor: colors.brand }} />
+        <View accessibilityRole="progressbar" accessibilityLabel={t("onboarding.streakProgress")} accessibilityValue={{ min: 0, max: 7, now: 5 }} style={{ height: 8, borderRadius: 999, backgroundColor: colors.elevated, overflow: "hidden" }}>
+          <View style={{ width: "71.4286%", height: "100%", borderRadius: 999, backgroundColor: colors.brand }} />
         </View>
         <Text accessibilityRole="header" style={{ marginTop: 48, marginBottom: 30, color: colors.text, fontFamily: "Inter_700Bold", fontSize: 28, lineHeight: 34, textAlign: "center" }}>
           {t("onboarding.streakTitle")}

@@ -56,7 +56,7 @@ export default function MonthlyGoalScreen() {
           <View
             accessibilityRole="progressbar"
             accessibilityLabel={t("onboarding.monthlyGoalProgress")}
-            accessibilityValue={{ min: 0, max: 8, now: 4 }}
+            accessibilityValue={{ min: 0, max: 7, now: 4 }}
             style={{
               height: 8,
               borderRadius: 999,
@@ -66,7 +66,7 @@ export default function MonthlyGoalScreen() {
           >
             <View
               style={{
-                width: "50%",
+                width: "57.1429%",
                 height: "100%",
                 borderRadius: 999,
                 backgroundColor: colors.brand,

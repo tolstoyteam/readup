@@ -38,8 +38,8 @@ export default function ReadingTimeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "bottom"]}>
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24 }}>
-        <View accessibilityRole="progressbar" accessibilityLabel={t("onboarding.timeProgress")} accessibilityValue={{ min: 0, max: 8, now: 6 }} style={{ height: 8, borderRadius: 999, backgroundColor: colors.elevated, overflow: "hidden" }}>
-          <View style={{ width: "75%", height: "100%", borderRadius: 999, backgroundColor: colors.brand }} />
+        <View accessibilityRole="progressbar" accessibilityLabel={t("onboarding.timeProgress")} accessibilityValue={{ min: 0, max: 7, now: 6 }} style={{ height: 8, borderRadius: 999, backgroundColor: colors.elevated, overflow: "hidden" }}>
+          <View style={{ width: "85.7143%", height: "100%", borderRadius: 999, backgroundColor: colors.brand }} />
         </View>
         <Text accessibilityRole="header" style={{ marginTop: 48, marginBottom: 36, color: colors.text, fontFamily: "Inter_700Bold", fontSize: 28, lineHeight: 34, textAlign: "center" }}>
           {t("onboarding.timeTitle")}

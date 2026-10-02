@@ -86,7 +86,7 @@ export default function LearningScreen() {
           <View
             accessibilityRole="progressbar"
             accessibilityLabel={t("onboarding.learningProgress")}
-            accessibilityValue={{ min: 0, max: 8, now: 3 }}
+            accessibilityValue={{ min: 0, max: 7, now: 3 }}
             style={{
               height: 8,
               borderRadius: 999,
@@ -96,7 +96,7 @@ export default function LearningScreen() {
           >
             <View
               style={{
-                width: "37.5%",
+                width: "42.8571%",
                 height: "100%",
                 borderRadius: 999,
                 backgroundColor: colors.brand,
