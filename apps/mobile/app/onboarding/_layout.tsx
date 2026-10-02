@@ -9,6 +9,7 @@ export default function OnboardingLayout() {
       <Stack.Screen name="monthly-goal" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="streak-goal" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="reading-time" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="reminder-time" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }
