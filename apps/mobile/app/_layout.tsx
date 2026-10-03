@@ -154,6 +154,7 @@ export default function RootLayout() {
                             sheetAllowedDetents: [0.92, 1],
                             sheetInitialDetentIndex: 0,
                             sheetGrabberVisible: true,
+                            sheetExpandsWhenScrolledToEdge: false,
                             sheetCornerRadius: 28,
                             contentStyle: {
                               backgroundColor:

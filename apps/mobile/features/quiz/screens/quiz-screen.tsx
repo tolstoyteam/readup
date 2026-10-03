@@ -161,7 +161,7 @@ export default function QuizScreen() {
   return (
     <SafeAreaView
       className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
-      edges={["top"]}
+      edges={["top", "bottom"]}
     >
       <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
@@ -206,6 +206,7 @@ export default function QuizScreen() {
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-6 pb-10"
+          nestedScrollEnabled
           showsVerticalScrollIndicator={false}
         >
           <View className="h-1.5 w-full overflow-hidden rounded-full bg-[#E8E6D8] dark:bg-[#26302B]">
@@ -335,7 +336,7 @@ function QuizResult({
   return (
     <SafeAreaView
       className="flex-1 bg-[#FBFAF2] dark:bg-[#101512]"
-      edges={["top"]}
+      edges={["top", "bottom"]}
     >
       <StatusBar style={statusBarStyleForScheme(colorScheme)} />
 
@@ -354,6 +355,7 @@ function QuizResult({
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-6 pb-12"
+        nestedScrollEnabled
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center pt-6">
