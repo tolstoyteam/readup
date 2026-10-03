@@ -43,3 +43,13 @@ pnpm mobile
 # or
 cd apps/mobile && pnpm start
 ```
+
+### Archive the iOS app in Xcode
+
+The `apps/mobile/ios` directory is generated and ignored by Git. After pulling a change to Expo, React Native, or a native dependency, regenerate it before opening Xcode:
+
+```bash
+pnpm --filter @readup/mobile ios:prepare-archive
+```
+
+Open `apps/mobile/ios/Readup.xcworkspace`, select the `Readup` scheme, then use **Product → Archive**. The preparation command recreates the native project from `apps/mobile/app.json` and installs matching pods, including current pod specs.

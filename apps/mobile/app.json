@@ -2,7 +2,7 @@
   "expo": {
     "name": "Readup",
     "slug": "qitap_app",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "qitapapp",
@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sanat.readup",
+      "appleTeamId": "6T3DV2P6TK",
       "infoPlist": {
         "CFBundleDisplayName": "Readup",
         "CFBundleName": "Readup",

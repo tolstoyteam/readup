@@ -8,6 +8,7 @@
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:prepare-archive": "expo prebuild --platform ios --clean --no-install && cd ios && pod install --repo-update",
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "tsx --test shared/i18n/interface-language.test.ts features/reading-stats/reading-stats.test.ts features/reader/lib/page-index.test.ts features/reader/lib/resolve-reading-position.test.ts features/books/lib/pick-edition.test.ts features/books/lib/embed-book-keywords.test.ts features/books/lib/legacy-stable-ids.test.ts features/books/lib/genre-filters.test.ts features/quotes/lib/build-highlight-segments.test.ts features/quotes/lib/resolve-quote-navigation.test.ts features/quotes/lib/quote-source-navigation.test.ts features/onboarding/lib/onboarding-draft.test.ts"
