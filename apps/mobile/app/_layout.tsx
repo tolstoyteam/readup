@@ -6,7 +6,6 @@ import {
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Platform } from "react-native";
 import "react-native-reanimated";
 
 import { AuthProvider } from "@/shared/context/auth-context";
@@ -101,24 +100,17 @@ export default function RootLayout() {
                           name="(auth)"
                           options={{
                             headerShown: false,
-                            ...(Platform.OS === "ios"
-                              ? {
-                                  presentation: "transparentModal" as const,
-                                  animation: "none" as const,
-                                  contentStyle: { backgroundColor: "transparent" },
-                                }
-                              : {
-                                  presentation: "formSheet" as const,
-                                  sheetAllowedDetents: [0.9, 1],
-                                  sheetInitialDetentIndex: 0,
-                                  sheetGrabberVisible: true,
-                                  contentStyle: {
-                                    backgroundColor:
-                                      colorScheme === "dark"
-                                        ? ReadupDarkColors.background
-                                        : ReadupColors.background,
-                                  },
-                                }),
+                            presentation: "formSheet",
+                            sheetAllowedDetents: [0.86, 1],
+                            sheetInitialDetentIndex: 0,
+                            sheetGrabberVisible: true,
+                            sheetExpandsWhenScrolledToEdge: false,
+                            contentStyle: {
+                              backgroundColor:
+                                colorScheme === "dark"
+                                  ? ReadupDarkColors.background
+                                  : ReadupColors.background,
+                            },
                           }}
                         />
                         <Stack.Screen
@@ -182,24 +174,17 @@ export default function RootLayout() {
                           name="subscription"
                           options={{
                             headerShown: false,
-                            ...(Platform.OS === "ios"
-                              ? {
-                                  presentation: "transparentModal" as const,
-                                  animation: "none" as const,
-                                  contentStyle: { backgroundColor: "transparent" },
-                                }
-                              : {
-                                  presentation: "formSheet" as const,
-                                  sheetAllowedDetents: [0.9, 1],
-                                  sheetInitialDetentIndex: 0,
-                                  sheetGrabberVisible: true,
-                                  contentStyle: {
-                                    backgroundColor:
-                                      colorScheme === "dark"
-                                        ? ReadupDarkColors.background
-                                        : ReadupColors.background,
-                                  },
-                                }),
+                            presentation: "formSheet",
+                            sheetAllowedDetents: [0.9, 1],
+                            sheetInitialDetentIndex: 0,
+                            sheetGrabberVisible: true,
+                            sheetExpandsWhenScrolledToEdge: false,
+                            contentStyle: {
+                              backgroundColor:
+                                colorScheme === "dark"
+                                  ? ReadupDarkColors.background
+                                  : ReadupColors.background,
+                            },
                           }}
                         />
                         <Stack.Screen
