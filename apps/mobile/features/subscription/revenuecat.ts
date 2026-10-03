@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import type {
   CustomerInfo,
@@ -20,10 +21,18 @@ const TEST_STORE_API_KEY = "test_fswvCQMxGOOEPMnaVMNcUXLruxN";
 
 /**
  * RevenueCat SDK keys are public app identifiers, not secret server keys.
- * Development builds can use App Store / Play Store sandbox when a platform key
- * is configured; otherwise they fall back to RevenueCat Test Store.
+ * Expo Go always uses the Test Store key. Development builds can use App Store /
+ * Play Store sandbox when a platform key is configured; otherwise they fall back
+ * to RevenueCat Test Store. Expo Go's Preview API Mode still mocks purchases.
  */
 export function revenueCatApiKey(): string {
+  if (__DEV__ && Constants.expoGoConfig != null) {
+    return (
+      process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY?.trim() ||
+      TEST_STORE_API_KEY
+    );
+  }
+
   const platformKey =
     Platform.OS === "ios"
       ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
