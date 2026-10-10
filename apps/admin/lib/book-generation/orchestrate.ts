@@ -163,6 +163,8 @@ export async function advanceBookGenerationJob(
         generatedLanguages: allLanguages,
         subtitle: draft.subtitle,
         description: draft.description,
+        gutenbergId: payload.gutenberg?.id,
+        gutenbergUrl: payload.gutenberg?.url,
       });
       english = await createEditionForWork({
         workId: job.workId,
@@ -173,10 +175,12 @@ export async function advanceBookGenerationJob(
         status: "generating_tts",
         generationMetadata: metadata,
       });
+      // Drop bulky source text after English is persisted (Gutenberg / uploads).
       await releaseStep({
         jobId,
         leaseToken,
         nextProgress: progress("saving_english", "English edition saved."),
+        payloadPatch: { source: undefined },
       });
       return { kind: "advanced" };
     }

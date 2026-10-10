@@ -24,6 +24,10 @@ export type BookGenerationMetadata = {
   subtitle?: string;
   description?: string;
   generated_at: string;
+  /** Project Gutenberg ebook id when this edition was imported via Gutenberg. */
+  gutenberg_id?: number;
+  /** Canonical Gutenberg / API source URL for attribution. */
+  gutenberg_url?: string;
 };
 
 export type ParagraphBlockContent = { text: string };

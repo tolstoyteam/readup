@@ -6,6 +6,8 @@ export function buildGenerationMetadata(args: {
   generatedLanguages: string[];
   subtitle?: string;
   description?: string;
+  gutenbergId?: number;
+  gutenbergUrl?: string;
 }): BookGenerationMetadata {
   return {
     source_language: SOURCE_LANGUAGE,
@@ -14,6 +16,8 @@ export function buildGenerationMetadata(args: {
     subtitle: args.subtitle,
     description: args.description,
     generated_at: new Date().toISOString(),
+    ...(args.gutenbergId != null ? { gutenberg_id: args.gutenbergId } : {}),
+    ...(args.gutenbergUrl ? { gutenberg_url: args.gutenbergUrl } : {}),
   };
 }
 

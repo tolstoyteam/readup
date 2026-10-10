@@ -42,6 +42,35 @@ SUPABASE_BOOK_COVERS_BUCKET=...
 `DIRECT_URL` is optional and only needed for migrations. `SUPABASE_BOOK_AUDIO_BUCKET`
 is optional for generated TTS storage.
 
+### Gutenberg import
+
+Requires a RapidAPI subscription to **Project Gutenberg - Free Books API**
+(host `project-gutenberg-free-books-api1.p.rapidapi.com`).
+
+Do **not** point `GUTENBERG_API_HOST` at other Gutenberg products such as
+`project-gutenberg-books-api.p.rapidapi.com` or `project-gutenberg-api.p.rapidapi.com`
+— a host/key mismatch returns RapidAPI `API doesn't exists`.
+
+```bash
+GUTENBERG_API_KEY=...
+# Optional; defaults to project-gutenberg-free-books-api1.p.rapidapi.com
+GUTENBERG_API_HOST=project-gutenberg-free-books-api1.p.rapidapi.com
+```
+
+Never set these as `NEXT_PUBLIC_*`. Restart the admin server after changing them.
+
+The client auto-detects whether the product mounts routes at `/books` or `/api/books`
+and caches the working prefix.
+
+Apply the schema migration if not already applied:
+
+```bash
+pnpm --filter @readup/db apply-drizzle 0022_gutenberg_import.sql
+```
+
+The Import from Gutenberg admin page starts a resumable batch job; keep the browser
+tab open while it advances (same pattern as AI book generation).
+
 ## Book generation on Vercel
 
 AI book generation is a resumable sequence of bounded Vercel Function invocations:
