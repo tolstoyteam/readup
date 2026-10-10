@@ -59,6 +59,10 @@ export type BookGenerationMetadata = {
   subtitle?: string;
   description?: string;
   generated_at: string;
+  /** Project Gutenberg ebook id when this edition was imported via Gutenberg. */
+  gutenberg_id?: number;
+  /** Canonical Gutenberg / API source URL for attribution. */
+  gutenberg_url?: string;
 };
 
 export const GENERATION_JOB_STATUSES = ["queued", "running", "succeeded", "failed"] as const;
@@ -186,11 +190,112 @@ export const bookWorksTable = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     slug: text("slug"),
     coverImageUrl: text("cover_image_url"),
+    /** Project Gutenberg ebook id; unique when set for import deduplication. */
+    gutenbergId: integer("gutenberg_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("book_works_slug_unique").on(table.slug)],
+  (table) => [
+    uniqueIndex("book_works_slug_unique").on(table.slug),
+    uniqueIndex("book_works_gutenberg_id_unique").on(table.gutenbergId),
+  ],
 );
+
+export const GUTENBERG_IMPORT_JOB_STATUSES = [
+  "queued",
+  "running",
+  "succeeded",
+  "failed",
+] as const;
+export type GutenbergImportJobStatus = (typeof GUTENBERG_IMPORT_JOB_STATUSES)[number];
+
+export const GUTENBERG_IMPORT_ITEM_STATUSES = [
+  "waiting",
+  "fetching",
+  "fetched",
+  "generating_english",
+  "generating_russian",
+  "generating_english_tts",
+  "generating_russian_tts",
+  "saving",
+  "completed",
+  "skipped",
+  "failed",
+] as const;
+export type GutenbergImportItemStatus = (typeof GUTENBERG_IMPORT_ITEM_STATUSES)[number];
+
+export type GutenbergImportFilters = {
+  genre?: string;
+  author?: string;
+  year?: number;
+};
+
+export type GutenbergImportProgress = {
+  requested: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+  processing: number;
+};
+
+export type GutenbergPendingBook = {
+  id: number;
+  title: string;
+  authors: { id?: number; name: string }[];
+  subjects?: string[];
+  bookshelves?: string[];
+  media_type?: string | null;
+  languages?: string[];
+  download_count?: number;
+  issued?: string | null;
+  cover_image?: string | null;
+  gutenberg_url?: string | null;
+};
+
+export type GutenbergImportCursor = {
+  page?: number;
+  next_url?: string | null;
+  candidate_ids?: number[];
+  /** Cached book summaries waiting to be imported (avoids re-listing). */
+  pending_books?: GutenbergPendingBook[];
+  /** ISO timestamp; soft-busy until this time after RapidAPI 429. */
+  rate_limited_until?: string | null;
+  exhausted?: boolean;
+  active_item_id?: string | null;
+  lease?: { token: string; expires_at: string } | null;
+  heartbeat_at?: string | null;
+};
+
+export const GUTENBERG_COVER_STATUSES = [
+  "pending",
+  "generating",
+  "uploading",
+  "completed",
+  "failed",
+  "skipped",
+] as const;
+export type GutenbergCoverStatus = (typeof GUTENBERG_COVER_STATUSES)[number];
+
+/** Cover generation state for a Gutenberg import item (stored in metadata JSON). */
+export type GutenbergImportCoverState = {
+  status: GutenbergCoverStatus;
+  /** Safe, user-facing error when status is failed. */
+  error?: string | null;
+  /** Diagnostic stage: generate | normalize | upload | persist | etc. */
+  stage?: string | null;
+  /** Storage path once upload + DB persist succeed. */
+  path?: string | null;
+};
+
+export type GutenbergImportItemMetadata = {
+  subjects?: string[];
+  language?: string;
+  gutenberg_url?: string;
+  issued?: string | null;
+  cover_image_url?: string | null;
+  download_count?: number;
+  cover?: GutenbergImportCoverState;
+};
 
 export const booksTable = pgTable(
   "books",
@@ -689,6 +794,82 @@ export const generationJobsTable = pgTable(
   ],
 );
 
+export const gutenbergImportJobsTable = pgTable(
+  "gutenberg_import_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    status: text("status")
+      .$type<GutenbergImportJobStatus>()
+      .notNull()
+      .default("queued"),
+    requestedCount: integer("requested_count").notNull(),
+    filters: jsonb("filters").$type<GutenbergImportFilters>().notNull().default({}),
+    progress: jsonb("progress")
+      .$type<GutenbergImportProgress>()
+      .notNull()
+      .default({
+        requested: 0,
+        imported: 0,
+        skipped: 0,
+        failed: 0,
+        processing: 0,
+      }),
+    cursor: jsonb("cursor").$type<GutenbergImportCursor>().notNull().default({}),
+    createdBy: uuid("created_by"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("gutenberg_import_jobs_status_idx").on(table.status),
+    check(
+      "gutenberg_import_jobs_status_check",
+      sql`${table.status} in ('queued', 'running', 'succeeded', 'failed')`,
+    ),
+    check(
+      "gutenberg_import_jobs_requested_count_check",
+      sql`${table.requestedCount} >= 1 and ${table.requestedCount} <= 50`,
+    ),
+  ],
+);
+
+export const gutenbergImportItemsTable = pgTable(
+  "gutenberg_import_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => gutenbergImportJobsTable.id, { onDelete: "cascade" }),
+    gutenbergId: integer("gutenberg_id").notNull(),
+    title: text("title").notNull(),
+    author: text("author").notNull().default("Unknown"),
+    status: text("status")
+      .$type<GutenbergImportItemStatus>()
+      .notNull()
+      .default("waiting"),
+    workId: uuid("work_id").references(() => bookWorksTable.id, { onDelete: "set null" }),
+    generationJobId: uuid("generation_job_id").references(() => generationJobsTable.id, {
+      onDelete: "set null",
+    }),
+    error: text("error"),
+    metadata: jsonb("metadata").$type<GutenbergImportItemMetadata>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("gutenberg_import_items_job_gutenberg_unique").on(
+      table.jobId,
+      table.gutenbergId,
+    ),
+    index("gutenberg_import_items_job_status_idx").on(table.jobId, table.status),
+    index("gutenberg_import_items_gutenberg_id_idx").on(table.gutenbergId),
+    check(
+      "gutenberg_import_items_status_check",
+      sql`${table.status} in ('waiting', 'fetching', 'fetched', 'generating_english', 'generating_russian', 'generating_english_tts', 'generating_russian_tts', 'saving', 'completed', 'skipped', 'failed')`,
+    ),
+  ],
+);
+
 export type BookWorkRecord = typeof bookWorksTable.$inferSelect;
 export type BookRecord = typeof booksTable.$inferSelect;
 export type NewBookRecord = typeof booksTable.$inferInsert;
@@ -709,3 +890,5 @@ export type UserNotificationRecord = typeof userNotificationsTable.$inferSelect;
 export type UserPushTokenRecord = typeof userPushTokensTable.$inferSelect;
 export type ReadingDailyLogRecord = typeof readingDailyLogTable.$inferSelect;
 export type GenerationJobRecord = typeof generationJobsTable.$inferSelect;
+export type GutenbergImportJobRecord = typeof gutenbergImportJobsTable.$inferSelect;
+export type GutenbergImportItemRecord = typeof gutenbergImportItemsTable.$inferSelect;

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  BookDownIcon,
   LibraryBigIcon,
   LogOutIcon,
   UploadIcon,
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 
 type AdminShellProps = {
-  active: "books" | "users" | "upload";
+  active: "books" | "users" | "upload" | "gutenberg";
   children: ReactNode;
 };
 
@@ -35,6 +36,12 @@ const NAV_ITEMS = [
   { key: "books", href: "/books", label: "Books", icon: LibraryBigIcon },
   { key: "users", href: "/users", label: "Users", icon: UsersIcon },
   { key: "upload", href: "/upload", label: "Book upload", icon: UploadIcon },
+  {
+    key: "gutenberg",
+    href: "/gutenberg",
+    label: "Import from Gutenberg",
+    icon: BookDownIcon,
+  },
 ] as const;
 
 export function AdminShell({ active, children }: AdminShellProps) {

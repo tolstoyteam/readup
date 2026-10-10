@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { adminUsersTable } from "@readup/db";
 import { db } from "@/db/client";
+import { withDbRetry } from "@/lib/retry";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type AdminAuthResult =
@@ -19,11 +20,15 @@ export async function getAdminAuth(): Promise<AdminAuthResult> {
     return { ok: false, status: 401, message: "Authentication required" };
   }
 
-  const rows = await db
-    .select({ userId: adminUsersTable.userId })
-    .from(adminUsersTable)
-    .where(eq(adminUsersTable.userId, user.id))
-    .limit(1);
+  const rows = await withDbRetry(
+    () =>
+      db
+        .select({ userId: adminUsersTable.userId })
+        .from(adminUsersTable)
+        .where(eq(adminUsersTable.userId, user.id))
+        .limit(1),
+    "admin_users lookup",
+  );
 
   if (rows.length === 0) {
     return { ok: false, status: 403, message: "Admin access required" };

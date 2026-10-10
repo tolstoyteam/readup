@@ -2,8 +2,34 @@ const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_BASE_MS = 1000;
 const DEFAULT_MAX_MS = 30_000;
 
+const DB_RETRY_MAX_ATTEMPTS = 3;
+const DB_RETRY_BASE_MS = 200;
+const DB_RETRY_MAX_MS = 2_000;
+
+const RETRYABLE_CODES = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "EAI_AGAIN",
+  "UND_ERR_CONNECT_TIMEOUT",
+]);
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Flatten an error and its nested `cause` chain (Drizzle wraps network codes). */
+function errorChain(error: unknown): unknown[] {
+  const out: unknown[] = [];
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current != null && !seen.has(current)) {
+    seen.add(current);
+    out.push(current);
+    if (typeof current !== "object" || !("cause" in current)) break;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return out;
 }
 
 function errorStatus(error: unknown): number | undefined {
@@ -21,28 +47,37 @@ function errorCode(error: unknown): string | undefined {
   return typeof code === "string" ? code : undefined;
 }
 
+function messageLooksTransient(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("rate limit") ||
+    lower.includes("timeout") ||
+    lower.includes("temporarily") ||
+    lower.includes("econnreset") ||
+    lower.includes("connection reset") ||
+    lower.includes("connection terminated") ||
+    lower.includes("connection refused")
+  );
+}
+
 /** Whether an error is worth retrying (rate limits, transient server/network faults). */
 export function isRetryableError(error: unknown): boolean {
-  const status = errorStatus(error);
-  if (status === 429 || status === 408 || status === 502 || status === 503 || status === 504) {
-    return true;
-  }
-
-  const code = errorCode(error);
-  if (
-    code === "ECONNRESET" ||
-    code === "ECONNREFUSED" ||
-    code === "ETIMEDOUT" ||
-    code === "EAI_AGAIN" ||
-    code === "UND_ERR_CONNECT_TIMEOUT"
-  ) {
-    return true;
-  }
-
-  if (error instanceof Error) {
-    const msg = error.message.toLowerCase();
-    if (msg.includes("rate limit") || msg.includes("timeout") || msg.includes("temporarily")) {
+  for (const item of errorChain(error)) {
+    const status = errorStatus(item);
+    if (status === 429 || status === 408 || status === 502 || status === 503 || status === 504) {
       return true;
+    }
+
+    const code = errorCode(item);
+    if (code && RETRYABLE_CODES.has(code)) {
+      return true;
+    }
+
+    if (item instanceof Error) {
+      if (messageLooksTransient(item.message)) return true;
+    } else if (typeof item === "object" && item !== null && "message" in item) {
+      const msg = (item as { message?: unknown }).message;
+      if (typeof msg === "string" && messageLooksTransient(msg)) return true;
     }
   }
 
@@ -89,4 +124,14 @@ export async function withExponentialBackoff<T>(
     }
   }
   throw lastError instanceof Error ? lastError : new Error(`${label} failed after ${maxAttempts} attempts`);
+}
+
+/** Short-backoff retry for transient Postgres / pooler / VPN connection drops. */
+export async function withDbRetry<T>(fn: () => Promise<T>, label = "db"): Promise<T> {
+  return withExponentialBackoff(fn, {
+    maxAttempts: DB_RETRY_MAX_ATTEMPTS,
+    baseDelayMs: DB_RETRY_BASE_MS,
+    maxDelayMs: DB_RETRY_MAX_MS,
+    label,
+  });
 }

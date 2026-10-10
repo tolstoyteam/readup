@@ -208,20 +208,42 @@ async function insertBookChildren(tx: DbExecutor, bookId: number, input: BookCon
 export async function createBookWork(args: {
   slug?: string | null;
   coverImageUrl?: string | null;
-} = {}): Promise<{ id: string; slug: string | null; coverImageUrl: string | null }> {
+  gutenbergId?: number | null;
+} = {}): Promise<{
+  id: string;
+  slug: string | null;
+  coverImageUrl: string | null;
+  gutenbergId: number | null;
+}> {
   const [work] = await db
     .insert(bookWorksTable)
     .values({
       slug: args.slug ?? null,
       coverImageUrl: args.coverImageUrl ?? null,
+      gutenbergId: args.gutenbergId ?? null,
     })
     .returning({
       id: bookWorksTable.id,
       slug: bookWorksTable.slug,
       coverImageUrl: bookWorksTable.coverImageUrl,
+      gutenbergId: bookWorksTable.gutenbergId,
     });
   if (!work) throw new Error("Failed to create book work");
   return work;
+}
+
+export async function findWorkByGutenbergId(
+  gutenbergId: number,
+): Promise<{ id: string; gutenbergId: number | null } | null> {
+  const [work] = await db
+    .select({
+      id: bookWorksTable.id,
+      gutenbergId: bookWorksTable.gutenbergId,
+    })
+    .from(bookWorksTable)
+    .where(eq(bookWorksTable.gutenbergId, gutenbergId))
+    .limit(1);
+  return work ?? null;
 }
 
 export async function createEditionForWork(args: {
@@ -515,11 +537,15 @@ export async function releaseGenerationJobLease(args: {
 
     const payloadWithoutLease = { ...payload };
     delete payloadWithoutLease.lease;
-    const nextPayload = {
+    const nextPayload: BookGenerationJobPayload = {
       ...payloadWithoutLease,
       ...(args.payloadPatch ?? {}),
       heartbeat_at: new Date().toISOString(),
     };
+    // Allow clearing bulky source text after English generation completes.
+    if (args.payloadPatch && "source" in args.payloadPatch && args.payloadPatch.source === undefined) {
+      delete nextPayload.source;
+    }
     await tx
       .update(generationJobsTable)
       .set({
