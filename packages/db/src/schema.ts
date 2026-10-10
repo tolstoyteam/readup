@@ -266,6 +266,27 @@ export type GutenbergImportCursor = {
   heartbeat_at?: string | null;
 };
 
+export const GUTENBERG_COVER_STATUSES = [
+  "pending",
+  "generating",
+  "uploading",
+  "completed",
+  "failed",
+  "skipped",
+] as const;
+export type GutenbergCoverStatus = (typeof GUTENBERG_COVER_STATUSES)[number];
+
+/** Cover generation state for a Gutenberg import item (stored in metadata JSON). */
+export type GutenbergImportCoverState = {
+  status: GutenbergCoverStatus;
+  /** Safe, user-facing error when status is failed. */
+  error?: string | null;
+  /** Diagnostic stage: generate | normalize | upload | persist | etc. */
+  stage?: string | null;
+  /** Storage path once upload + DB persist succeed. */
+  path?: string | null;
+};
+
 export type GutenbergImportItemMetadata = {
   subjects?: string[];
   language?: string;
@@ -273,6 +294,7 @@ export type GutenbergImportItemMetadata = {
   issued?: string | null;
   cover_image_url?: string | null;
   download_count?: number;
+  cover?: GutenbergImportCoverState;
 };
 
 export const booksTable = pgTable(

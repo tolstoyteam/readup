@@ -12,13 +12,11 @@ import {
   createGenerationJob,
   findWorkByGutenbergId,
   getGenerationJob,
-  updateWorkCover,
 } from "@/lib/book-relational";
 import { advanceBookGenerationJob } from "@/lib/book-generation/orchestrate";
 import type { BookGenerationJobPayload } from "@/lib/book-generation/types";
-import { uploadWorkCover } from "@/lib/cover-storage";
+import { ensureAiWorkCover } from "@/lib/cover-ensure";
 import {
-  downloadCoverBytes,
   fetchGutenbergBookText,
   formatAuthorName,
   fromPendingBook,
@@ -501,6 +499,7 @@ export async function advanceGutenbergImportJob(
         issued: nextBook.issued,
         cover_image_url: nextBook.cover_image,
         download_count: nextBook.download_count,
+        cover: { status: "pending", error: null, stage: null, path: null },
       },
     });
 
@@ -651,21 +650,26 @@ async function processWaitingItem(args: {
       throw error;
     }
 
-    const coverUrl = item.metadata?.cover_image_url;
-    let coverPath: string | null = null;
-    if (coverUrl) {
-      const cover = await downloadCoverBytes(coverUrl);
-      if (cover) {
-        try {
-          coverPath = await uploadWorkCover(work.id, cover);
-          await updateWorkCover(work.id, coverPath);
-        } catch (error) {
-          console.warn("[gutenberg_import] cover upload failed", {
-            gutenbergId: item.gutenbergId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
+    const coverResult = await ensureAiWorkCover({
+      workId: work.id,
+      title: item.title,
+      author: item.author,
+      subjects: item.metadata?.subjects,
+      onStatus: async (cover) => {
+        const fresh = await getGutenbergImportItem(item.id);
+        await updateGutenbergImportItem(item.id, {
+          metadata: { ...(fresh?.metadata ?? item.metadata), cover },
+        });
+      },
+    });
+    const coverPath = coverResult.ok ? coverResult.path : null;
+    if (!coverResult.ok) {
+      console.warn("[gutenberg_import] AI cover failed; continuing without cover", {
+        gutenbergId: item.gutenbergId,
+        workId: work.id,
+        error: coverResult.cover.error,
+        stage: coverResult.cover.stage,
+      });
     }
 
     const gutenbergUrl =

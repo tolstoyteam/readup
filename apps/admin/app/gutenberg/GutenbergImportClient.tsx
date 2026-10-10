@@ -22,6 +22,13 @@ import {
 
 const ACTIVE_IMPORT_JOB_KEY = "readup:gutenberg-import-job:v1";
 
+type CoverState = {
+  status?: string;
+  error?: string | null;
+  stage?: string | null;
+  path?: string | null;
+};
+
 type ImportItem = {
   id: string;
   gutenberg_id: number;
@@ -30,6 +37,10 @@ type ImportItem = {
   status: string;
   work_id: string | null;
   error: string | null;
+  metadata?: {
+    cover?: CoverState | null;
+    subjects?: string[];
+  } | null;
 };
 
 type ImportJobResponse = {
@@ -64,6 +75,15 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Completed",
   skipped: "Skipped",
   failed: "Failed",
+};
+
+const COVER_STATUS_LABELS: Record<string, string> = {
+  pending: "Cover pending",
+  generating: "Generating cover",
+  uploading: "Uploading cover",
+  completed: "Cover ready",
+  failed: "Cover failed",
+  skipped: "Cover exists",
 };
 
 function saveActiveImportJob(jobId: string) {
@@ -115,6 +135,7 @@ export function GutenbergImportClient() {
   const [year, setYear] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [retryingCoverId, setRetryingCoverId] = useState<string | null>(null);
   const [job, setJob] = useState<ImportJobResponse | null>(null);
   const [resumableJobId, setResumableJobId] = useState<string | null>(() =>
     typeof window === "undefined" ? null : loadActiveImportJob(),
@@ -247,6 +268,31 @@ export function GutenbergImportClient() {
     }
   }
 
+  async function retryCover(itemId: string) {
+    if (!job?.id || isRunning || retryingCoverId) return;
+    setError(null);
+    setRetryingCoverId(itemId);
+    try {
+      const res = await fetch(
+        `/api/gutenberg-imports/${job.id}/items/${itemId}/retry-cover`,
+        { method: "POST", cache: "no-store" },
+      );
+      const data = (await res.json().catch(() => ({}))) as ImportJobResponse & {
+        error?: string;
+      };
+      if (data.items) {
+        setJob(data);
+      }
+      if (!res.ok) {
+        throw new Error(data.error ?? "Cover retry failed.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cover retry failed.");
+    } finally {
+      setRetryingCoverId(null);
+    }
+  }
+
   const progress = job?.progress;
   const failedCount = progress?.failed ?? 0;
 
@@ -372,36 +418,78 @@ export function GutenbergImportClient() {
                   <TableHead>Author</TableHead>
                   <TableHead>Gutenberg ID</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Cover</TableHead>
                   <TableHead>Error</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {job.items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-20 text-muted-foreground">
+                    <TableCell colSpan={6} className="h-20 text-muted-foreground">
                       Waiting for candidates…
                     </TableCell>
                   </TableRow>
                 ) : (
-                  job.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="max-w-[220px] truncate font-medium">
-                        {item.title}
-                      </TableCell>
-                      <TableCell className="max-w-[160px] truncate text-muted-foreground">
-                        {item.author}
-                      </TableCell>
-                      <TableCell>{item.gutenberg_id}</TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant(item.status)}>
-                          {STATUS_LABELS[item.status] ?? item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">
-                        {item.error ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  job.items.map((item) => {
+                    const cover = item.metadata?.cover;
+                    const coverStatus = cover?.status;
+                    const canRetryCover =
+                      Boolean(item.work_id) &&
+                      coverStatus === "failed" &&
+                      !isRunning &&
+                      retryingCoverId !== item.id;
+                    const coverLabel = coverStatus
+                      ? (COVER_STATUS_LABELS[coverStatus] ?? coverStatus)
+                      : "—";
+                    const coverError =
+                      coverStatus === "failed" ? cover?.error : null;
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="max-w-[220px] truncate font-medium">
+                          {item.title}
+                        </TableCell>
+                        <TableCell className="max-w-[160px] truncate text-muted-foreground">
+                          {item.author}
+                        </TableCell>
+                        <TableCell>{item.gutenberg_id}</TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant(item.status)}>
+                            {STATUS_LABELS[item.status] ?? item.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={
+                                coverStatus === "failed"
+                                  ? "text-sm text-destructive"
+                                  : "text-sm text-muted-foreground"
+                              }
+                              title={coverError ?? undefined}
+                            >
+                              {retryingCoverId === item.id
+                                ? "Retrying cover…"
+                                : coverLabel}
+                            </span>
+                            {canRetryCover ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-fit"
+                                onClick={() => void retryCover(item.id)}
+                              >
+                                Retry cover
+                              </Button>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">
+                          {item.error ?? coverError ?? "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
