@@ -39,7 +39,7 @@ const NAV_ITEMS = [
   {
     key: "gutenberg",
     href: "/gutenberg",
-    label: "Import from Gutenberg",
+    label: "Gutenberg library",
     icon: BookDownIcon,
   },
 ] as const;

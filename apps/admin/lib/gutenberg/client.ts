@@ -31,6 +31,8 @@ export type GutenbergBookSummary = {
   cover_image: string | null;
   gutenberg_url: string | null;
   reading_ease_score?: string | null;
+  /** Complete source item, including fields not yet mapped by Readup. */
+  raw: Record<string, unknown>;
 };
 
 export type GutenbergBookListResponse = {
@@ -52,6 +54,9 @@ export type GutenbergBookTextResponse = {
     source_format?: string;
     source_url?: string;
   };
+  /** Complete text endpoint response except for text, which is stored separately. */
+  rawMetadata: Record<string, unknown>;
+  textSource: "api" | "source_url_fallback";
 };
 
 export class GutenbergApiError extends Error {
@@ -201,6 +206,7 @@ function normalizeBook(raw: Record<string, unknown>): GutenbergBookSummary | nul
       typeof raw.reading_ease_score === "number"
         ? String(raw.reading_ease_score)
         : null,
+    raw,
   };
 }
 
@@ -355,6 +361,7 @@ export function formatAuthorName(authors: { name: string }[]): string {
 }
 
 export function isUsableTextCandidate(book: GutenbergBookSummary): boolean {
+  if (book.raw.removed_from_catalog === true) return false;
   const media = (book.media_type ?? "").toLowerCase();
   if (media && media !== "text") return false;
   if (book.languages.length > 0 && !book.languages.some((l) => l.toLowerCase().startsWith("en"))) {
@@ -539,6 +546,7 @@ async function fetchPlainTextFromUrl(url: string): Promise<string> {
  */
 export async function fetchGutenbergBookText(
   gutenbergId: number,
+  options: { allowSourceFallback?: boolean } = {},
 ): Promise<GutenbergBookTextResponse> {
   console.info("[gutenberg] fetch book text", { gutenbergId });
 
@@ -583,6 +591,7 @@ export async function fetchGutenbergBookText(
       : undefined;
 
   let text = typeof data.text === "string" ? data.text : "";
+  let textSource: "api" | "source_url_fallback" = "api";
   const bookId =
     typeof data.book_id === "number"
       ? data.book_id
@@ -600,6 +609,9 @@ export async function fetchGutenbergBookText(
   });
 
   if (textLooksIncomplete(text, metadata)) {
+    if (options.allowSourceFallback === false) {
+      throw new Error("Gutenberg API returned incomplete cleaned text.");
+    }
     const sourceUrl =
       (typeof metadata?.source_url === "string" && metadata.source_url) ||
       `https://www.gutenberg.org/files/${gutenbergId}/${gutenbergId}-0.txt`;
@@ -612,6 +624,7 @@ export async function fetchGutenbergBookText(
       const fallback = await fetchPlainTextFromUrl(sourceUrl);
       if (fallback.length > text.length) {
         text = fallback;
+        textSource = "source_url_fallback";
       }
     } catch (error) {
       console.warn("[gutenberg] source_url fallback failed", {
@@ -631,6 +644,8 @@ export async function fetchGutenbergBookText(
       typeof data.cleaning_mode === "string" ? data.cleaning_mode : "simple",
     text,
     metadata,
+    rawMetadata: Object.fromEntries(Object.entries(data).filter(([key]) => key !== "text")),
+    textSource,
   };
 }
 

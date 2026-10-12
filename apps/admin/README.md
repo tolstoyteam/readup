@@ -66,10 +66,16 @@ Apply the schema migration if not already applied:
 
 ```bash
 pnpm --filter @readup/db apply-drizzle 0022_gutenberg_import.sql
+pnpm --filter @readup/db apply-drizzle 0024_gutenberg_source_library.sql
 ```
 
-The Import from Gutenberg admin page starts a resumable batch job; keep the browser
-tab open while it advances (same pattern as AI book generation).
+The Gutenberg admin page now has a **Save Gutenberg source books** workflow. It
+stores full book metadata (including the raw API item), authors, bookshelves, and
+cleaned text in private `gutenberg_source_books` rows. Collection jobs are
+resumable and do not create app editions or invoke AI. Request up to 100 new books
+per job; existing complete books are skipped. Keep the tab open while a job runs,
+or resume it later from the same browser. The previous direct AI import remains
+available in the collapsed section below the source library.
 
 ### Two-part cover builder
 

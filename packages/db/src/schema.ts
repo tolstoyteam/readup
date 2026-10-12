@@ -215,6 +215,81 @@ export const bookCoverDesignsTable = pgTable("book_cover_designs", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Private Gutenberg source material. App-facing editions are created separately. */
+export const gutenbergSourceBooksTable = pgTable(
+  "gutenberg_source_books",
+  {
+    gutenbergId: integer("gutenberg_id").primaryKey(),
+    title: text("title").notNull(),
+    authors: jsonb("authors").$type<Record<string, unknown>[]>().notNull().default([]),
+    bookshelves: jsonb("bookshelves").$type<string[]>().notNull().default([]),
+    subjects: jsonb("subjects").$type<string[]>().notNull().default([]),
+    languages: jsonb("languages").$type<string[]>().notNull().default([]),
+    mediaType: text("media_type"),
+    downloadCount: integer("download_count").notNull().default(0),
+    issued: text("issued"),
+    coverImageUrl: text("cover_image_url"),
+    gutenbergUrl: text("gutenberg_url"),
+    rawBook: jsonb("raw_book").$type<Record<string, unknown>>().notNull(),
+    cleanedText: text("cleaned_text"),
+    textStatus: text("text_status").notNull().default("pending"),
+    textError: text("text_error"),
+    textSource: text("text_source"),
+    cleaningMode: text("cleaning_mode"),
+    textMetadata: jsonb("text_metadata").$type<Record<string, unknown>>(),
+    textLength: integer("text_length"),
+    textSha256: text("text_sha256"),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("gutenberg_source_books_text_status_idx").on(table.textStatus),
+    check(
+      "gutenberg_source_books_text_status_check",
+      sql`${table.textStatus} in ('pending', 'ready', 'failed')`,
+    ),
+  ],
+);
+
+export type GutenbergCollectionCursor = {
+  next_url?: string | null;
+  pending_books?: Record<string, unknown>[];
+  exhausted?: boolean;
+  lease?: { token: string; expires_at: string } | null;
+  rate_limited_until?: string | null;
+  rate_limit_count?: number;
+};
+
+export const gutenbergCollectionJobsTable = pgTable(
+  "gutenberg_collection_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    status: text("status").notNull().default("queued"),
+    requestedCount: integer("requested_count").notNull(),
+    savedCount: integer("saved_count").notNull().default(0),
+    skippedCount: integer("skipped_count").notNull().default(0),
+    failedCount: integer("failed_count").notNull().default(0),
+    filters: jsonb("filters").$type<GutenbergImportFilters>().notNull().default({}),
+    cursor: jsonb("cursor").$type<GutenbergCollectionCursor>().notNull().default({}),
+    createdBy: uuid("created_by"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("gutenberg_collection_jobs_status_idx").on(table.status),
+    check(
+      "gutenberg_collection_jobs_status_check",
+      sql`${table.status} in ('queued', 'running', 'succeeded', 'failed')`,
+    ),
+    check(
+      "gutenberg_collection_jobs_count_check",
+      sql`${table.requestedCount} >= 1 and ${table.requestedCount} <= 100`,
+    ),
+  ],
+);
+
 export const GUTENBERG_IMPORT_JOB_STATUSES = [
   "queued",
   "running",
@@ -907,3 +982,5 @@ export type ReadingDailyLogRecord = typeof readingDailyLogTable.$inferSelect;
 export type GenerationJobRecord = typeof generationJobsTable.$inferSelect;
 export type GutenbergImportJobRecord = typeof gutenbergImportJobsTable.$inferSelect;
 export type GutenbergImportItemRecord = typeof gutenbergImportItemsTable.$inferSelect;
+export type GutenbergSourceBookRecord = typeof gutenbergSourceBooksTable.$inferSelect;
+export type GutenbergCollectionJobRecord = typeof gutenbergCollectionJobsTable.$inferSelect;
