@@ -59,7 +59,7 @@ export function BookListenPlayer({
   } = useReaderBookAudio();
   const [barWidth, setBarWidth] = useState(1);
 
-  const currentVoiceLabel = voices.find((v) => v.id === voice)?.label ?? voice;
+  const currentVoiceLabel = t(voices.find((v) => v.id === voice)?.labelKey ?? "reader.voiceWoman");
   const duration = status.duration;
   const current = status.currentTime;
   const progress = audioProgressFraction(current, duration);

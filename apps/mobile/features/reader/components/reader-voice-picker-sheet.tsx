@@ -5,7 +5,7 @@ import { useInterfaceLanguage } from "@/shared/context/interface-language-contex
 import { Check } from "lucide-react-native";
 import { Pressable, Text } from "react-native";
 
-type VoiceOption = { id: BookAudioVoice; label: string };
+type VoiceOption = { id: BookAudioVoice; labelKey: "reader.voiceWoman" | "reader.voiceMan" };
 
 export function ReaderVoicePickerSheet({
   visible,
@@ -45,7 +45,7 @@ export function ReaderVoicePickerSheet({
           accessibilityState={{ selected: voice === v.id }}
         >
           <Text className="text-base font-medium text-[#1A2420] dark:text-[#F3F4EE]">
-            {v.label}
+            {t(v.labelKey)}
           </Text>
           {voice === v.id ? (
             <Check size={22} color="#059669" strokeWidth={2.5} />

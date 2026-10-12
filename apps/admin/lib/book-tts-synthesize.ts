@@ -167,7 +167,7 @@ export async function synthesizeBookTtsChunk(args: {
 }
 
 /**
- * For each text chunk, generates Alloy / Nova / Ash, uploads to Storage, merges `tts_audio`.
+ * For each text chunk, generates Nova and Ash, uploads to Storage, merges `tts_audio`.
  */
 export async function synthesizeFullBookTts(
   book: BookWithContent,

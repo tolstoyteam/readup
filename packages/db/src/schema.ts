@@ -72,8 +72,8 @@ export type ParagraphBlockContent = { text: string };
 export type QuoteBlockContent = { text: string; source?: string };
 export type ChapterBlockContent = ParagraphBlockContent | QuoteBlockContent;
 
-/** Fixed voices used for every TTS generation (all three are produced per part). */
-export const TTS_VOICE_IDS = ["alloy", "nova", "ash"] as const;
+/** Fixed woman and man voices used for every TTS generation. */
+export const TTS_VOICE_IDS = ["nova", "ash"] as const;
 export type TtsVoiceId = (typeof TTS_VOICE_IDS)[number];
 
 /** Supabase object paths for one audio part, one file per voice. */

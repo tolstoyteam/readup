@@ -10,7 +10,7 @@ export function mergeBookTtsPart(
   return { parts, updated_at: new Date().toISOString() };
 }
 
-/** Chunk indexes that have all three voice files recorded in `tts_audio`. */
+/** Chunk indexes that have both voice files recorded in `tts_audio`. */
 export function fullTtsChunkIndexes(tts: BookTtsAudio | undefined): number[] {
   if (!tts?.parts) return [];
   const out: number[] = [];

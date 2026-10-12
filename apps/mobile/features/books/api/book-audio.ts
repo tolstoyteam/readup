@@ -11,10 +11,9 @@ import {
 
 export type BookAudioVoice = TtsVoiceId;
 
-export const BOOK_AUDIO_VOICES: { id: BookAudioVoice; label: string }[] = [
-  { id: "nova", label: "Nova" },
-  { id: "alloy", label: "Alloy" },
-  { id: "ash", label: "Ash" },
+export const BOOK_AUDIO_VOICES: { id: BookAudioVoice; labelKey: "reader.voiceWoman" | "reader.voiceMan" }[] = [
+  { id: "nova", labelKey: "reader.voiceWoman" },
+  { id: "ash", labelKey: "reader.voiceMan" },
 ];
 
 const SIGNED_URL_TTL_SEC = 21_600; // 6 hours

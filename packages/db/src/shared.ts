@@ -34,7 +34,7 @@ export type ParagraphBlockContent = { text: string };
 export type QuoteBlockContent = { text: string; source?: string };
 export type ChapterBlockContent = ParagraphBlockContent | QuoteBlockContent;
 
-export const TTS_VOICE_IDS = ["alloy", "nova", "ash"] as const;
+export const TTS_VOICE_IDS = ["nova", "ash"] as const;
 export type TtsVoiceId = (typeof TTS_VOICE_IDS)[number];
 
 export type BookTtsVoicePaths = Record<TtsVoiceId, string>;
