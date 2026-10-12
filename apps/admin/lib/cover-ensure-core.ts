@@ -12,6 +12,7 @@ export type EnsureAiWorkCoverArgs = {
   title: string;
   author: string;
   subjects?: string[];
+  bookshelves?: string[];
   onStatus?: (cover: GutenbergImportCoverState) => Promise<void>;
 };
 

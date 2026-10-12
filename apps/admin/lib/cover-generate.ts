@@ -6,9 +6,9 @@ import { withExponentialBackoff } from "@/lib/retry";
 
 export { buildCoverPrompt, sanitizeCoverError } from "@/lib/cover-prompt";
 
-const DEFAULT_MODEL = "gpt-image-1";
-const DEFAULT_QUALITY = "low";
-const DEFAULT_SIZE = "1024x1536" as const;
+const DEFAULT_MODEL = "gpt-image-2.5-flare";
+const DEFAULT_QUALITY = "medium";
+const DEFAULT_SIZE = "1024x1024" as const;
 
 let activeCoverGens = 0;
 const coverGenWaiters: Array<() => void> = [];
@@ -46,6 +46,10 @@ function imageQuality(): "low" | "medium" | "high" | "auto" {
   return DEFAULT_QUALITY;
 }
 
+export function coverGenerationSettings() {
+  return { model: imageModel(), quality: imageQuality(), size: DEFAULT_SIZE };
+}
+
 async function fetchImageBytes(url: string): Promise<Buffer> {
   const res = await fetch(url);
   if (!res.ok) {
@@ -65,7 +69,9 @@ async function fetchImageBytes(url: string): Promise<Buffer> {
 export async function generateBookCoverImage(args: {
   title: string;
   author: string;
+  genre?: string;
   subjects?: string[];
+  colors?: { imageBackground: string; accent: string; secondary: string };
 }): Promise<Buffer> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { CoverBuilder } from "@/components/books/CoverBuilder";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -135,11 +136,23 @@ export function GutenbergImportClient() {
   const [year, setYear] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [retryingCoverId, setRetryingCoverId] = useState<string | null>(null);
   const [job, setJob] = useState<ImportJobResponse | null>(null);
   const [resumableJobId, setResumableJobId] = useState<string | null>(() =>
     typeof window === "undefined" ? null : loadActiveImportJob(),
   );
+
+  async function syncPublishedCover(itemId: string) {
+    if (!job?.id) return;
+    try {
+      const response = await fetch(`/api/gutenberg-imports/${job.id}/items/${itemId}/retry-cover`, {
+        method: "POST", cache: "no-store",
+      });
+      const data = await response.json();
+      if (response.ok && data.items) setJob(data);
+    } catch (error) {
+      console.warn("Could not refresh Gutenberg cover status", error);
+    }
+  }
 
   async function runImportLoop(jobId: string) {
     saveActiveImportJob(jobId);
@@ -265,31 +278,6 @@ export function GutenbergImportClient() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Retry failed.");
       setIsRunning(false);
-    }
-  }
-
-  async function retryCover(itemId: string) {
-    if (!job?.id || isRunning || retryingCoverId) return;
-    setError(null);
-    setRetryingCoverId(itemId);
-    try {
-      const res = await fetch(
-        `/api/gutenberg-imports/${job.id}/items/${itemId}/retry-cover`,
-        { method: "POST", cache: "no-store" },
-      );
-      const data = (await res.json().catch(() => ({}))) as ImportJobResponse & {
-        error?: string;
-      };
-      if (data.items) {
-        setJob(data);
-      }
-      if (!res.ok) {
-        throw new Error(data.error ?? "Cover retry failed.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Cover retry failed.");
-    } finally {
-      setRetryingCoverId(null);
     }
   }
 
@@ -433,11 +421,6 @@ export function GutenbergImportClient() {
                   job.items.map((item) => {
                     const cover = item.metadata?.cover;
                     const coverStatus = cover?.status;
-                    const canRetryCover =
-                      Boolean(item.work_id) &&
-                      coverStatus === "failed" &&
-                      !isRunning &&
-                      retryingCoverId !== item.id;
                     const coverLabel = coverStatus
                       ? (COVER_STATUS_LABELS[coverStatus] ?? coverStatus)
                       : "—";
@@ -467,21 +450,9 @@ export function GutenbergImportClient() {
                               }
                               title={coverError ?? undefined}
                             >
-                              {retryingCoverId === item.id
-                                ? "Retrying cover…"
-                                : coverLabel}
+                              {coverLabel}
                             </span>
-                            {canRetryCover ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="w-fit"
-                                onClick={() => void retryCover(item.id)}
-                              >
-                                Retry cover
-                              </Button>
-                            ) : null}
+                            {item.work_id ? <CoverBuilder workId={item.work_id} title={item.title} author={item.author} buttonLabel={coverStatus === "failed" ? "Retry in cover builder" : "Open cover builder"} onPublished={() => syncPublishedCover(item.id)} /> : null}
                           </div>
                         </TableCell>
                         <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">

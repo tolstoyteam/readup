@@ -1,7 +1,9 @@
 export function buildCoverPrompt(args: {
   title: string;
   author: string;
+  genre?: string;
   subjects?: string[];
+  colors?: { imageBackground: string; accent: string; secondary: string };
 }): string {
   const title = args.title.trim() || "Untitled";
   const author = args.author.trim() || "Unknown Author";
@@ -11,23 +13,23 @@ export function buildCoverPrompt(args: {
     .slice(0, 6)
     .join(", ");
 
-  const themeLine = subjects
-    ? `Genre / themes (for atmosphere only): ${subjects}`
-    : "Infer genre and atmosphere from the title and author.";
+  const themeLine = subjects ? `Relevant subjects: ${subjects}` : "Use the genre for concept context.";
 
-  return `Create a distinctive, professional book cover for a mobile reading app.
+  return `Editorial illustration prompt version 2. Create one original, minimal expressive illustration for the LOWER image of a two-part book cover.
 
 Book title: ${title}
 Author: ${author}
+Genre: ${args.genre ?? "other"}
 ${themeLine}
+Image background: ${args.colors?.imageBackground ?? "warm neutral"}
+Primary accent: ${args.colors?.accent ?? "muted red"}
+Secondary color: ${args.colors?.secondary ?? "slate blue"}
 
-Create an original visual concept inspired by the book's subject, themes, atmosphere, and genre. The design should be visually striking, polished, recognizable at small mobile-screen sizes, and clearly distinguishable from other book covers in the library.
+Create a single clear visual idea inspired by these details. Make a complete square image with its own background using the named palette colors, restrained shapes, and subtle print texture. It must read clearly at small mobile sizes. Leave no blank panel for typography.
 
-Do not depict, imitate, or include photographs or recognizable likenesses of public figures. Do not copy an existing book cover, copyrighted cover artwork, or another artist's specific style. Create an original composition.
+Do not depict recognizable public figures. Do not copy or imitate an existing book cover, copyrighted cover artwork, or another artist's specific style.
 
-Use a portrait book-cover composition with a 5:8 aspect ratio (width:height = 1000:1600). Use thoughtful typography, a clear visual hierarchy, balanced composition, and appropriate colors. Include the exact book title and author name only if you can render them accurately. Do not invent subtitles, author names, awards, publisher logos, or other text. Avoid unnecessary decorative text, watermarks, and mockup scenes.
-
-The result must be a finished, original book-cover image suitable for direct use as the cover in a mobile reading app, not a picture of a physical book.`;
+No text, letters, numerals, typography, logos, watermarks, book mockups, or pictures of a physical book. The title and author are concept context only and will be typeset separately by the application.`;
 }
 
 /** Sanitize errors for admin UI — never leak keys or full provider payloads. */

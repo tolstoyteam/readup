@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { validateCoverBytes } from "@/lib/cover-image";
 import { getBookCoversBucket, getSupabaseAdmin } from "@/lib/supabase-storage";
 
@@ -54,12 +55,12 @@ export async function uploadWorkCover(
     throw new Error(validated.message);
   }
 
-  const objectPath = `works/${workId}/cover.${validated.extension}`;
+  const objectPath = `works/${workId}/covers/${randomUUID()}.${validated.extension}`;
   const supabase = getSupabaseAdmin();
   const bucket = getBookCoversBucket();
   const { error } = await supabase.storage.from(bucket).upload(objectPath, cover.buffer, {
     contentType: validated.mime,
-    upsert: true,
+    upsert: false,
   });
 
   if (error) {

@@ -468,6 +468,7 @@ export async function advanceGutenbergImportJob(
         status: "skipped",
         metadata: {
           subjects: nextBook.subjects,
+          bookshelves: nextBook.bookshelves,
           language: nextBook.languages[0],
           gutenberg_url: nextBook.gutenberg_url ?? undefined,
           issued: nextBook.issued,
@@ -494,6 +495,7 @@ export async function advanceGutenbergImportJob(
       status: "waiting",
       metadata: {
         subjects: nextBook.subjects,
+        bookshelves: nextBook.bookshelves,
         language: nextBook.languages[0],
         gutenberg_url: nextBook.gutenberg_url ?? undefined,
         issued: nextBook.issued,
@@ -655,6 +657,7 @@ async function processWaitingItem(args: {
       title: item.title,
       author: item.author,
       subjects: item.metadata?.subjects,
+      bookshelves: item.metadata?.bookshelves,
       onStatus: async (cover) => {
         const fresh = await getGutenbergImportItem(item.id);
         await updateGutenbergImportItem(item.id, {

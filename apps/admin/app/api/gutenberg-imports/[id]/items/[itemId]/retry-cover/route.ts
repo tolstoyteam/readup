@@ -106,6 +106,7 @@ export async function POST(
     title: item.title,
     author: item.author,
     subjects: item.metadata?.subjects,
+    bookshelves: item.metadata?.bookshelves,
     onStatus: async (cover) => {
       const fresh = await getGutenbergImportItem(itemId);
       await updateGutenbergImportItem(itemId, {

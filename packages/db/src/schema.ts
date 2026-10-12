@@ -201,6 +201,20 @@ export const bookWorksTable = pgTable(
   ],
 );
 
+/** Private editing data. Public/mobile reads use only book_works.cover_image_url. */
+export const bookCoverDesignsTable = pgTable("book_cover_designs", {
+  workId: uuid("work_id").primaryKey().references(() => bookWorksTable.id, { onDelete: "cascade" }),
+  draftRecipe: jsonb("draft_recipe").$type<Record<string, unknown> | null>(),
+  publishedRecipe: jsonb("published_recipe").$type<Record<string, unknown> | null>(),
+  draftSourcePath: text("draft_source_path"),
+  publishedSourcePath: text("published_source_path"),
+  publishedPath: text("published_path"),
+  generationState: text("generation_state").notNull().default("idle"),
+  error: text("error"),
+  revision: integer("revision").notNull().default(1),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const GUTENBERG_IMPORT_JOB_STATUSES = [
   "queued",
   "running",
@@ -289,6 +303,7 @@ export type GutenbergImportCoverState = {
 
 export type GutenbergImportItemMetadata = {
   subjects?: string[];
+  bookshelves?: string[];
   language?: string;
   gutenberg_url?: string;
   issued?: string | null;

@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["@napi-rs/canvas"],
+  outputFileTracingIncludes: {
+    "/api/books/works/*/cover-design/**": ["./lib/NotoSans.ttf"],
+  },
 };
 
 export default nextConfig;

@@ -12,14 +12,14 @@ describe("buildCoverPrompt", () => {
     assert.match(prompt, /Pride and Prejudice/);
     assert.match(prompt, /Jane Austen/);
     assert.match(prompt, /Romance/);
-    assert.match(prompt, /5:8/);
+    assert.match(prompt, /square image/);
     assert.match(prompt, /public figures/i);
   });
 
   it("works without subjects", () => {
     const prompt = buildCoverPrompt({ title: "Moby Dick", author: "Herman Melville" });
     assert.match(prompt, /Moby Dick/);
-    assert.match(prompt, /Infer genre/);
+    assert.match(prompt, /Use the genre/);
   });
 });
 

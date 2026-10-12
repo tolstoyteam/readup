@@ -84,11 +84,11 @@ export async function PATCH(
     );
   }
 
-  await updateBookCover(id, newPath);
-
-  const oldCover = existing.coverImageUrl;
-  if (oldCover && oldCover !== newPath) {
-    await removeCoverFromStorage(oldCover);
+  try {
+    await updateBookCover(id, newPath);
+  } catch (error) {
+    await removeCoverFromStorage(newPath);
+    throw error;
   }
 
   return coverSuccessResponse(id, existing.workId, newPath);
@@ -112,12 +112,7 @@ export async function DELETE(
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  const oldCover = existing.coverImageUrl;
   await updateBookCover(id, null);
-
-  if (oldCover) {
-    await removeCoverFromStorage(oldCover);
-  }
 
   return coverSuccessResponse(id, existing.workId, null);
 }

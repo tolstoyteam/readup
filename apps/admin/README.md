@@ -71,6 +71,29 @@ pnpm --filter @readup/db apply-drizzle 0022_gutenberg_import.sql
 The Import from Gutenberg admin page starts a resumable batch job; keep the browser
 tab open while it advances (same pattern as AI book generation).
 
+### Two-part cover builder
+
+Apply the private design table and private `book-cover-sources` Storage bucket
+before deploying the new cover generation code:
+
+```bash
+pnpm --filter @readup/db apply-drizzle 0023_book_cover_designs.sql
+```
+
+The existing `SUPABASE_BOOK_COVERS_BUCKET` holds only published, versioned
+1000×1600 covers. The private `book-cover-sources` bucket keeps original square
+illustration bytes. The admin work-cover builder opens from Gutenberg items and
+the book edit form. Draft changes and source regeneration do not change the
+mobile cover until **Publish cover** succeeds. Existing covers are left in place.
+
+Versioned sources and retired covers are intentionally retained for recovery.
+Inspect the 30-day cleanup candidates, then remove unreferenced files separately:
+
+```bash
+pnpm --filter @readup/admin cover:cleanup
+pnpm --filter @readup/admin cover:cleanup --apply
+```
+
 ## Book generation on Vercel
 
 AI book generation is a resumable sequence of bounded Vercel Function invocations:

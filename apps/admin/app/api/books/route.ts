@@ -2,13 +2,13 @@ import { parseBookContentInput } from "@/lib/book-content";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { validateCoverBytes } from "@/lib/cover-image";
 import { finalizeBookTtsForBook } from "@/lib/book-tts-regenerate";
+import { removeCoverFromStorage, uploadWorkCover } from "@/lib/cover-storage";
 import {
   createBookWithContent,
   listBooks,
   updateBookCover,
   type BookWithContent,
 } from "@/lib/book-relational";
-import { getBookCoversBucket, getSupabaseAdmin } from "@/lib/supabase-storage";
 
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
@@ -94,7 +94,12 @@ async function postMultipart(request: Request) {
     if (!uploaded.ok) {
       return Response.json({ error: uploaded.message }, { status: uploaded.status });
     }
-    await updateBookCover(book.id, uploaded.path);
+    try {
+      await updateBookCover(book.id, uploaded.path);
+    } catch (error) {
+      await removeCoverFromStorage(uploaded.path);
+      throw error;
+    }
     bookForTts = { ...book, coverImageUrl: uploaded.path };
   }
 
@@ -130,23 +135,8 @@ async function uploadCover(
   workId: string,
   cover: { buffer: Buffer; mime: string; extension: string },
 ): Promise<{ ok: true; path: string } | { ok: false; message: string; status: number }> {
-  const objectPath = `works/${workId}/cover.${cover.extension}`;
-
   try {
-    const supabase = getSupabaseAdmin();
-    const bucket = getBookCoversBucket();
-    const { error } = await supabase.storage.from(bucket).upload(objectPath, cover.buffer, {
-      contentType: cover.mime,
-      upsert: true,
-    });
-    if (error) {
-      console.error("Supabase storage upload:", error);
-      return {
-        ok: false,
-        message: "Failed to upload cover to storage. Check bucket name and service role permissions.",
-        status: 502,
-      };
-    }
+    return { ok: true, path: await uploadWorkCover(workId, cover) };
   } catch (e) {
     console.error(e);
     return {
@@ -155,8 +145,6 @@ async function uploadCover(
       status: 500,
     };
   }
-
-  return { ok: true, path: objectPath };
 }
 
 export async function GET() {

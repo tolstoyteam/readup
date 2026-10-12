@@ -20,6 +20,7 @@ import { genreDisplayName } from "@/lib/book-genres";
 import { LANGUAGE_OPTIONS } from "@/lib/book-language";
 import type { BookWithContent } from "@/lib/book-relational";
 import { BookPreview } from "@/app/upload/components/BookPreview";
+import { CoverBuilder } from "@/components/books/CoverBuilder";
 import { ChapterEditor } from "@/app/upload/components/ChapterEditor";
 import { QuizEditor, createDefaultQuiz } from "@/app/upload/components/QuizEditor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -617,6 +618,11 @@ export function BookUploadForm({
                 ) : null}
               </div>
             ) : null}
+            {editContext ? <CoverBuilder workId={editContext.initial.workId} onPublished={(path) => {
+              setSavedCoverPath(path);
+              form.setValue("cover_image_url", path, { shouldDirty: false });
+              setCoverStatus("Generated cover published for all language versions of this book.");
+            }} /> : null}
             </CardContent>
           </Card>
 
