@@ -56,6 +56,9 @@ export type BookGenerationJobPayload = {
   workflow_settings: WorkflowSettings;
   source?: { filename: string; text: string };
   cover_path?: string | null;
+  /** Saved Gutenberg source to prepare on a separate, resumable generation step. */
+  gutenberg_source_id?: number;
+  cover_prepared?: boolean;
   /** Optional Gutenberg attribution when this job was started by an import. */
   gutenberg?: { id: number; url?: string };
   progress?: GenerationJobProgress | null;

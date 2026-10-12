@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   BookDownIcon,
+  BookOpenCheckIcon,
   LibraryBigIcon,
   LogOutIcon,
   UploadIcon,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/sidebar";
 
 type AdminShellProps = {
-  active: "books" | "users" | "upload" | "gutenberg";
+  active: "books" | "users" | "upload" | "gutenberg" | "gutenbergBooks";
   children: ReactNode;
 };
 
@@ -41,6 +42,12 @@ const NAV_ITEMS = [
     href: "/gutenberg",
     label: "Gutenberg library",
     icon: BookDownIcon,
+  },
+  {
+    key: "gutenbergBooks",
+    href: "/gutenberg/books",
+    label: "Saved Gutenberg books",
+    icon: BookOpenCheckIcon,
   },
 ] as const;
 

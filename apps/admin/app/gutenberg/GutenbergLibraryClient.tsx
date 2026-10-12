@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -173,9 +174,14 @@ export function GutenbergLibraryClient() {
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <h3 className="font-semibold text-foreground">Saved source library</h3>
-        <Button type="button" variant="outline" size="sm" onClick={() => void refreshLibrary().catch((err) => setError(String(err)))}>
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => void refreshLibrary().catch((err) => setError(String(err)))}>
+            Refresh
+          </Button>
+          <Button nativeButton={false} variant="outline" size="sm" render={<Link href="/gutenberg/books" />}>
+            Review and add to app
+          </Button>
+        </div>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
         {library ? `${library.ready} ready of ${library.total} stored books` : "Loading books…"}

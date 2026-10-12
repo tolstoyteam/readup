@@ -1,6 +1,12 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import { eq, inArray } from "drizzle-orm";
+import { booksTable, gutenbergSourceBooksTable } from "@readup/db";
+import { db } from "@/db/client";
+import { ensureAiWorkCover } from "@/lib/cover-ensure";
+import { formatAuthorName } from "@/lib/gutenberg/client";
+import { prepareGutenbergSourceText } from "@/lib/gutenberg/source-prep";
 import { languageLabel } from "@/lib/book-language";
 import { deleteOrphanTtsChunks } from "@/lib/book-audio-storage";
 import {
@@ -145,6 +151,62 @@ export async function advanceBookGenerationJob(
 
     let english = await getEditionByWorkLanguage(job.workId, SOURCE_LANGUAGE);
     if (!english) {
+      if (payload.gutenberg_source_id && !payload.cover_prepared) {
+        const [saved] = await db.select({
+          title: gutenbergSourceBooksTable.title,
+          authors: gutenbergSourceBooksTable.authors,
+          subjects: gutenbergSourceBooksTable.subjects,
+          bookshelves: gutenbergSourceBooksTable.bookshelves,
+        }).from(gutenbergSourceBooksTable)
+          .where(eq(gutenbergSourceBooksTable.gutenbergId, payload.gutenberg_source_id)).limit(1);
+        if (!saved) throw new Error("Saved Gutenberg source book was not found.");
+        await updateProgress(jobId, leaseToken, progress("generating_cover", "Generating book cover..."));
+        const cover = await ensureAiWorkCover({
+          workId: job.workId,
+          title: saved.title,
+          author: formatAuthorName(saved.authors.filter((a): a is { name: string } => typeof a.name === "string")),
+          subjects: saved.subjects,
+          bookshelves: saved.bookshelves,
+        });
+        if (!cover.ok) {
+          throw new Error(cover.cover.error ?? "Could not generate the mobile book cover.");
+        }
+        await releaseStep({
+          jobId,
+          leaseToken,
+          nextProgress: progress("generating_cover", "Cover ready."),
+          payloadPatch: { cover_prepared: true, cover_path: cover.path },
+        });
+        return { kind: "advanced" };
+      }
+
+      if (payload.gutenberg_source_id && !payload.source) {
+        const [saved] = await db.select({
+          title: gutenbergSourceBooksTable.title,
+          authors: gutenbergSourceBooksTable.authors,
+          cleanedText: gutenbergSourceBooksTable.cleanedText,
+          textStatus: gutenbergSourceBooksTable.textStatus,
+        }).from(gutenbergSourceBooksTable)
+          .where(eq(gutenbergSourceBooksTable.gutenbergId, payload.gutenberg_source_id)).limit(1);
+        if (!saved || saved.textStatus !== "ready" || !saved.cleanedText?.trim()) {
+          throw new Error("Saved Gutenberg text is not ready for generation.");
+        }
+        await updateProgress(jobId, leaseToken, progress("preparing_source", "Preparing saved book text..."));
+        const source = await prepareGutenbergSourceText({
+          title: saved.title,
+          author: formatAuthorName(saved.authors.filter((a): a is { name: string } => typeof a.name === "string")),
+          text: saved.cleanedText,
+          gutenbergId: payload.gutenberg_source_id,
+        });
+        await releaseStep({
+          jobId,
+          leaseToken,
+          nextProgress: progress("preparing_source", "Saved book text prepared."),
+          payloadPatch: { source },
+        });
+        return { kind: "advanced" };
+      }
+
       await updateProgress(
         jobId,
         leaseToken,
@@ -189,7 +251,7 @@ export async function advanceBookGenerationJob(
     for (const language of additionalLanguages) {
       const existing = await getEditionByWorkLanguage(job.workId, language);
       const previousFailure = warnings.find((warning) => warning.language === language);
-      if (existing || previousFailure) continue;
+      if (existing || (previousFailure && !payload.gutenberg_source_id)) continue;
 
       await updateProgress(
         jobId,
@@ -226,8 +288,12 @@ export async function advanceBookGenerationJob(
             `${languageLabel(language)} translation saved.`,
             { language, edition_id: edition.id },
           ),
+          ...(payload.gutenberg_source_id && previousFailure
+            ? { payloadPatch: { warnings: warningsWithoutLanguage(warnings, language) } }
+            : {}),
         });
       } catch (error) {
+        if (payload.gutenberg_source_id) throw error;
         const message =
           error instanceof Error ? error.message : `Translation to ${language} failed.`;
         const nextWarnings = [
@@ -283,6 +349,9 @@ export async function advanceBookGenerationJob(
       const apiKey = process.env.OPENAI_API_KEY?.trim();
       const bucket = getBookAudioBucket();
       if (!apiKey || !bucket) {
+        if (payload.gutenberg_source_id) {
+          throw new Error("Audio generation is not configured. Set OPENAI_API_KEY and the book audio bucket.");
+        }
         if (edition.status !== "published") {
           await updateEditionStatus(edition.id, "published");
           await releaseStep({
@@ -344,6 +413,7 @@ export async function advanceBookGenerationJob(
       if (!edition.ttsAudio) {
         throw new Error(`TTS metadata is missing for ${languageLabel(language)}.`);
       }
+      if (payload.gutenberg_source_id) continue;
       if (edition.status !== "published") {
         await deleteOrphanTtsChunks(String(edition.id), chunks.length - 1);
         await updateBookTtsAudio(edition.id, edition.ttsAudio);
@@ -358,6 +428,15 @@ export async function advanceBookGenerationJob(
         });
         return { kind: "advanced" };
       }
+    }
+
+    if (payload.gutenberg_source_id) {
+      if (editions.length !== allLanguages.length || editions.some(({ edition }) => !edition.ttsAudio)) {
+        throw new Error("All requested editions and audio must be complete before publishing.");
+      }
+      await db.update(booksTable)
+        .set({ status: "published", publishedAt: new Date() })
+        .where(inArray(booksTable.id, editions.map(({ edition }) => edition.id)));
     }
 
     const result = {

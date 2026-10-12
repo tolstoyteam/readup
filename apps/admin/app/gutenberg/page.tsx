@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/AdminShell";
 import { requireAdminPage } from "@/lib/admin-auth";
-import { GutenbergImportClient } from "./GutenbergImportClient";
 import { GutenbergLibraryClient } from "./GutenbergLibraryClient";
 
 export const dynamic = "force-dynamic";
@@ -27,10 +26,6 @@ export default async function GutenbergImportPage() {
         </header>
 
         <GutenbergLibraryClient />
-        <details className="rounded-card border border-border bg-card p-5 sm:p-6">
-          <summary className="cursor-pointer font-semibold text-foreground">Generate app editions directly (existing workflow)</summary>
-          <div className="mt-5"><GutenbergImportClient /></div>
-        </details>
       </div>
     </AdminShell>
   );

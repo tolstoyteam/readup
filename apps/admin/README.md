@@ -74,8 +74,14 @@ stores full book metadata (including the raw API item), authors, bookshelves, an
 cleaned text in private `gutenberg_source_books` rows. Collection jobs are
 resumable and do not create app editions or invoke AI. Request up to 100 new books
 per job; existing complete books are skipped. Keep the tab open while a job runs,
-or resume it later from the same browser. The previous direct AI import remains
-available in the collapsed section below the source library.
+or resume it later from the same browser. The **Saved Gutenberg books** page at
+`/gutenberg/books` lists the collected books with their app status. An admin can
+start generation for one saved book or select up to 100 books across pages and
+generate them as a resumable batch. This generates the mobile app's short-form
+book, AI cover, English and Russian editions, quizzes, and audio. Saved-source
+editions publish together after these assets are ready. Generation uses the saved
+text and does not call the Gutenberg API again. The old direct-generation panel has been removed from the
+Gutenberg library page.
 
 ### Two-part cover builder
 
