@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 
 import {
@@ -34,7 +34,7 @@ export function useReadingSessionTracker({
   chapterStableId,
   recordReadingSession,
 }: ReadingSessionTrackerConfig) {
-  const lastSaveAtRef = useRef(Date.now());
+  const lastSaveAtRef = useRef<number | null>(null);
   const pendingElapsedMsRef = useRef(0);
   const lastFlushedPageRef = useRef<number | null>(null);
   const bookCompletedRef = useRef(false);
@@ -56,7 +56,7 @@ export function useReadingSessionTracker({
       if (!enabled || !id || pages <= 0) return;
 
       const now = Date.now();
-      const elapsedMs = now - lastSaveAtRef.current;
+      const elapsedMs = now - (lastSaveAtRef.current ?? now);
       lastSaveAtRef.current = now;
       const previousPendingElapsedMs = pendingElapsedMsRef.current;
       const pending = consumePendingReadingTime(
@@ -118,6 +118,7 @@ export function useReadingSessionTracker({
 
   useEffect(() => {
     if (!enabled) return;
+    lastSaveAtRef.current = Date.now();
 
     const onAppState = (state: AppStateStatus) => {
       if (state === "background" || state === "inactive") {
@@ -132,10 +133,9 @@ export function useReadingSessionTracker({
     };
   }, [enabled, flush]);
 
-  return {
-    flush,
-    onPageChange,
-    resetPageTracking,
-    computeMinutesDelta,
-  };
+  // Reader effects depend on the tracker; keep its identity stable between renders.
+  return useMemo(
+    () => ({ flush, onPageChange, resetPageTracking, computeMinutesDelta }),
+    [flush, onPageChange, resetPageTracking],
+  );
 }

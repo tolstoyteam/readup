@@ -114,6 +114,9 @@ export function ReaderBookAudioProvider({
   const status = useAudioPlayerStatus(player);
   const statusRef = useRef(status);
   statusRef.current = status;
+  // A new parent callback must not restart the cleanup effect and flush progress.
+  const onSessionFlushRef = useRef(onSessionFlush);
+  onSessionFlushRef.current = onSessionFlush;
   const wasPlayingRef = useRef(false);
 
   useEffect(() => {
@@ -159,11 +162,11 @@ export function ReaderBookAudioProvider({
   );
 
   const flushListeningSession = useCallback(() => {
-    if (!onSessionFlush) return;
+    if (!onSessionFlushRef.current) return;
     const s = statusRef.current;
     const audioPositionMs = Math.max(0, Math.round(s.currentTime * 1000));
-    void onSessionFlush(audioPositionMs);
-  }, [onSessionFlush]);
+    void onSessionFlushRef.current(audioPositionMs);
+  }, []);
 
   useEffect(() => {
     if (!onSessionFlush || !player.playing) return;

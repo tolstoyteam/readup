@@ -51,6 +51,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     plugins,
+    ios: {
+      ...config.ios,
+      infoPlist: {
+        ...config.ios?.infoPlist,
+        UIBackgroundModes: ["audio"],
+      },
+    },
     extra: {
       ...config.extra,
       supabaseBookCoversBucket:

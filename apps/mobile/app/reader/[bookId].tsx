@@ -456,6 +456,10 @@ export default function ReaderScreen() {
     chapterStableId,
     recordReadingSession,
   });
+  const flushAudioSession = useCallback(
+    (audioPositionMs: number) => sessionTracker.flush({ audioPositionMs }),
+    [sessionTracker],
+  );
 
   useEffect(() => {
     if (!bookId || !document || libraryLoading) return;
@@ -977,9 +981,7 @@ export default function ReaderScreen() {
         <ReaderBookAudioProvider
           bookId={document.book_id}
           initialSource={audioState.source}
-          onSessionFlush={(audioPositionMs) =>
-            sessionTracker.flush({ audioPositionMs })
-          }
+          onSessionFlush={flushAudioSession}
         >
           {readerShell}
         </ReaderBookAudioProvider>
