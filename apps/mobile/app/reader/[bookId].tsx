@@ -39,13 +39,13 @@ import { useInterfaceLanguage } from "@/shared/context/interface-language-contex
 import { useSubscription } from "@/features/subscription";
 import { useReadupColors, statusBarStyleForScheme } from "@/shared/constants/readup-theme";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
-import { useIsFocused } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import {
   useLocalSearchParams,
   useNavigation,
   useRouter,
   useFocusEffect,
+  useIsFocused,
   Redirect,
   type Href,
 } from "expo-router";
