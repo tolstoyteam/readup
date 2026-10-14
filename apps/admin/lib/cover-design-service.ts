@@ -7,7 +7,7 @@ import { bookCoverDesignsTable, booksTable, bookWorksTable } from "@readup/db";
 import { db } from "@/db/client";
 import { composeCover } from "./cover-compose";
 import {
-  COVER_PALETTES, COVER_PROMPT_VERSION, createCoverRecipe, textColorForPanel,
+  COVER_PALETTES, COVER_PROMPT_VERSION, createCoverRecipe, textColorForPanel, withCurrentCoverLayout,
   type CoverRecipe,
 } from "./cover-design";
 import { coverGenerationSettings, generateBookCoverImage } from "./cover-generate";
@@ -103,9 +103,9 @@ function updateRecipe(recipe: CoverRecipe, input: Partial<Pick<CoverRecipe,
   if (!Number.isFinite(grain) || grain < 0 || grain > 0.12 || !Number.isFinite(focal) || focal < -1 || focal > 1) {
     throw new Error("Grain or image focal offset is out of range.");
   }
-  return { ...recipe, title, author, palette, textColorMode: mode,
+  return withCurrentCoverLayout({ ...recipe, title, author, palette, textColorMode: mode,
     titleFontFamily, authorFontFamily, titleFontSize, authorFontSize,
-    resolvedTextColor: textColorForPanel(palette.panel, mode), grainStrength: grain, focalOffset: focal };
+    resolvedTextColor: textColorForPanel(palette.panel, mode), grainStrength: grain, focalOffset: focal });
 }
 
 export async function saveCoverDraft(workId: string, revision: number, input: Parameters<typeof updateRecipe>[1]) {
@@ -158,7 +158,7 @@ export async function generateCoverSource(workId: string, args?: { title: string
   }
   const revision = row.revision;
   const recipe = recipeOf(row.draftRecipe)!;
-  const generationRecipe = { ...recipe, ...coverGenerationSettings(), promptVersion: COVER_PROMPT_VERSION };
+  const generationRecipe = { ...withCurrentCoverLayout(recipe), ...coverGenerationSettings(), promptVersion: COVER_PROMPT_VERSION };
   if (generationActive(row)) throw new CoverConflictError();
   const [claimed] = await db.update(bookCoverDesignsTable).set({
     generationState: "generating", error: null, revision: revision + 1, updatedAt: new Date(),
@@ -213,7 +213,7 @@ export async function publishCover(workId: string, revision: number, expectedAct
   const row = await getRow(workId);
   if (!row || row.revision !== revision || !row.draftRecipe || !row.draftSourcePath) throw new CoverConflictError();
   if (generationActive(row)) throw new CoverConflictError();
-  const recipe = recipeOf(row.draftRecipe)!;
+  const recipe = withCurrentCoverLayout(recipeOf(row.draftRecipe)!);
   const cover = await composeCover(await sourceBytes(row.draftSourcePath), recipe);
   const path = await uploadWorkCover(workId, { buffer: cover, mime: "image/png", extension: "png" });
   try {

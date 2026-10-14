@@ -14,7 +14,7 @@ export function BookCoverThumbnail({ src }: BookCoverThumbnailProps) {
   return (
     <div
       className={cn(
-        "aspect-[5/8] w-12 shrink-0 overflow-hidden rounded-sm",
+        "aspect-[25/36] w-12 shrink-0 overflow-hidden rounded-sm",
         !showImage && "bg-muted/40",
       )}
       aria-hidden

@@ -22,7 +22,7 @@ async function makeJpeg(width: number, height: number): Promise<Buffer> {
 }
 
 describe("normalizeCoverImage", () => {
-  it("resizes and crops to 1000×1600 PNG with valid cover aspect", async () => {
+  it("resizes and crops to 1000×1440 PNG with valid cover aspect", async () => {
     const input = await makeJpeg(1024, 1536);
     const cover = await normalizeCoverImage(input);
 

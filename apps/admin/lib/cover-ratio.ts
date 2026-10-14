@@ -1,5 +1,6 @@
-/** Height ÷ width — portrait cover (e.g. 1600×1000). */
-export const COVER_HEIGHT_WIDTH_RATIO = 1.6;
+/** Height ÷ width — portrait cover matching the app's book cards. */
+import { COVER_HEIGHT_WIDTH_RATIO } from "./cover-dimensions";
+export { COVER_HEIGHT_WIDTH_RATIO };
 export const COVER_RATIO_TOLERANCE = 0.02;
 
 export function isCoverAspectRatio(height: number, width: number): boolean {

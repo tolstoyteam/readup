@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { validateCoverBytes } from "@/lib/cover-image";
+import { COVER_HEIGHT, COVER_WIDTH } from "./cover-dimensions";
 
 export type NormalizedCover = {
   buffer: Buffer;
@@ -7,12 +8,12 @@ export type NormalizedCover = {
   extension: string;
 };
 
-/** Target portrait cover size (5:8 width:height). */
-export const COVER_TARGET_WIDTH = 1000;
-export const COVER_TARGET_HEIGHT = 1600;
+/** Target portrait cover size (25:36 width:height). */
+export const COVER_TARGET_WIDTH = COVER_WIDTH;
+export const COVER_TARGET_HEIGHT = COVER_HEIGHT;
 
 /**
- * Decode any common raster format, center-cover-crop to 1000×1600, emit PNG,
+ * Decode any common raster format, center-cover-crop to 1000×1440, emit PNG,
  * and validate against the existing cover rules.
  */
 export async function normalizeCoverImage(buffer: Buffer): Promise<NormalizedCover> {

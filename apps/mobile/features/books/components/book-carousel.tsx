@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { getBookCardCoverHeight } from "@/features/books/lib/book-grid-layout";
 import {
   FlatList,
   ListRenderItem,
@@ -31,7 +32,6 @@ const CARD_WIDTH_RATIO = 0.46;
 const CARD_GAP = 16;
 /** Small inset from screen edge; list is not centered so the first card isn’t pushed in. */
 const EDGE_INSET = 16;
-const COVER_ASPECT = 2 / 3;
 
 const refreshColors = {
   tint: "#9CA3AF",
@@ -47,7 +47,7 @@ export function BookCarousel({
   const { width, height } = useWindowDimensions();
   const router = useRouter();
   const cardWidth = Math.round(width * CARD_WIDTH_RATIO);
-  const coverHeight = Math.round(cardWidth / COVER_ASPECT);
+  const coverHeight = getBookCardCoverHeight(cardWidth);
   const listBlockHeight = coverHeight + 56;
 
   const renderItem: ListRenderItem<BookCarouselItem> = ({ item }) => (

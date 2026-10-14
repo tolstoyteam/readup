@@ -93,10 +93,12 @@ pnpm --filter @readup/db apply-drizzle 0023_book_cover_designs.sql
 ```
 
 The existing `SUPABASE_BOOK_COVERS_BUCKET` holds only published, versioned
-1000×1600 covers. The private `book-cover-sources` bucket keeps original square
+1000×1440 covers, matching the mobile portrait book cards. The private
+`book-cover-sources` bucket keeps original square
 illustration bytes. The admin work-cover builder opens from Gutenberg items and
 the book edit form. Draft changes and source regeneration do not change the
-mobile cover until **Publish cover** succeeds. Existing covers are left in place.
+mobile cover until **Publish cover** succeeds. Existing 1000×1600 covers remain
+in place until replaced; new previews and publications use 1000×1440.
 
 Versioned sources and retired covers are intentionally retained for recovery.
 Inspect the 30-day cleanup candidates, then remove unreferenced files separately:

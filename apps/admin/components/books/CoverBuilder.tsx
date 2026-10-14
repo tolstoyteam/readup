@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { COVER_HEIGHT, COVER_PANEL_HEIGHT, COVER_WIDTH } from "@/lib/cover-dimensions";
 
 type Palette = { id: string; genre: string; panel: string; imageBackground: string; accent: string; secondary: string };
 type Recipe = {
@@ -62,13 +63,14 @@ function font(family: Recipe["titleFontFamily"]) {
 function LayoutGuide({ recipe, sourceUrl }: { recipe: Recipe; sourceUrl: string | null }) {
   const titleSize = recipe.titleFontSize ?? (recipe.title.length > 55 ? 64 : recipe.title.length > 32 ? 78 : 100);
   const authorSize = recipe.authorFontSize ?? 42;
+  const panelPercent = COVER_PANEL_HEIGHT / COVER_HEIGHT * 100;
   return (
-    <div className="relative aspect-[5/8] w-full overflow-hidden rounded-sm shadow-lg" style={{ containerType: "inline-size", backgroundColor: recipe.palette.panel }}>
-      <div className="absolute inset-x-0 top-0 flex h-[40%] flex-col justify-between overflow-hidden" style={{ color: coverTextColor(recipe), padding: "7.6cqw" }}>
+    <div className="relative w-full overflow-hidden rounded-sm shadow-lg" style={{ aspectRatio: `${COVER_WIDTH} / ${COVER_HEIGHT}`, containerType: "inline-size", backgroundColor: recipe.palette.panel }}>
+      <div className="absolute inset-x-0 top-0 flex flex-col justify-between overflow-hidden" style={{ height: `${panelPercent}%`, color: coverTextColor(recipe), padding: "7.6cqw" }}>
         <p className="m-0 font-bold break-words" style={{ fontFamily: font(recipe.titleFontFamily), fontSize: `${titleSize / 10}cqw`, lineHeight: 1.13 }}>{recipe.title || "Book title"}</p>
         <p className="m-0 break-words" style={{ fontFamily: font(recipe.authorFontFamily), fontSize: `${authorSize / 10}cqw`, lineHeight: 1.2 }}>{recipe.author || "Author name"}</p>
       </div>
-      <div className="absolute inset-x-0 bottom-0 h-[60%] overflow-hidden" style={{ backgroundColor: recipe.palette.imageBackground }}>
+      <div className="absolute inset-x-0 bottom-0 overflow-hidden" style={{ height: `${100 - panelPercent}%`, backgroundColor: recipe.palette.imageBackground }}>
         {sourceUrl ? <img src={sourceUrl} alt="Lower cover illustration" className="size-full object-cover" style={{ objectPosition: `center ${(recipe.focalOffset + 1) * 50}%` }} /> :
           <div className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center text-sm" style={{ color: coverTextColor(recipe) }}><ImagePlus aria-hidden="true" /><span>Generate or upload a square illustration</span></div>}
       </div>
@@ -256,7 +258,7 @@ export function CoverBuilder({ workId, buttonLabel = "Open cover builder", title
         <DialogContent showCloseButton={false} className="flex h-[min(92dvh,900px)] max-w-[min(1100px,calc(100%-1rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(1100px,calc(100%-2rem))]">
           <DialogHeader className="shrink-0 border-b border-border px-5 py-4 sm:px-7">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex flex-col gap-1"><DialogTitle className="text-xl">Cover builder</DialogTitle><DialogDescription>Design the title panel and illustration, then review the final 5:8 cover.</DialogDescription></div>
+              <div className="flex flex-col gap-1"><DialogTitle className="text-xl">Cover builder</DialogTitle><DialogDescription>Design the title panel and illustration, then review the final cover at the app’s book-card ratio.</DialogDescription></div>
               <Button type="button" variant="ghost" size="sm" onClick={close}>Close</Button>
             </div>
           </DialogHeader>
@@ -299,12 +301,12 @@ export function CoverBuilder({ workId, buttonLabel = "Open cover builder", title
                   </section>
                 </div>
                 <aside className="flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start" aria-label="Cover preview">
-                  <div className="flex items-center justify-between gap-2"><div><h3 className="text-base font-semibold">Cover preview</h3><p className="text-xs text-muted-foreground">1000 × 1600 px · 5:8</p></div><span className="text-xs text-muted-foreground">{exactPreview ? "Final render" : "Layout guide"}</span></div>
-                  <div className="mx-auto w-full max-w-[360px]">{exactPreview && preview ? <img src={preview} alt="Final composed cover preview" className="aspect-[5/8] w-full rounded-sm object-cover shadow-lg" /> : <LayoutGuide recipe={draft} sourceUrl={sourceUrl} />}</div>
+                  <div className="flex items-center justify-between gap-2"><div><h3 className="text-base font-semibold">Cover preview</h3><p className="text-xs text-muted-foreground">{COVER_WIDTH} × {COVER_HEIGHT} px · 25:36</p></div><span className="text-xs text-muted-foreground">{exactPreview ? "Final render" : "Layout guide"}</span></div>
+                  <div className="mx-auto w-full max-w-[360px]">{exactPreview && preview ? <img src={preview} alt="Final composed cover preview" className="w-full rounded-sm object-cover shadow-lg" style={{ aspectRatio: `${COVER_WIDTH} / ${COVER_HEIGHT}` }} /> : <LayoutGuide recipe={draft} sourceUrl={sourceUrl} />}</div>
                   <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
                     <p>{exactPreview ? "This exact render is ready to publish." : dirty ? "Changes appear here as a layout guide. Update preview to review the exact cover, or publish your current changes." : design.hasSource ? "Update preview to review the exact cover, or publish your current draft." : "Add an illustration before publishing the cover."}</p>
                     {draft.title.length > 75 ? <p>Long title: check readability at the smaller card size.</p> : null}
-                    {exactPreview && preview ? <div className="flex items-end gap-3 pt-1"><img src={preview} alt="Cover cropped as a mobile book card" width={136} height={196} className="h-[196px] w-[136px] rounded-md border border-border object-cover" /><div className="flex flex-col gap-1"><span>Mobile card · 136 × 196</span><a href={preview} target="_blank" rel="noreferrer" className="font-medium text-foreground underline">Open full size</a></div></div> : null}
+                    {exactPreview && preview ? <div className="flex items-end gap-3 pt-1"><img src={preview} alt="Cover at mobile book card size" width={136} height={196} className="h-[196px] w-[136px] rounded-md border border-border object-cover" /><div className="flex flex-col gap-1"><span>Mobile card · 136 × 196</span><a href={preview} target="_blank" rel="noreferrer" className="font-medium text-foreground underline">Open full size</a></div></div> : null}
                   </div>
                 </aside>
               </div>

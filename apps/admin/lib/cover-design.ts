@@ -4,7 +4,9 @@ import { BOOK_GENRES, type BookGenre } from "@readup/db";
 export const COVER_CLASSIFICATION_VERSION = 1;
 export const COVER_PALETTE_VERSION = 1;
 export const COVER_SELECTION_VERSION = 1;
-export const COVER_RECIPE_VERSION = 1;
+export const COVER_RECIPE_VERSION = 2;
+export const COVER_LAYOUT_VERSION = 2;
+export const COVER_COMPOSITOR_VERSION = 2;
 export const COVER_PROMPT_VERSION = 2;
 
 export type CoverPalette = {
@@ -126,6 +128,11 @@ export type CoverRecipe = {
   size: string;
 };
 
+export function withCurrentCoverLayout(recipe: CoverRecipe): CoverRecipe {
+  return { ...recipe, version: COVER_RECIPE_VERSION,
+    layoutVersion: COVER_LAYOUT_VERSION, compositorVersion: COVER_COMPOSITOR_VERSION };
+}
+
 export function textColorForPanel(panel: string, mode: CoverRecipe["textColorMode"]): string {
   if (mode !== "auto") return mode === "black" ? "#101010" : "#FFFFFF";
   const parts = [1, 3, 5].map((i) => parseInt(panel.slice(i, i + 2), 16) / 255)
@@ -143,7 +150,8 @@ export function createCoverRecipe(args: { identity: string; title: string; autho
     classificationVersion: COVER_CLASSIFICATION_VERSION, palette, textColorMode: "auto",
     titleFontFamily: "sans", authorFontFamily: "sans", titleFontSize: null, authorFontSize: null,
     resolvedTextColor: textColorForPanel(palette.panel, "auto"), grainSeed: seed,
-    grainStrength: 0, focalOffset: 0, layoutVersion: 1, fontVersion: 1, compositorVersion: 1,
+    grainStrength: 0, focalOffset: 0, layoutVersion: COVER_LAYOUT_VERSION,
+    fontVersion: 1, compositorVersion: COVER_COMPOSITOR_VERSION,
     promptVersion: COVER_PROMPT_VERSION, model: process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2.5-flare",
     conceptSubjects: [...(args.subjects ?? []), ...(args.bookshelves ?? [])].filter(Boolean).slice(0, 6),
     quality: process.env.OPENAI_IMAGE_QUALITY?.trim() || "medium", size: "1024x1024",

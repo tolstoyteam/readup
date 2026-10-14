@@ -4,10 +4,9 @@ import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import sharp from "sharp";
 import { validateCoverBytes } from "./cover-image";
 import { textColorForPanel, type CoverRecipe } from "./cover-design";
+import { COVER_HEIGHT, COVER_PANEL_HEIGHT, COVER_WIDTH } from "./cover-dimensions";
 
-export const COVER_WIDTH = 1000;
-export const COVER_HEIGHT = 1600;
-export const COVER_PANEL_HEIGHT = 640;
+export { COVER_HEIGHT, COVER_PANEL_HEIGHT, COVER_WIDTH } from "./cover-dimensions";
 const SANS_FONT = "Readup Noto Sans";
 const SERIF_REGULAR_FONT = "Readup Noto Serif Regular";
 const SERIF_BOLD_FONT = "Readup Noto Serif Bold";
@@ -117,15 +116,16 @@ function seededGrain(seed: number, strength: number): Buffer | null {
 /** The sole compositor for admin previews and published PNGs. */
 export async function composeCover(source: Buffer, recipe: CoverRecipe): Promise<Buffer> {
   if (!source.length) throw new Error("Generate or upload a lower illustration first.");
-  const normalized = await sharp(source).rotate().resize(1000, 1000, { fit: "cover" }).png().toBuffer();
+  const normalized = await sharp(source).rotate().resize(COVER_WIDTH, COVER_WIDTH, { fit: "cover" }).png().toBuffer();
   const normalizedImage = sharp(normalized);
   const metadata = await normalizedImage.metadata();
   if (metadata.hasAlpha && (await normalizedImage.stats()).channels[3]?.min !== 255) {
     throw new Error("The lower illustration needs its own opaque background.");
   }
   const offset = Math.min(1, Math.max(-1, recipe.focalOffset));
-  const top = Math.round((1000 - 960) * (offset + 1) / 2);
-  const lower = await sharp(normalized).extract({ left: 0, top, width: 1000, height: 960 }).toBuffer();
+  const lowerHeight = COVER_HEIGHT - COVER_PANEL_HEIGHT;
+  const top = Math.round((COVER_WIDTH - lowerHeight) * (offset + 1) / 2);
+  const lower = await sharp(normalized).extract({ left: 0, top, width: COVER_WIDTH, height: lowerHeight }).toBuffer();
   const text = renderText(recipe);
   let cover = await sharp({
     create: { width: COVER_WIDTH, height: COVER_HEIGHT, channels: 4, background: recipe.palette.panel },
