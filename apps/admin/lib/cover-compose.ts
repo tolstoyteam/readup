@@ -8,20 +8,30 @@ import { textColorForPanel, type CoverRecipe } from "./cover-design";
 export const COVER_WIDTH = 1000;
 export const COVER_HEIGHT = 1600;
 export const COVER_PANEL_HEIGHT = 640;
-const FONT_FAMILY = "Readup Noto Sans";
+const SANS_FONT = "Readup Noto Sans";
+const SERIF_REGULAR_FONT = "Readup Noto Serif Regular";
+const SERIF_BOLD_FONT = "Readup Noto Serif Bold";
 let fontLoaded = false;
 
 function loadFont() {
   if (fontLoaded) return;
-  const path = [
-    join(process.cwd(), "lib", "NotoSans.ttf"),
-    join(process.cwd(), "apps", "admin", "lib", "NotoSans.ttf"),
-  ].find(existsSync);
-  if (!path) throw new Error("Bundled Noto Sans font is missing.");
-  if (!GlobalFonts.registerFromPath(path, FONT_FAMILY)) {
-    throw new Error("Could not load bundled Noto Sans font.");
+  const fonts = [
+    { paths: [join(process.cwd(), "lib", "NotoSans.ttf"), join(process.cwd(), "apps", "admin", "lib", "NotoSans.ttf")], family: SANS_FONT },
+    { paths: [join(process.cwd(), "lib", "NotoSerif-Regular.woff"), join(process.cwd(), "apps", "admin", "lib", "NotoSerif-Regular.woff")], family: SERIF_REGULAR_FONT },
+    { paths: [join(process.cwd(), "lib", "NotoSerif-Bold.woff"), join(process.cwd(), "apps", "admin", "lib", "NotoSerif-Bold.woff")], family: SERIF_BOLD_FONT },
+  ];
+  for (const { paths, family } of fonts) {
+    const path = paths.find(existsSync);
+    if (!path || !GlobalFonts.registerFromPath(path, family)) {
+      throw new Error(`Could not load bundled ${family} font.`);
+    }
   }
   fontLoaded = true;
+}
+
+function coverFont(family: CoverRecipe["titleFontFamily"], weight: "regular" | "bold") {
+  if (family === "serif") return weight === "bold" ? SERIF_BOLD_FONT : SERIF_REGULAR_FONT;
+  return SANS_FONT;
 }
 
 function wrapText(ctx: ReturnType<ReturnType<typeof createCanvas>["getContext"]>, text: string, maxWidth: number): string[] | null {
@@ -43,14 +53,15 @@ export function coverTextWarning(recipe: CoverRecipe): string | null {
   return null;
 }
 
-function titleLayout(ctx: ReturnType<ReturnType<typeof createCanvas>["getContext"]>, title: string) {
-  for (let size = 112; size >= 56; size -= 2) {
-    ctx.font = `700 ${size}px "${FONT_FAMILY}"`;
-    const lines = wrapText(ctx, title, 848);
+function titleLayout(ctx: ReturnType<ReturnType<typeof createCanvas>["getContext"]>, recipe: CoverRecipe) {
+  const sizes = recipe.titleFontSize == null ? Array.from({ length: 29 }, (_, index) => 112 - index * 2) : [recipe.titleFontSize];
+  for (const size of sizes) {
+    ctx.font = `700 ${size}px "${coverFont(recipe.titleFontFamily, "bold")}"`;
+    const lines = wrapText(ctx, recipe.title, 848);
     const lineHeight = Math.round(size * 1.13);
     if (lines && lines.length * lineHeight <= 365) return { size, lines, lineHeight };
   }
-  throw new Error("The exact cover title does not fit. Edit the cover display title and preview again.");
+  throw new Error("The cover title does not fit at this size. Choose Auto fit, a smaller size, or a shorter title.");
 }
 
 function renderText(recipe: CoverRecipe): Buffer {
@@ -66,22 +77,25 @@ function renderText(recipe: CoverRecipe): Buffer {
   const color = textColorForPanel(recipe.palette.panel, recipe.textColorMode);
   ctx.fillStyle = color;
   ctx.textBaseline = "top";
-  const title = titleLayout(ctx, recipe.title);
-  ctx.font = `700 ${title.size}px "${FONT_FAMILY}"`;
+  const title = titleLayout(ctx, recipe);
+  ctx.font = `700 ${title.size}px "${coverFont(recipe.titleFontFamily, "bold")}"`;
   title.lines.forEach((line, index) => ctx.fillText(line, 76, 76 + index * title.lineHeight));
 
   const authorTop = Math.max(492, 76 + title.lines.length * title.lineHeight + 36);
   let authorLines: string[] | null = null;
   let authorSize = 46;
-  for (; authorSize >= 30; authorSize -= 2) {
-    ctx.font = `400 ${authorSize}px "${FONT_FAMILY}"`;
+  const authorSizes = recipe.authorFontSize == null ? Array.from({ length: 9 }, (_, index) => 46 - index * 2) : [recipe.authorFontSize];
+  for (const size of authorSizes) {
+    authorSize = size;
+    ctx.font = `400 ${authorSize}px "${coverFont(recipe.authorFontFamily, "regular")}"`;
     authorLines = wrapText(ctx, recipe.author, 848);
     if (authorLines && authorTop + authorLines.length * Math.round(authorSize * 1.2) <= 575) break;
+    authorLines = null;
   }
-  if (!authorLines || authorSize < 30) {
-    throw new Error("The exact cover author does not fit. Edit the cover display author and preview again.");
+  if (!authorLines) {
+    throw new Error("The cover author does not fit at this size. Choose Auto fit, a smaller size, or a shorter name.");
   }
-  ctx.font = `400 ${authorSize}px "${FONT_FAMILY}"`;
+  ctx.font = `400 ${authorSize}px "${coverFont(recipe.authorFontFamily, "regular")}"`;
   authorLines.forEach((line, index) => ctx.fillText(line, 76, authorTop + index * Math.round(authorSize * 1.2)));
   return canvas.toBuffer("image/png");
 }

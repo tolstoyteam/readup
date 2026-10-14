@@ -108,6 +108,10 @@ export type CoverRecipe = {
   classificationVersion: number;
   palette: CoverPalette;
   textColorMode: "auto" | "black" | "white";
+  titleFontFamily?: "sans" | "serif";
+  authorFontFamily?: "sans" | "serif";
+  titleFontSize?: number | null;
+  authorFontSize?: number | null;
   resolvedTextColor: string;
   grainSeed: number;
   grainStrength: number;
@@ -137,6 +141,7 @@ export function createCoverRecipe(args: { identity: string; title: string; autho
   return {
     version: COVER_RECIPE_VERSION, title: args.title, author: args.author, genre,
     classificationVersion: COVER_CLASSIFICATION_VERSION, palette, textColorMode: "auto",
+    titleFontFamily: "sans", authorFontFamily: "sans", titleFontSize: null, authorFontSize: null,
     resolvedTextColor: textColorForPanel(palette.panel, "auto"), grainSeed: seed,
     grainStrength: 0, focalOffset: 0, layoutVersion: 1, fontVersion: 1, compositorVersion: 1,
     promptVersion: COVER_PROMPT_VERSION, model: process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2.5-flare",

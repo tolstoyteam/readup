@@ -2,6 +2,27 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@font-face {
+  font-family: "Readup Cover Sans";
+  src: url("../lib/NotoSans.ttf") format("truetype");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Readup Cover Serif";
+  src: url("../lib/NotoSerif-Regular.woff") format("woff");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Readup Cover Serif";
+  src: url("../lib/NotoSerif-Bold.woff") format("woff");
+  font-weight: 700;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

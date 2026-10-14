@@ -75,7 +75,8 @@ export async function ensureCoverDraft(args: {
 }
 
 function updateRecipe(recipe: CoverRecipe, input: Partial<Pick<CoverRecipe,
-  "title" | "author" | "textColorMode" | "grainStrength" | "focalOffset">> & { paletteId?: string }): CoverRecipe {
+  "title" | "author" | "textColorMode" | "grainStrength" | "focalOffset" |
+  "titleFontFamily" | "authorFontFamily" | "titleFontSize" | "authorFontSize">> & { paletteId?: string }): CoverRecipe {
   const palette = input.paletteId ? COVER_PALETTES.find((item) => item.id === input.paletteId) : recipe.palette;
   if (!palette) throw new Error("Unknown palette.");
   const title = input.title === undefined ? recipe.title : input.title;
@@ -88,10 +89,22 @@ function updateRecipe(recipe: CoverRecipe, input: Partial<Pick<CoverRecipe,
   if (!(["auto", "black", "white"] as const).includes(mode)) throw new Error("Invalid text color mode.");
   const grain = input.grainStrength ?? recipe.grainStrength;
   const focal = input.focalOffset ?? recipe.focalOffset;
+  const titleFontFamily = input.titleFontFamily ?? recipe.titleFontFamily ?? "sans";
+  const authorFontFamily = input.authorFontFamily ?? recipe.authorFontFamily ?? "sans";
+  const titleFontSize = input.titleFontSize === undefined ? recipe.titleFontSize ?? null : input.titleFontSize;
+  const authorFontSize = input.authorFontSize === undefined ? recipe.authorFontSize ?? null : input.authorFontSize;
+  if (![titleFontFamily, authorFontFamily].every((family) => family === "sans" || family === "serif")) {
+    throw new Error("Choose a supported cover font.");
+  }
+  if ((titleFontSize !== null && (!Number.isInteger(titleFontSize) || titleFontSize < 56 || titleFontSize > 112))
+    || (authorFontSize !== null && (!Number.isInteger(authorFontSize) || authorFontSize < 30 || authorFontSize > 46))) {
+    throw new Error("Cover font size is out of range.");
+  }
   if (!Number.isFinite(grain) || grain < 0 || grain > 0.12 || !Number.isFinite(focal) || focal < -1 || focal > 1) {
     throw new Error("Grain or image focal offset is out of range.");
   }
   return { ...recipe, title, author, palette, textColorMode: mode,
+    titleFontFamily, authorFontFamily, titleFontSize, authorFontSize,
     resolvedTextColor: textColorForPanel(palette.panel, mode), grainStrength: grain, focalOffset: focal };
 }
 
