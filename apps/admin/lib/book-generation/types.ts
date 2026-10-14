@@ -60,7 +60,7 @@ export type BookGenerationJobPayload = {
   gutenberg_source_id?: number;
   cover_prepared?: boolean;
   /** Optional Gutenberg attribution when this job was started by an import. */
-  gutenberg?: { id: number; url?: string };
+  gutenberg?: { id: number; url?: string; title?: string };
   progress?: GenerationJobProgress | null;
   heartbeat_at?: string | null;
   result?: GenerationJobResult | null;

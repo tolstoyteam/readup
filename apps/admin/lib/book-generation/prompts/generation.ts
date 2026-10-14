@@ -1,12 +1,16 @@
 import { BOOK_GENRES, type BookGenerationSettings } from "@readup/db";
 import { getLengthPreset } from "../length-presets";
 
-export function buildGenerationSystemPrompt(settings: BookGenerationSettings, includeQuiz: boolean): string {
+export function buildGenerationSystemPrompt(settings: BookGenerationSettings, includeQuiz: boolean, sourceTitle?: string): string {
   const preset = getLengthPreset(settings.length);
   const supportedGenres = BOOK_GENRES.join(", ");
   const quizRules = includeQuiz
     ? `Include a "quiz" with 3 to 5 multiple-choice questions. Each question must have 3 or 4 answers with exactly one marked correct (is_correct=true).`
     : `Set "quiz" to null. Do not include any quiz questions.`;
+
+  const titleRule = sourceTitle
+    ? `"title": use the original Gutenberg title exactly as provided: ${JSON.stringify(sourceTitle)}`
+    : '"title": compelling book title derived from the topic';
 
   return `You are an editor who creates engaging book summaries for the Readup mobile reading app.
 
@@ -35,7 +39,7 @@ Chapter length (CRITICAL — applies to EVERY chapter):
 - Short ≠ fewer chapters; Long ≠ more chapters. Only sentence count per chapter changes.
 
 Always provide:
-- "title": compelling book title derived from the topic
+- ${titleRule}
 - "subtitle": a short supporting subtitle
 - "description": 2–3 sentence catalog description
 - "author": real author when summarizing a known work, otherwise "Unknown"
@@ -70,12 +74,17 @@ FINAL CHECK before responding:
 export function buildGenerationUserPrompt(args: {
   settings: BookGenerationSettings;
   source?: { filename: string; text: string };
+  sourceTitle?: string;
   lengthCorrectionAddendum?: string;
 }): string {
-  const { settings, source, lengthCorrectionAddendum } = args;
+  const { settings, source, sourceTitle, lengthCorrectionAddendum } = args;
   const preset = getLengthPreset(settings.length);
 
   const parts: string[] = [];
+
+  if (sourceTitle) {
+    parts.push(`Original Gutenberg title: ${JSON.stringify(sourceTitle)}. Use this exact title for the generated book.`);
+  }
 
   if (source) {
     parts.push(

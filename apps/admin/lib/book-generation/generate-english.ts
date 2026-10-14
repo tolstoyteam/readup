@@ -7,6 +7,7 @@ import { BOOK_GENRES } from "@/lib/book-genres";
 import { parseBookContentInput, type BookContentInput } from "@/lib/book-content";
 import type { BookGenerationSettings } from "@readup/db";
 import { getLengthPreset } from "./length-presets";
+import { generatedEditionTitle } from "./gutenberg-title";
 import {
   buildLengthCorrectionAddendum,
   chaptersOutsideSoftRange,
@@ -87,6 +88,7 @@ function buildGenerationBookSchema(settings: BookGenerationSettings, includeQuiz
 type GenerateEnglishOptions = {
   settings: BookGenerationSettings;
   includeQuiz: boolean;
+  sourceTitle?: string;
   source?: {
     filename: string;
     text: string;
@@ -98,10 +100,11 @@ type RawGeneratedBook = z.infer<ReturnType<typeof buildGenerationBookSchema>>;
 function toBookContentInput(
   draft: RawGeneratedBook,
   includeQuiz: boolean,
+  sourceTitle?: string,
 ): GeneratedEnglishDraft {
   const genres = draft.genres.length === 1 ? draft.genres : ["other" as const];
   const content: BookContentInput = {
-    title: draft.title,
+    title: generatedEditionTitle(draft.title, sourceTitle),
     author: draft.author,
     language: SOURCE_LANGUAGE,
     genres,
@@ -162,10 +165,11 @@ async function generateRawBook(
   const { object } = await generateObject({
     model: provider(DEFAULT_MODEL),
     schema,
-    system: buildGenerationSystemPrompt(options.settings, options.includeQuiz),
+    system: buildGenerationSystemPrompt(options.settings, options.includeQuiz, options.sourceTitle),
     prompt: buildGenerationUserPrompt({
       settings: options.settings,
       source: options.source,
+      sourceTitle: options.sourceTitle,
       lengthCorrectionAddendum,
     }),
     temperature: 0.6,
@@ -186,7 +190,7 @@ export async function generateEnglishBook(
     object = await generateRawBook(options, correction);
   }
 
-  const draft = toBookContentInput(object, options.includeQuiz);
+  const draft = toBookContentInput(object, options.includeQuiz, options.sourceTitle);
   const parsed = parseBookContentInput(draft.content);
   if (!parsed.ok) {
     throw new Error(`Generated book failed validation: ${parsed.message}`);

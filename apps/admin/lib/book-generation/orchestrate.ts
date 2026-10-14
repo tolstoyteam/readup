@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
-import { booksTable, gutenbergSourceBooksTable } from "@readup/db";
+import { booksTable, gutenbergImportItemsTable, gutenbergSourceBooksTable } from "@readup/db";
 import { db } from "@/db/client";
 import { ensureAiWorkCover } from "@/lib/cover-ensure";
 import { formatAuthorName } from "@/lib/gutenberg/client";
@@ -54,6 +54,32 @@ function warningsWithoutLanguage(
   language: string,
 ) {
   return warnings.filter((warning) => warning.language !== language);
+}
+
+async function getGutenbergTitle(jobId: string, payload: BookGenerationJobPayload): Promise<string | undefined> {
+  if (payload.gutenberg?.title?.trim()) return payload.gutenberg.title.trim();
+
+  // Jobs queued before Gutenberg titles were added to the payload still need the
+  // original title when they resume.
+  if (payload.gutenberg_source_id) {
+    const [source] = await db.select({ title: gutenbergSourceBooksTable.title })
+      .from(gutenbergSourceBooksTable)
+      .where(eq(gutenbergSourceBooksTable.gutenbergId, payload.gutenberg_source_id))
+      .limit(1);
+    if (source?.title.trim()) return source.title.trim();
+    throw new Error(`Original title is unavailable for Gutenberg #${payload.gutenberg_source_id}.`);
+  }
+
+  if (payload.gutenberg?.id) {
+    const [item] = await db.select({ title: gutenbergImportItemsTable.title })
+      .from(gutenbergImportItemsTable)
+      .where(eq(gutenbergImportItemsTable.generationJobId, jobId))
+      .limit(1);
+    if (item?.title.trim()) return item.title.trim();
+    throw new Error(`Original title is unavailable for Gutenberg #${payload.gutenberg.id}.`);
+  }
+
+  return undefined;
 }
 
 async function updateProgress(
@@ -212,10 +238,12 @@ export async function advanceBookGenerationJob(
         leaseToken,
         progress("generating_english", "Generating English book..."),
       );
+      const sourceTitle = await getGutenbergTitle(jobId, payload);
       const draft = await generateEnglishBook({
         settings: generationSettings,
         includeQuiz: settings.include_quiz,
         source: payload.source,
+        sourceTitle,
       });
       const metadata = buildGenerationMetadata({
         settings: {

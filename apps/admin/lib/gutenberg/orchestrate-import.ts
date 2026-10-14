@@ -690,7 +690,7 @@ async function processWaitingItem(args: {
       },
       source,
       cover_path: coverPath,
-      gutenberg: { id: item.gutenbergId, url: gutenbergUrl },
+      gutenberg: { id: item.gutenbergId, url: gutenbergUrl, title: item.title },
       progress: { step: "queued", message: "Waiting to generate..." },
       heartbeat_at: new Date().toISOString(),
       result: null,

@@ -140,7 +140,7 @@ export async function enqueueSavedSourceBooks(ids: number[]) {
           include_quiz: true,
         },
         gutenberg_source_id: id,
-        gutenberg: { id, url: source.gutenbergUrl ?? `https://www.gutenberg.org/ebooks/${id}` },
+        gutenberg: { id, url: source.gutenbergUrl ?? `https://www.gutenberg.org/ebooks/${id}`, title: source.title },
         progress: { step: "queued", message: "Waiting to generate from saved Gutenberg text..." },
         heartbeat_at: new Date().toISOString(),
         result: null,
