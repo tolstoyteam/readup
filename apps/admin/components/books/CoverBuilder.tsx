@@ -215,6 +215,9 @@ export function CoverBuilder({ workId, buttonLabel = "Open cover builder", title
       let current = design;
       if (dirty) current = await saveCurrent(current, draft);
       if (action === "save") { setActivity("saved"); return; }
+      if (action === "publish" && (dirty || !exactPreview)) {
+        await renderPreview(current.revision);
+      }
       if (file) {
         const form = new FormData();
         form.set("source", file); form.set("revision", String(current.revision));
@@ -299,7 +302,7 @@ export function CoverBuilder({ workId, buttonLabel = "Open cover builder", title
                   <div className="flex items-center justify-between gap-2"><div><h3 className="text-base font-semibold">Cover preview</h3><p className="text-xs text-muted-foreground">1000 × 1600 px · 5:8</p></div><span className="text-xs text-muted-foreground">{exactPreview ? "Final render" : "Layout guide"}</span></div>
                   <div className="mx-auto w-full max-w-[360px]">{exactPreview && preview ? <img src={preview} alt="Final composed cover preview" className="aspect-[5/8] w-full rounded-sm object-cover shadow-lg" /> : <LayoutGuide recipe={draft} sourceUrl={sourceUrl} />}</div>
                   <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                    <p>{exactPreview ? "This exact render is ready to publish." : dirty ? "Changes appear here as a layout guide. Update preview to render the exact cover." : design.hasSource ? "Update preview to render the exact cover." : "Add an illustration to render the finished cover."}</p>
+                    <p>{exactPreview ? "This exact render is ready to publish." : dirty ? "Changes appear here as a layout guide. Update preview to review the exact cover, or publish your current changes." : design.hasSource ? "Update preview to review the exact cover, or publish your current draft." : "Add an illustration before publishing the cover."}</p>
                     {draft.title.length > 75 ? <p>Long title: check readability at the smaller card size.</p> : null}
                     {exactPreview && preview ? <div className="flex items-end gap-3 pt-1"><img src={preview} alt="Cover cropped as a mobile book card" width={136} height={196} className="h-[196px] w-[136px] rounded-md border border-border object-cover" /><div className="flex flex-col gap-1"><span>Mobile card · 136 × 196</span><a href={preview} target="_blank" rel="noreferrer" className="font-medium text-foreground underline">Open full size</a></div></div> : null}
                   </div>
@@ -308,11 +311,11 @@ export function CoverBuilder({ workId, buttonLabel = "Open cover builder", title
             )}
           </div>
           {design && draft ? <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-background px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-            <p role="status" className="text-xs text-muted-foreground">{busy ? activity === "generating" ? "Generating illustration…" : `${activity[0]?.toUpperCase()}${activity.slice(1)}…` : dirty ? "Unsaved changes" : activity === "published" ? "Cover published" : activity === "previewed" ? "Preview is up to date" : design.publishedPath === design.activePath && design.activePath ? "Generated cover active" : "Draft ready"}</p>
+            <p role="status" className="text-xs text-muted-foreground">{busy ? activity === "generating" ? "Generating illustration…" : `${activity[0]?.toUpperCase()}${activity.slice(1)}…` : !design.hasSource ? "Generate or upload an illustration to publish" : dirty ? "Unsaved changes" : activity === "published" ? "Cover published" : activity === "previewed" ? "Preview is up to date" : design.publishedPath === design.activePath && design.activePath ? "Generated cover active" : "Draft ready"}</p>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" disabled={busy || !dirty || !draft.title.trim() || !draft.author.trim()} onClick={() => void run("save")}>Save draft</Button>
               <Button type="button" variant="outline" disabled={busy || !design.hasSource || !draft.title.trim() || !draft.author.trim()} onClick={() => void run("preview")}>Update preview</Button>
-              <Button type="button" disabled={busy || !design.hasSource || dirty || !exactPreview} onClick={() => void run("publish")}>Publish cover</Button>
+              <Button type="button" disabled={busy || !design.hasSource || !draft.title.trim() || !draft.author.trim()} onClick={() => void run("publish")}>Publish cover</Button>
             </div>
           </div> : null}
         </DialogContent>
