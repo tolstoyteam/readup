@@ -15,6 +15,7 @@ import Purchases, {
   type PurchasesOffering,
 } from "react-native-purchases";
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
+import { AppState } from "react-native";
 
 import {
   hasReadupPremium,
@@ -40,6 +41,7 @@ type SubscriptionContextValue = {
   refresh: () => Promise<CustomerInfo>;
   purchasePlan: (plan: SubscriptionPlan) => Promise<PurchaseOutcome>;
   restorePurchases: () => Promise<boolean>;
+  presentCodeRedemptionSheet: () => Promise<void>;
   presentPaywall: () => Promise<PAYWALL_RESULT>;
   presentCustomerCenter: () => Promise<void>;
 };
@@ -152,6 +154,26 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     };
   }, [configured]);
 
+  useEffect(() => {
+    if (!configured) return;
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      const identityRun = latestIdentityRun.current;
+      void operationQueue.current
+        .then(async () => {
+          if (identityRun !== latestIdentityRun.current) return;
+          const info = await Purchases.getCustomerInfo();
+          if (identityRun === latestIdentityRun.current) setCustomerInfo(info);
+        })
+        .catch((error) => {
+          if (__DEV__)
+            console.warn("[RevenueCat refresh]", revenueCatErrorMessage(error));
+        });
+    });
+    return () => subscription.remove();
+  }, [configured]);
+
   const refresh = useCallback(async () => {
     const [info, offerings] = await Promise.all([
       Purchases.getCustomerInfo(),
@@ -195,6 +217,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setCustomerInfo(info);
       setErrorMessage(null);
       return hasReadupPremium(info);
+    } catch (error) {
+      setErrorMessage(revenueCatErrorMessage(error));
+      throw error;
+    }
+  }, [userId]);
+
+  const presentCodeRedemptionSheet = useCallback(async () => {
+    requireAuthenticatedCustomer(userId);
+    try {
+      await Purchases.presentCodeRedemptionSheet();
+      setErrorMessage(null);
     } catch (error) {
       setErrorMessage(revenueCatErrorMessage(error));
       throw error;
@@ -252,6 +285,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       refresh,
       purchasePlan,
       restorePurchases,
+      presentCodeRedemptionSheet,
       presentPaywall,
       presentCustomerCenter,
     }),
@@ -264,6 +298,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       refresh,
       purchasePlan,
       restorePurchases,
+      presentCodeRedemptionSheet,
       presentPaywall,
       presentCustomerCenter,
     ],

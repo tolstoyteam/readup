@@ -6,6 +6,7 @@ import {
   Headphones,
   Library,
   Sparkles,
+  Ticket,
   X,
   Zap,
 } from "lucide-react-native";
@@ -14,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -89,13 +91,14 @@ export default function SubscriptionScreen() {
     purchasePlan,
     refresh,
     restorePurchases,
+    presentCodeRedemptionSheet,
     presentPaywall,
   } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">(
     "yearly",
   );
   const [busyAction, setBusyAction] = useState<
-    null | "purchase" | "restore" | "paywall" | "manage" | "refresh"
+    null | "purchase" | "restore" | "redeem" | "paywall" | "manage" | "refresh"
   >(null);
 
   const monthlyPackage = packageForPlan(currentOffering, "monthly");
@@ -180,6 +183,17 @@ export default function SubscriptionScreen() {
         t("premium.paywallErrorTitle"),
         revenueCatErrorMessage(error),
       );
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function handleRedeemCode() {
+    setBusyAction("redeem");
+    try {
+      await presentCodeRedemptionSheet();
+    } catch (error) {
+      Alert.alert(t("premium.redeemErrorTitle"), revenueCatErrorMessage(error));
     } finally {
       setBusyAction(null);
     }
@@ -395,6 +409,26 @@ export default function SubscriptionScreen() {
 
               {!isPremium ? (
                 <View className="mt-4 items-center gap-3">
+                  {Platform.OS === "ios" ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={busy || !configured}
+                      onPress={() => void handleRedeemCode()}
+                      className="min-h-[44px] flex-row items-center justify-center gap-2 active:opacity-70 disabled:opacity-40"
+                    >
+                      {busyAction === "redeem" ? (
+                        <ActivityIndicator size="small" color={colors.brand} />
+                      ) : (
+                        <Ticket size={18} color={colors.brand} strokeWidth={2} />
+                      )}
+                      <Text
+                        className="text-[14px] font-semibold tracking-[-0.56px]"
+                        style={{ color: colors.brand }}
+                      >
+                        {t("premium.redeemCode")}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     disabled={busy || !configured || currentOffering == null}

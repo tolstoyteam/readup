@@ -137,6 +137,8 @@ const baseTranslations = {
     "premium.restoreSuccessBody": "Readup Premium снова активен.",
     "premium.restoreSuccessTitle": "Покупки восстановлены",
     "premium.refreshing": "Обновляем...",
+    "premium.redeemCode": "Активировать код",
+    "premium.redeemErrorTitle": "Не удалось активировать код",
     "premium.restoring": "Восстанавливаем...",
     "premium.signInRequiredBody":
       "Войдите или создайте аккаунт, чтобы подписка была привязана к вашему профилю.",
@@ -548,6 +550,8 @@ const baseTranslations = {
     "premium.restoreSuccessBody": "Readup Premium is active again.",
     "premium.restoreSuccessTitle": "Purchases restored",
     "premium.refreshing": "Refreshing...",
+    "premium.redeemCode": "Redeem code",
+    "premium.redeemErrorTitle": "Could not open code redemption",
     "premium.restoring": "Restoring...",
     "premium.signInRequiredBody":
       "Sign in or create an account so your subscription is linked to your Readup profile.",
@@ -965,6 +969,8 @@ export const spanishTranslations: Partial<Record<TranslationKey, string>> = {
   "premium.restoreSuccessBody": "Readup Premium vuelve a estar activo.",
   "premium.restoreSuccessTitle": "Compras restauradas",
   "premium.refreshing": "Actualizando...",
+  "premium.redeemCode": "Canjear código",
+  "premium.redeemErrorTitle": "No se pudo abrir el canje del código",
   "premium.restoring": "Restaurando...",
   "premium.signInRequiredBody":
     "Inicia sesión o crea una cuenta para vincular la suscripción a tu perfil de Readup.",
