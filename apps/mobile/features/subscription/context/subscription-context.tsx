@@ -17,6 +17,7 @@ import Purchases, {
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import { AppState } from "react-native";
 
+import { presentOfferCodeRedeemSheet } from "@/modules/readup-offer-codes/src/readup-offer-codes";
 import {
   hasReadupPremium,
   isPurchaseCancelled,
@@ -226,7 +227,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const presentCodeRedemptionSheet = useCallback(async () => {
     requireAuthenticatedCustomer(userId);
     try {
-      await Purchases.presentCodeRedemptionSheet();
+      await presentOfferCodeRedeemSheet();
       setErrorMessage(null);
     } catch (error) {
       setErrorMessage(revenueCatErrorMessage(error));
